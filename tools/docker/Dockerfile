@@ -36,15 +36,18 @@ RUN ln -sf /usr/bin/python3.11 /usr/local/bin/python3.11 && \
 # Upgrade pip
 RUN python3.11 -m pip install --upgrade pip setuptools wheel
 
-# Copy lock file if it exists (will fail gracefully if not present)
-COPY pip.lock* ./
+# Install pipenv
+RUN python3.11 -m pip install pipenv
 
-# Install Python packages only if pip.lock exists
-RUN if [ -f pip.lock ]; then \
-        echo "Using pip.lock for reproducible build"; \
-        pip3 install -r pip.lock; \
+# Copy lock file if it exists (will fail gracefully if not present)
+COPY Pipfile* ./
+
+# Install Python packages only if Pipfile exists
+RUN if [ -f Pipfile ]; then \
+        echo "Using Pipfile for reproducible build"; \
+        pipenv install --deploy --ignore-pipfile; \
     else \
-        echo "No pip.lock found, skipping pip installation"; \
+        echo "No Pipfile found, skipping pip installation"; \
     fi
 
 # Create a non-root user
