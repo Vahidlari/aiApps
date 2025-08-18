@@ -3,12 +3,10 @@
 # Exit on any error
 set -e
 
-echo "Generating pip.lock file..."
+echo "Generating Pipfile.lock from Pipfile..."
 
-# Convert requirements.txt to Pipfile
-pipenv install -r requirements.txt
-# Then generate lock file
+# Generate lock file from Pipfile
 pipenv lock
 
-echo "pip.lock file generated successfully!"
+echo "Pipfile.lock generated successfully!"
 echo "You can now build the Docker image with reproducible dependencies."

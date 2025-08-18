@@ -42,12 +42,12 @@ RUN python3.11 -m pip install pipenv
 # Copy lock file if it exists (will fail gracefully if not present)
 COPY Pipfile* ./
 
-# Install Python packages only if Pipfile exists
-RUN if [ -f Pipfile ]; then \
-        echo "Using Pipfile for reproducible build"; \
-        pipenv install --deploy --ignore-pipfile; \
+# Install Python packages from Pipfile.lock for reproducible builds
+RUN if [ -f Pipfile.lock ]; then \
+        echo "Installing packages from Pipfile.lock"; \
+        pipenv install --deploy --ignore-pipfile --system; \
     else \
-        echo "No Pipfile found, skipping pip installation"; \
+        echo "No Pipfile.lock found, skipping pip installation"; \
     fi
 
 # Create a non-root user

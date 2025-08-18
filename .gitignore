@@ -208,7 +208,6 @@ models/
 data/
 datasets/
 *.csv
-*.json
 *.xml
 *.xlsx
 *.xls
@@ -243,4 +242,3 @@ Thumbs.db
 
 # Python lock files
 poetry.lock
-Pipfile.lock
