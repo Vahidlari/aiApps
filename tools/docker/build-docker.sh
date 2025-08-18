@@ -3,11 +3,41 @@
 # Exit on any error
 set -e
 
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+
+# Navigate to the docker directory
+cd "$(dirname "$0")"
+
+# Check for .env file and create if it doesn't exist
+if [ ! -f .env ]; then
+    echo -e "${YELLOW}No .env file found. Creating from template...${NC}"
+    if [ ! -f env.template ]; then
+        echo -e "${RED}No env.template file found. Please check the repository.${NC}"
+        exit 1
+    fi
+    cp env.template .env
+    echo -e "${GREEN}Created .env file. Please edit it with your credentials.${NC}"
+    echo -e "${YELLOW}Opening .env file for editing...${NC}"
+    ${EDITOR:-vi} .env
+fi
+
+# Load environment variables
+set -a
+source .env
+set +a
+
+
 # Configuration
-IMAGE_NAME="ai-dev"
+IMAGE_NAME=${IMAGE_NAME:-ai-dev}
 REGISTRY="ghcr.io"
-# Convert repository name to lowercase (Docker requirement)
-REPOSITORY=$(echo "${GITHUB_REPOSITORY:-vahidlari/aiapps}" | tr "[:upper:]" "[:lower:]")
+
+REPOSITORY_NAME=$(basename -s .git $(git remote get-url origin) | tr "[:upper:]" "[:lower:]")
+REPOSITORY="${GITHUB_USERNAME}/${REPOSITORY_NAME}"
 FULL_IMAGE_NAME="${REGISTRY}/${REPOSITORY}/${IMAGE_NAME}"
 
 # Get current date for tagging
@@ -73,14 +103,15 @@ echo "Tags: ${DATE_TAG}, ${LATEST_TAG}"
 # Push to registry if requested
 if [ "$PUSH_IMAGE" = true ]; then
     echo "Pushing to GitHub Container Registry..."
-    
-    # Check if user is logged in to ghcr.io
-    if ! docker info | grep -q "ghcr.io"; then
-        echo "Please login to GitHub Container Registry first:"
-        echo "echo \$GITHUB_TOKEN | docker login ghcr.io -u \$GITHUB_USERNAME --password-stdin"
-        echo "Or use: docker login ghcr.io"
+
+    if [ -n "$GITHUB_USERNAME" ] && [ -n "$GITHUB_CR_PAT" ]; then
+        echo "Logging in to GitHub Container Registry..."
+        echo "${GITHUB_CR_PAT}" | docker login ghcr.io -u "${GITHUB_USERNAME}" --password-stdin
+    else
+        echo "GITHUB_USERNAME or GITHUB_CR_PAT is not set in .env file. Please set it."
         exit 1
     fi
+    
     
     # Push both tags
     docker push "${FULL_IMAGE_NAME}:${DATE_TAG}"
