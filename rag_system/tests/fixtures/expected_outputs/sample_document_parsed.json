@@ -1,0 +1,121 @@
+{
+    "title": "Sample LaTeX Document for Testing",
+    "author": "Test Author",
+    "year": "2024",
+    "doi": "",
+    "source_document": "sample_latex.tex",
+    "page_reference": "1",
+    "sections": [
+        {
+            "title": "Introduction",
+            "label": "sec:intro",
+            "number": "1",
+            "paragraphs": [
+                {
+                    "content": "This is a sample LaTeX document designed for testing the RAG system parser. It contains various LaTeX structures including sections, subsections, citations, tables, and figures.",
+                    "citations": null
+                }
+            ],
+            "subsections": [
+                {
+                    "title": "Background",
+                    "label": "subsec:background",
+                    "number": "1.1",
+                    "paragraphs": [
+                        {
+                            "content": "The background section provides context for the research. We reference previous work by (Einstein, Albert, 1905) and (Newton, Isaac, 1687).",
+                            "citations": [
+                                {
+                                    "author": "Einstein, Albert",
+                                    "year": "1905",
+                                    "title": "On the Electrodynamics of Moving Bodies",
+                                    "doi": "10.1002/andp.19053221004",
+                                    "source_document": "sample_bibliography.bib",
+                                    "page_reference": "",
+                                    "citation_label": "einstein1905",
+                                    "citation_hash": "hash_value"
+                                },
+                                {
+                                    "author": "Newton, Isaac",
+                                    "year": "1687",
+                                    "title": "Philosophiæ Naturalis Principia Mathematica",
+                                    "doi": "",
+                                    "source_document": "sample_bibliography.bib",
+                                    "page_reference": "",
+                                    "citation_label": "newton1687",
+                                    "citation_hash": "hash_value"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "tables": [
+        {
+            "caption": "Data Sources and Characteristics",
+            "label": "tab:data_sources",
+            "headers": [
+                "Source",
+                "Records",
+                "Quality"
+            ],
+            "rows": [
+                [
+                    "Database A",
+                    "1,000",
+                    "High"
+                ],
+                [
+                    "Database B",
+                    "2,500",
+                    "Medium"
+                ],
+                [
+                    "Database C",
+                    "500",
+                    "High"
+                ]
+            ],
+            "footnotes": null
+        },
+        {
+            "caption": "Experimental Results",
+            "label": "tab:results",
+            "headers": [
+                "Method",
+                "Accuracy",
+                "Precision",
+                "Recall"
+            ],
+            "rows": [
+                [
+                    "Baseline",
+                    "0.75",
+                    "0.72",
+                    "0.78"
+                ],
+                [
+                    "Proposed",
+                    "0.89",
+                    "0.87",
+                    "0.91"
+                ]
+            ],
+            "footnotes": null
+        }
+    ],
+    "figures": [
+        {
+            "caption": "Feature Distribution Analysis",
+            "label": "fig:features",
+            "image_path": ""
+        },
+        {
+            "caption": "Performance Comparison",
+            "label": "fig:results",
+            "image_path": ""
+        }
+    ]
+}

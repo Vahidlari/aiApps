@@ -91,11 +91,46 @@ class LatexFigure:
 
 
 @dataclass
+class LatexSubsubsection:
+    """A LaTeX subsubsection."""
+
+    title: str
+    label: str
+    number: str
+    paragraphs: Optional[List[LatexParagraph]] = None
+
+
+@dataclass
+class LatexSubsection:
+    """A LaTeX subsection."""
+
+    title: str
+    label: str
+    number: str
+    paragraphs: Optional[List[LatexParagraph]] = None
+    subsubsections: Optional[List[LatexSubsubsection]] = None
+
+
+@dataclass
 class LatexSection:
     """A LaTeX section."""
 
     title: str
-    paragraphs: List[LatexParagraph]
+    label: str
+    number: str
+    paragraphs: Optional[List[LatexParagraph]] = None
+    subsections: Optional[List[LatexSubsection]] = None
+
+
+@dataclass
+class LatexChapter:
+    """A LaTeX chapter."""
+
+    title: str
+    label: str
+    number: str
+    paragraphs: Optional[List[LatexParagraph]] = None
+    sections: Optional[List[LatexSection]] = None
 
 
 @dataclass
@@ -108,7 +143,11 @@ class LatexDocument:
     doi: str
     source_document: str
     page_reference: str
-    sections: List[LatexSection]
+    chapters: Optional[List[LatexChapter]] = None
+    sections: Optional[List[LatexSection]] = None
+    subsections: Optional[List[LatexSubsection]] = None
+    subsubsections: Optional[List[LatexSubsubsection]] = None
+    paragraphs: Optional[List[LatexParagraph]] = None
     tables: Optional[List[LatexTable]] = None
     figures: Optional[List[LatexFigure]] = None
 
@@ -124,18 +163,24 @@ class LatexParser:
     def __init__(self, document_path: str = None, bibliography_path: str = None):
         self.document_path = document_path
         self.bibliography_path = bibliography_path
+        # If bibliography or document path is provided, load bibliography entries
+        # otherwise, set bibliography entries to an empty dictionary
         self.bibliography_entries = (
-            self._load_bibliography() if self.bibliography_path else {}
+            self._load_bibliography()
+            if (self.bibliography_path or document_path)
+            else {}
         )
+        # If document path is provided, parse the document
+        # otherwise, set document to None
         self.document = self.parse_document(document_path) if document_path else None
 
     def _load_bibliography(self) -> Dict[str, Citation]:
-        """Load bibliography entries from .bib file or document."""
-        if not self.bibliography_path:
+        """Load bibliography entries from bibliography_path file or document_path file."""
+        if not (self.bibliography_path or self.document_path):
             return {}
-
+        actual_path = self.bibliography_path or self.document_path
         try:
-            with open(self.bibliography_path, "r", encoding="utf-8") as file:
+            with open(actual_path, "r", encoding="utf-8") as file:
                 bib_content = file.read()
             return self._parse_bibtex(bib_content)
         except Exception as e:
@@ -279,6 +324,41 @@ class LatexParser:
         """Extract DOI from LaTeX text."""
         doi_match = re.search(r"\\doi\{([^}]+)\}", text)
         return doi_match.group(1) if doi_match else ""
+
+    def _parse_chapters(self, text: str) -> List[LatexChapter]:
+        """Parse chapters hierarchically from LaTeX text."""
+        chapters = []
+
+        # Split text into chapter blocks
+        chapter_blocks = self._split_into_chapters(text)
+
+        for block in chapter_blocks:
+            if block.strip():
+                chapter = self._parse_single_chapter(block)
+                if chapter:
+                    chapters.append(chapter)
+
+        return chapters
+
+    def _split_into_chapters(self, text: str) -> List[str]:
+        """Split LaTeX text into chapter blocks."""
+        chapter_pattern = r"(\\chapter\*?\{[^}]+\}|\\section\*?\{[^}]+\}|\\subsection\*?\{[^}]+\}|\\subsubsection\*?\{[^}]+\})"
+        return re.split(chapter_pattern, text)
+
+    def _parse_single_chapter(self, chapter_text: str) -> Optional[LatexChapter]:
+        """Parse a single chapter block into a LatexChapter object."""
+        title_match = re.search(r"\\chapter\*?\{([^}]+)\}", chapter_text)
+        chapter_text_after_title = re.sub(r"\\chapter\*?\{[^}]+\}", "", chapter_text)
+        if not title_match:
+            return None
+
+        title = title_match.group(1)
+        # Capture paragraphs before sections
+        paragraphs = self._parse_paragraphs(chapter_text_after_title)
+
+        sections = self._parse_sections(chapter_text)
+
+        return LatexChapter(title=title, paragraphs=paragraphs)
 
     def _parse_sections(self, text: str) -> List[LatexSection]:
         """Parse sections hierarchically from LaTeX text."""
