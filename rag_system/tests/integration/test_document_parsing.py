@@ -5,7 +5,7 @@ Integration tests for end-to-end document parsing.
 import tempfile
 from pathlib import Path
 
-from rag_system.utils.latex_parser import LatexParser
+from utils.latex_parser import LatexParser
 
 
 class TestEndToEndDocumentParsing:

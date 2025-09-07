@@ -268,6 +268,9 @@ class LatexParser:
         # Clean document text by removing table/figure environments
         cleaned_text = self._remove_table_figure_environments(document_text)
 
+        # Parse chapters hierarchically from cleaned text
+        chapters = self._parse_chapters(cleaned_text)
+
         # Parse sections hierarchically from cleaned text
         sections = self._parse_sections(cleaned_text)
 
@@ -459,7 +462,7 @@ class LatexParser:
         ]
 
         for pattern, command in cite_patterns:
-            matches = list(re.finditer(pattern, text))
+            matches = list(re.finditer(pattern, processed_text))
 
             for match in reversed(matches):  # Process in reverse to maintain indices
                 citation_key = match.group(1)
@@ -495,17 +498,17 @@ class LatexParser:
     def _format_citation_embedding(self, citation: Citation, command: str) -> str:
         """Format citation embedding based on the citation command used."""
         if command == "\\cite":
-            return f"({citation.author}, {citation.year})"
+            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
         elif command == "\\citep":
-            return f"({citation.author}, {citation.year})"
+            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
         elif command == "\\citet":
-            return f"{citation.author} ({citation.year})"
+            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
         elif command == "\\citeauthor":
             return citation.author
         elif command == "\\citeyear":
             return citation.year
         else:
-            return f"({citation.author}, {citation.year})"
+            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
 
     def _parse_tables(self, text: str) -> List[LatexTable]:
         """Parse tables from LaTeX text."""
@@ -536,7 +539,11 @@ class LatexParser:
         # Parse tabular content
         headers, rows = self._parse_tabular_content(table_text)
 
-        return LatexTable(caption=caption, label=label, headers=headers, rows=rows)
+        return (
+            LatexTable(caption=caption, label=label, headers=headers, rows=rows)
+            if headers or rows
+            else None
+        )
 
     def _parse_tabular_content(
         self, table_text: str
@@ -551,6 +558,14 @@ class LatexParser:
 
         tabular_text = tabular_match.group(0)
 
+        # Remove the tabular commands and only keep the content
+        tabular_text = re.sub(r"\\begin\{tabular\}", "", tabular_text)
+        tabular_text = re.sub(r"\\end\{tabular\}", "", tabular_text)
+        tabular_text = tabular_text.strip()
+
+        # Remove column formatting like {|c|c|} at the start of tabular
+        tabular_text = re.sub(r"^\s*\{[^\}]*\}\s*", "", tabular_text)
+        tabular_text = tabular_text.strip()
         # Split into rows
         rows = []
         for line in tabular_text.split("\\\\"):

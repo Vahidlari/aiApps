@@ -6,23 +6,25 @@
 \begin{document}
 \maketitle
 
-\section{Introduction}
-\label{sec:intro}
+
+\chapter{Introduction}
+\label{chap:intro}
 
 This is a sample LaTeX document designed for testing the RAG system parser. It contains various LaTeX structures including sections, subsections, citations, tables, and figures.
 
-\subsection{Background}
-\label{subsec:background}
+\section{Background}
+\label{sec:background}
 
 The background section provides context for the research. We reference previous work by \cite{einstein1905} and \citep{newton1687}.
 
-\subsection{Related Work}
-\label{subsec:related}
+\section{Related Work}
+\label{sec:related}
 
-Previous research has shown significant results \citet{smith2023}. The methodology is described in detail by \citeauthor{jones2022} in \citeyear{jones2022}.
+Previous research has shown significant results \citet{smith2023}. The methodology is described in detail by \citeauthor{jones2022} in \citeyear{jones2022}.\
 
-\section{Methodology}
-\label{sec:method}
+
+\chapter{Methodology}
+\label{chap:method}
 
 Our approach is based on the following principles:
 
@@ -32,7 +34,7 @@ Our approach is based on the following principles:
 \item Model training and validation
 \end{enumerate}
 
-\subsection{Data Collection}
+\section{Data Collection}
 \label{subsec:data}
 
 The data collection process involved gathering information from multiple sources as shown in Table~\ref{tab:data_sources}.
@@ -52,8 +54,20 @@ Database C & 500 & High \\
 \end{tabular}
 \end{table}
 
-\subsection{Feature Extraction}
-\label{subsec:features}
+\subsection{Data Preprocessing}
+\label{subsec:data_preprocessing}
+
+Data preprocessing was performed using standard techniques. The results are visualized in Figure~\ref{fig:data_preprocessing}.
+
+\begin{figure}[h]
+\centering
+\caption{Data Preprocessing}
+\label{fig:data_preprocessing}
+% \includegraphics[width=0.8\textwidth]{data_preprocessing.png}
+\end{figure}
+
+\section{Feature Extraction}
+\label{sec:features}
 
 Feature extraction was performed using standard techniques. The results are visualized in Figure~\ref{fig:features}.
 
@@ -64,8 +78,8 @@ Feature extraction was performed using standard techniques. The results are visu
 % \includegraphics[width=0.8\textwidth]{features.png}
 \end{figure}
 
-\section{Results}
-\label{sec:results}
+\chapter{Results}
+\label{chap:results}
 
 The experimental results demonstrate the effectiveness of our approach. Table~\ref{tab:results} shows the performance metrics.
 
@@ -92,8 +106,18 @@ Figure~\ref{fig:results} illustrates the performance comparison.
 % \includegraphics[width=0.8\textwidth]{results.png}
 \end{figure}
 
-\section{Discussion}
-\label{sec:discussion}
+\subsection{Performance Comparison}
+\label{subsec:performance_comparison}
+
+Performance comparison was performed using standard techniques. The results are visualized in Figure~\ref{fig:performance_comparison}.
+
+\subsubsection{Possible Improvements}
+\label{subsubsection:possible_improvements}
+
+Possible improvements were identified and are described in Section~\ref{sec:possible_improvements}.
+
+\chapter{Discussion}
+\label{chap:discussion}
 
 The results show significant improvement over baseline methods. This can be attributed to several factors:
 
@@ -103,8 +127,8 @@ The results show significant improvement over baseline methods. This can be attr
 \item Enhanced training procedures
 \end{itemize}
 
-\subsection{Limitations}
-\label{subsec:limitations}
+\section{Limitations}
+\label{sec:limitations}
 
 Our approach has several limitations:
 
@@ -114,8 +138,8 @@ Our approach has several limitations:
 \item May not generalize to all domains
 \end{enumerate}
 
-\section{Conclusion}
-\label{sec:conclusion}
+\chapter{Conclusion}
+\label{chap:conclusion}
 
 In this work, we presented a novel approach that achieves state-of-the-art performance. Future work will focus on addressing the identified limitations and extending the approach to additional domains.
 

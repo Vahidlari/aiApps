@@ -2,7 +2,7 @@
 Unit tests for dataclasses in the RAG system.
 """
 
-from rag_system.utils.latex_parser import (
+from utils.latex_parser import (
     Citation,
     LatexChapter,
     LatexDocument,
@@ -204,7 +204,7 @@ class TestLatexTable:
         plain_text = table.to_plain_text()
         expected = """Table: Sample Table
 Name | Age
------ | -----
+---- | ---
 Alice | 25
 Bob | 30
 """

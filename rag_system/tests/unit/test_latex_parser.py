@@ -5,7 +5,7 @@ Unit tests for the LaTeX parser module.
 import tempfile
 from pathlib import Path
 
-from rag_system.utils.latex_parser import LatexParser
+from utils.latex_parser import LatexParser
 
 
 class TestLatexParserInitialization:
@@ -319,6 +319,7 @@ class TestSectionParsing:
     def test_parse_sections(self, sample_latex_content):
         """Test parsing sections from LaTeX content."""
         parser = LatexParser()
+
         sections = parser._parse_sections(sample_latex_content)
 
         assert len(sections) >= 2  # Should have Introduction and Results sections
