@@ -96,7 +96,6 @@ class LatexSubsubsection:
 
     title: str
     label: str
-    number: str
     paragraphs: Optional[List[LatexParagraph]] = None
 
 
@@ -106,7 +105,6 @@ class LatexSubsection:
 
     title: str
     label: str
-    number: str
     paragraphs: Optional[List[LatexParagraph]] = None
     subsubsections: Optional[List[LatexSubsubsection]] = None
 
@@ -117,7 +115,6 @@ class LatexSection:
 
     title: str
     label: str
-    number: str
     paragraphs: Optional[List[LatexParagraph]] = None
     subsections: Optional[List[LatexSubsection]] = None
 
@@ -128,7 +125,6 @@ class LatexChapter:
 
     title: str
     label: str
-    number: str
     paragraphs: Optional[List[LatexParagraph]] = None
     sections: Optional[List[LatexSection]] = None
 
@@ -167,7 +163,7 @@ class LatexParser:
         # otherwise, set bibliography entries to an empty dictionary
         self.bibliography_entries = (
             self._load_bibliography()
-            if (self.bibliography_path or document_path)
+            if (self.bibliography_path or self.document_path)
             else {}
         )
         # If document path is provided, parse the document
@@ -246,6 +242,8 @@ class LatexParser:
     def parse_document(self, document_path: str) -> LatexDocument:
         """Parse a Latex file into a LatexDocument object."""
         try:
+            if not self.document_path:
+                self.document_path = document_path
             with open(document_path, "r", encoding="utf-8") as file:
                 document_text = file.read()
             return self.parse_document_text(document_text)
@@ -261,30 +259,41 @@ class LatexParser:
         year = self._extract_year(document_text)
         doi = self._extract_doi(document_text)
 
+        cleaned_text = self._remove_document_preamble(document_text)
+
         # Parse tables and figures FIRST (to remove them from text)
-        tables = self._parse_tables(document_text)
-        figures = self._parse_figures(document_text)
+        tables = self._parse_tables(cleaned_text)
+        figures = self._parse_figures(cleaned_text)
 
         # Clean document text by removing table/figure environments
-        cleaned_text = self._remove_table_figure_environments(document_text)
+        cleaned_text = self._remove_table_figure_environments(cleaned_text)
 
         # Parse chapters hierarchically from cleaned text
-        chapters = self._parse_chapters(cleaned_text)
+        chapters, remaining_text = self._parse_chapters(cleaned_text)
 
         # Parse sections hierarchically from cleaned text
-        sections = self._parse_sections(cleaned_text)
+        sections, remaining_text = self._parse_sections(remaining_text)
+
+        # Parse paragraphs from remaining text
+        paragraphs = self._parse_paragraphs(remaining_text)
 
         return LatexDocument(
             title=title,
             author=author,
             year=year,
             doi=doi,
-            source_document=self.document_path or "unknown",
+            source_document=self.document_path,
             page_reference="1",
+            chapters=chapters,
             sections=sections,
+            paragraphs=paragraphs,
             tables=tables,
             figures=figures,
         )
+
+    def _remove_document_preamble(self, text: str) -> str:
+        """Remove document preamble from text."""
+        return re.sub(r"\\begin\{document\}|\\end\{document\}", "", text)
 
     def _remove_table_figure_environments(self, text: str) -> str:
         """Remove table and figure environments from text to clean paragraphs."""
@@ -307,12 +316,12 @@ class LatexParser:
     def _extract_title(self, text: str) -> str:
         """Extract document title from LaTeX text."""
         title_match = re.search(r"\\title\{([^}]+)\}", text)
-        return title_match.group(1) if title_match else "Untitled"
+        return title_match.group(1) if title_match else ""
 
     def _extract_author(self, text: str) -> str:
         """Extract document author from LaTeX text."""
         author_match = re.search(r"\\author\{([^}]+)\}", text)
-        return author_match.group(1) if author_match else "Unknown Author"
+        return author_match.group(1) if author_match else ""
 
     def _extract_year(self, text: str) -> str:
         """Extract document year from LaTeX text."""
@@ -321,17 +330,22 @@ class LatexParser:
             year_text = year_match.group(1)
             year_match = re.search(r"\b(\d{4})\b", year_text)
             return year_match.group(1) if year_match else year_text
-        return "Unknown Year"
+        return ""
+
+    def _extract_label(self, text: str) -> str:
+        """Extract label from LaTeX text."""
+        label_match = re.search(r"\\label\{([^}]+)\}", text)
+        return label_match.group(1) if label_match else ""
 
     def _extract_doi(self, text: str) -> str:
         """Extract DOI from LaTeX text."""
         doi_match = re.search(r"\\doi\{([^}]+)\}", text)
         return doi_match.group(1) if doi_match else ""
 
-    def _parse_chapters(self, text: str) -> List[LatexChapter]:
+    def _parse_chapters(self, text: str) -> tuple[List[LatexChapter], str]:
         """Parse chapters hierarchically from LaTeX text."""
         chapters = []
-
+        remaining_text = text
         # Split text into chapter blocks
         chapter_blocks = self._split_into_chapters(text)
 
@@ -340,13 +354,16 @@ class LatexParser:
                 chapter = self._parse_single_chapter(block)
                 if chapter:
                     chapters.append(chapter)
+                    remaining_text = remaining_text.replace(block, "", 1)
 
-        return chapters
+        return chapters, remaining_text
 
     def _split_into_chapters(self, text: str) -> List[str]:
         """Split LaTeX text into chapter blocks."""
-        chapter_pattern = r"(\\chapter\*?\{[^}]+\}|\\section\*?\{[^}]+\}|\\subsection\*?\{[^}]+\}|\\subsubsection\*?\{[^}]+\})"
-        return re.split(chapter_pattern, text)
+        # Use re.finditer to match chapter command and its content together
+        chapter_pattern = r"(\\chapter\*?\{[^}]+\}.*?)(?=(\\chapter\*?\{[^}]+\})|$)"
+        matches = re.finditer(chapter_pattern, text, re.DOTALL)
+        return [m.group(1) for m in matches]
 
     def _parse_single_chapter(self, chapter_text: str) -> Optional[LatexChapter]:
         """Parse a single chapter block into a LatexChapter object."""
@@ -356,17 +373,29 @@ class LatexParser:
             return None
 
         title = title_match.group(1)
-        # Capture paragraphs before sections
-        paragraphs = self._parse_paragraphs(chapter_text_after_title)
+        label = self._extract_label(chapter_text)
+        chapter_text_after_label = re.sub(
+            r"\\label\{[^}]+\}", "", chapter_text_after_title
+        )
 
-        sections = self._parse_sections(chapter_text)
+        # capture sections
+        sections, remaining_text = self._parse_sections(chapter_text_after_label)
 
-        return LatexChapter(title=title, paragraphs=paragraphs)
+        # capture paragraphs
+        paragraphs = self._parse_paragraphs(remaining_text)
 
-    def _parse_sections(self, text: str) -> List[LatexSection]:
-        """Parse sections hierarchically from LaTeX text."""
+        return LatexChapter(
+            title=title, label=label, paragraphs=paragraphs, sections=sections
+        )
+
+    def _parse_sections(self, text: str) -> tuple[List[LatexSection], str]:
+        """Parse sections hierarchically from LaTeX text.
+        Returns:
+            List[LatexSection]: List of sections
+            str: Remaining text after sections are parsed and removed
+        """
         sections = []
-
+        remaining_text = text
         # Split text into section blocks
         section_blocks = self._split_into_sections(text)
 
@@ -374,21 +403,19 @@ class LatexParser:
             if block.strip():
                 section = self._parse_single_section(block)
                 if section:
+                    remaining_text = remaining_text.replace(block, "", 1)
                     sections.append(section)
 
-        return sections
+        return sections, remaining_text
 
     def _split_into_sections(self, text: str) -> List[str]:
-        """Split LaTeX text into section blocks."""
-        # Remove document preamble
-        text = re.sub(
-            r"\\begin\{document\}.*?\\end\{document\}",
-            r"\\end{document}",
-            text,
-            flags=re.DOTALL,
-        )
+        """Split LaTeX text into section blocks which start with section, subsection, or subsubsection.
+        Any other text not part of a section command is ignored.
+        Returns:
+            List[str]: List of section blocks
+        """
 
-        # Split by section commands
+        # Split by section, subsection, or subsubsection commands
         section_pattern = r"(\\section\*?\{[^}]+\}|\\subsection\*?\{[^}]+\}|\\subsubsection\*?\{[^}]+\})"
         parts = re.split(section_pattern, text)
 
@@ -405,7 +432,7 @@ class LatexParser:
                 if current_section:
                     sections.append(current_section)
                 current_section = part
-            else:
+            elif i > 0:
                 current_section += part
 
         if current_section:
@@ -415,17 +442,34 @@ class LatexParser:
 
     def _parse_single_section(self, section_text: str) -> Optional[LatexSection]:
         """Parse a single section block into a LatexSection object."""
+
+        regular_expression = r"\\section\*?\{([^}]+)\}|\\subsection\*?\{([^}]+)\}|\\subsubsection\*?\{([^}]+)\}"
+
         # Extract section title
-        title_match = re.search(r"\\section\*?\{([^}]+)\}", section_text)
+        title_match = re.search(
+            regular_expression,
+            section_text,
+        )
         if not title_match:
             return None
 
-        title = title_match.group(1)
+        title = (
+            title_match.group(1)
+            if title_match.group(1)
+            else title_match.group(2) if title_match.group(2) else title_match.group(3)
+        )
+
+        # Remove the section command
+        section_text = re.sub(regular_expression, "", section_text)
+
+        # capture label
+        label = self._extract_label(section_text)
+        section_text_after_label = re.sub(r"\\label\{[^}]+\}", "", section_text)
 
         # Extract paragraphs
-        paragraphs = self._parse_paragraphs(section_text)
+        paragraphs = self._parse_paragraphs(section_text_after_label)
 
-        return LatexSection(title=title, paragraphs=paragraphs)
+        return LatexSection(title=title, label=label, paragraphs=paragraphs)
 
     def _parse_paragraphs(self, text: str) -> List[LatexParagraph]:
         """Parse paragraphs from section text."""

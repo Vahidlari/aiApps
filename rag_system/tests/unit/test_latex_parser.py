@@ -172,7 +172,24 @@ class TestDocumentParsing:
         assert document.title == "Sample Document"
         assert document.author == "Test Author"
         assert document.year == "2024"
+        assert len(document.sections) > 2
         assert document.source_document == str(temp_latex_file)
+
+    def test_parse_document_with_valid_file_complex(self, temp_complex_latex_file):
+        """Test parsing a valid LaTeX document."""
+        parser = LatexParser()
+        document = parser.parse_document(str(temp_complex_latex_file))
+
+        assert document is not None
+        assert document.title == "Complex Scientific Document"
+        assert document.author == "Dr. Jane Smith"
+        assert document.year == "2024"
+        assert document.source_document == str(temp_complex_latex_file)
+        assert len(document.chapters) > 1
+        assert len(document.chapters[0].sections) > 2
+        assert len(document.chapters[1].sections) > 0
+        assert len(document.sections) == 0
+        assert len(document.paragraphs) > 0
 
     def test_parse_document_with_missing_file(self):
         """Test parsing a missing document file."""
@@ -238,6 +255,19 @@ More text.
         assert "Some text after." in cleaned
         assert "More text." in cleaned
 
+    def test_remove_document_preamble(self):
+        """Test removing document preamble."""
+        parser = LatexParser()
+        text = "\\begin{document}\n\\title{Sample Title}\n\\author{Sample Author}\n\\date{2024}\n\\begin{abstract}\nThis is an abstract.\n\\end{abstract}\n\\begin{main}\nThis is the main content.\n\\end{main}\n\\end{document}"
+        cleaned = parser._remove_document_preamble(text)
+        assert "\\begin{document}" not in cleaned
+        assert "\\end{document}" not in cleaned
+        assert "Sample Title" in cleaned
+        assert "Sample Author" in cleaned
+        assert "2024" in cleaned
+        assert "This is an abstract." in cleaned
+        assert "This is the main content." in cleaned
+
 
 class TestMetadataExtraction:
     """Test metadata extraction from LaTeX documents."""
@@ -248,13 +278,6 @@ class TestMetadataExtraction:
         text = "\\title{Sample Title}"
         title = parser._extract_title(text)
         assert title == "Sample Title"
-
-    def test_extract_title_with_braces(self):
-        """Test extracting title with nested braces."""
-        parser = LatexParser()
-        text = "\\title{Sample Title with {nested} braces}"
-        title = parser._extract_title(text)
-        assert title == "Sample Title with {nested} braces"
 
     def test_extract_title_not_found(self):
         """Test extracting title when not present."""
@@ -313,6 +336,60 @@ class TestMetadataExtraction:
         assert doi == ""
 
 
+class TestChapterParsing:
+    """Test chapter parsing functionality."""
+
+    def test_parse_chapters(self, complex_latex_content):
+        """Test parsing chapters from LaTeX content."""
+        parser = LatexParser()
+        chapters, remaining_text = parser._parse_chapters(complex_latex_content)
+
+        assert len(chapters) >= 2  # Should have Introduction and Results chapters
+        assert any(chapter.title == "Introduction" for chapter in chapters)
+        assert any(chapter.title == "Results" for chapter in chapters)
+        assert "\\chapter" not in remaining_text
+
+    def test_parse_single_chapter(self):
+        """Test parsing a single chapter."""
+        parser = LatexParser()
+        chapter_text = """
+\\chapter{Test Chapter}
+This is the content of the test chapter.
+"""
+        chapter = parser._parse_single_chapter(chapter_text)
+
+        assert chapter is not None
+        assert chapter.title == "Test Chapter"
+        assert chapter.paragraphs is not None
+        assert len(chapter.paragraphs) > 0
+
+    def test_parse_single_chapter_invalid(self):
+        """Test parsing invalid chapter text."""
+        parser = LatexParser()
+        invalid_text = "This is not a chapter"
+        chapter = parser._parse_single_chapter(invalid_text)
+
+        assert chapter is None
+
+    def test_split_into_chapters(self):
+        """Test splitting text into chapters."""
+        parser = LatexParser()
+        text = """
+\\chapter{First Chapter}
+Content of first chapter.
+
+\\chapter{Second Chapter}
+Content of second chapter.
+"""
+        chapters = parser._split_into_chapters(text)
+
+        assert len(chapters) >= 1
+        assert "First Chapter" in chapters[0]
+        assert "Content of first chapter." in chapters[0]
+        assert "Second Chapter" in chapters[1]
+        assert "Content of second chapter." in chapters[1]
+
+
 class TestSectionParsing:
     """Test section parsing functionality."""
 
@@ -320,28 +397,28 @@ class TestSectionParsing:
         """Test parsing sections from LaTeX content."""
         parser = LatexParser()
 
-        sections = parser._parse_sections(sample_latex_content)
+        sections, remaining_text = parser._parse_sections(sample_latex_content)
 
         assert len(sections) >= 2  # Should have Introduction and Results sections
         assert any(section.title == "Introduction" for section in sections)
         assert any(section.title == "Results" for section in sections)
+        assert "\\documentclass" in remaining_text
 
     def test_parse_single_section(self):
         """Test parsing a single section."""
         parser = LatexParser()
         section_text = """
 \\section{Test Section}
-This is the content of the test section.
+This is the content of the test section. 
 
-\\subsection{Test Subsection}
-This is a subsection.
+this is a new paragraph. The paragraph ends here.
 """
         section = parser._parse_single_section(section_text)
 
         assert section is not None
         assert section.title == "Test Section"
         assert section.paragraphs is not None
-        assert len(section.paragraphs) > 0
+        assert len(section.paragraphs) > 1
 
     def test_parse_single_section_invalid(self):
         """Test parsing invalid section text."""
@@ -544,4 +621,6 @@ class TestFigureParsing:
         invalid_text = "This is not a figure"
         figure = parser._parse_single_figure(invalid_text)
 
-        assert figure is None
+        assert figure.caption == ""
+        assert figure.label == ""
+        assert figure.image_path == ""

@@ -231,12 +231,11 @@ class TestLatexSubsubsection:
     def test_subsubsection_creation_basic(self):
         """Test basic LatexSubsubsection creation."""
         subsubsection = LatexSubsubsection(
-            title="Test Subsubsection", label="subsec:test", number="1.1.1"
+            title="Test Subsubsection", label="subsec:test"
         )
 
         assert subsubsection.title == "Test Subsubsection"
         assert subsubsection.label == "subsec:test"
-        assert subsubsection.number == "1.1.1"
         assert subsubsection.paragraphs is None
 
     def test_subsubsection_with_paragraphs(self, sample_citation):
@@ -248,7 +247,6 @@ class TestLatexSubsubsection:
         subsubsection = LatexSubsubsection(
             title="Subsubsection with Content",
             label="subsec:content",
-            number="1.1.1",
             paragraphs=[paragraph],
         )
 
@@ -261,13 +259,10 @@ class TestLatexSubsection:
 
     def test_subsection_creation_basic(self):
         """Test basic LatexSubsection creation."""
-        subsection = LatexSubsection(
-            title="Test Subsection", label="sec:test", number="1.1"
-        )
+        subsection = LatexSubsection(title="Test Subsection", label="sec:test")
 
         assert subsection.title == "Test Subsection"
         assert subsection.label == "sec:test"
-        assert subsection.number == "1.1"
         assert subsection.paragraphs is None
         assert subsection.subsubsections is None
 
@@ -278,13 +273,12 @@ class TestLatexSubsection:
         )
 
         subsubsection = LatexSubsubsection(
-            title="Nested Subsubsection", label="subsec:nested", number="1.1.1"
+            title="Nested Subsubsection", label="subsec:nested"
         )
 
         subsection = LatexSubsection(
             title="Subsection with Content",
             label="sec:content",
-            number="1.1",
             paragraphs=[paragraph],
             subsubsections=[subsubsection],
         )
@@ -300,11 +294,10 @@ class TestLatexSection:
 
     def test_section_creation_basic(self):
         """Test basic LatexSection creation."""
-        section = LatexSection(title="Test Section", label="sec:test", number="1")
+        section = LatexSection(title="Test Section", label="sec:test")
 
         assert section.title == "Test Section"
         assert section.label == "sec:test"
-        assert section.number == "1"
         assert section.paragraphs is None
         assert section.subsections is None
 
@@ -314,14 +307,11 @@ class TestLatexSection:
             content="Section paragraph.", citations=[sample_citation]
         )
 
-        subsection = LatexSubsection(
-            title="Nested Subsection", label="sec:nested", number="1.1"
-        )
+        subsection = LatexSubsection(title="Nested Subsection", label="sec:nested")
 
         section = LatexSection(
             title="Section with Hierarchy",
             label="sec:hierarchy",
-            number="1",
             paragraphs=[paragraph],
             subsections=[subsection],
         )
@@ -337,11 +327,10 @@ class TestLatexChapter:
 
     def test_chapter_creation_basic(self):
         """Test basic LatexChapter creation."""
-        chapter = LatexChapter(title="Test Chapter", label="ch:test", number="1")
+        chapter = LatexChapter(title="Test Chapter", label="ch:test")
 
         assert chapter.title == "Test Chapter"
         assert chapter.label == "ch:test"
-        assert chapter.number == "1"
         assert chapter.paragraphs is None
         assert chapter.sections is None
 
@@ -351,14 +340,11 @@ class TestLatexChapter:
             content="Chapter paragraph.", citations=[sample_citation]
         )
 
-        section = LatexSection(
-            title="Chapter Section", label="sec:chapter", number="1.1"
-        )
+        section = LatexSection(title="Chapter Section", label="sec:chapter")
 
         chapter = LatexChapter(
             title="Chapter with Sections",
             label="ch:sections",
-            number="1",
             paragraphs=[paragraph],
             sections=[section],
         )
@@ -390,7 +376,7 @@ class TestLatexDocument:
         )
 
         chapter = LatexChapter(
-            title="Document Chapter", label="ch:doc", number="1", paragraphs=[paragraph]
+            title="Document Chapter", label="ch:doc", paragraphs=[paragraph]
         )
 
         document = LatexDocument(
@@ -415,7 +401,6 @@ class TestLatexDocument:
         section = LatexSection(
             title="Document Section",
             label="sec:doc",
-            number="1",
             paragraphs=[paragraph],
         )
 

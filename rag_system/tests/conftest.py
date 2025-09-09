@@ -142,6 +142,8 @@ def complex_latex_content():
 \begin{document}
 \maketitle
 
+This document has multiple chapters, sections, subsections, and paragraphs.
+
 \chapter{Introduction}
 \label{ch:intro}
 
@@ -203,7 +205,7 @@ def malformed_latex_content():
     """Malformed LaTeX content for error handling tests."""
     return r"""
 \documentclass{article}
-\title{Malformed Document
+\title{Malformed Document}
 
 \begin{document}
 \section{Unclosed Section
@@ -216,6 +218,18 @@ This paragraph has unclosed braces { and missing citations \cite{.
 Missing closing
 \end{document}
 """
+
+
+@pytest.fixture
+def temp_complex_latex_file(complex_latex_content):
+    """Create a temporary LaTeX file for testing."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".tex", delete=False) as f:
+        f.write(complex_latex_content)
+        f.flush()
+        yield Path(f.name)
+
+    # Cleanup
+    Path(f.name).unlink(missing_ok=True)
 
 
 @pytest.fixture
