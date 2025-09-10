@@ -30,38 +30,40 @@ This project implements a Retrieval-Augmented Generation (RAG) system specifical
 rag_system/
 ├── core/
 │   ├── __init__.py
-│   ├── document_processor.py    # LaTeX parsing and chunking
-│   ├── embedding_engine.py      # Vector embeddings
-│   ├── vector_store.py          # Weaviate database interface
-│   ├── retriever.py             # Hybrid search and retrieval
-│   └── generator.py             # Answer generation with Ollama
+│   ├── document_preprocessor.py    # LaTeX parsing and preprocessing
+│   ├── data_chunker.py            # Format-agnostic chunking
+│   ├── embedding_engine.py        # Vector embeddings
+│   ├── vector_store.py            # Weaviate database interface
+│   ├── retriever.py               # Hybrid search and retrieval
+│   └── generator.py               # Answer generation with Ollama
 ├── utils/
 │   ├── __init__.py
-│   ├── latex_parser.py          # LaTeX-specific utilities
-│   ├── text_processing.py       # Text cleaning and preprocessing
-│   └── config_validator.py      # Configuration validation
+│   ├── latex_parser.py            # LaTeX-specific utilities
+│   ├── text_processing.py         # Text cleaning and preprocessing
+│   └── config_validator.py        # Configuration validation
 ├── config/
 │   ├── __init__.py
-│   ├── settings.py              # Configuration management
-│   └── default_config.yaml      # Default configuration
+│   ├── settings.py                # Configuration management
+│   └── default_config.yaml        # Default configuration
 ├── examples/
 │   ├── __init__.py
-│   ├── sample_queries.py        # Example usage
-│   └── latex_samples/           # Sample LaTeX files for testing
+│   ├── sample_queries.py          # Example usage
+│   └── latex_samples/             # Sample LaTeX files for testing
 ├── tests/
 │   ├── __init__.py
 │   ├── test_document_processor.py
+│   ├── test_data_chunker.py
 │   ├── test_embedding_engine.py
 │   ├── test_vector_store.py
 │   ├── test_retriever.py
 │   └── test_generator.py
 ├── docs/
-│   ├── design_decisions.md      # This file
-│   ├── api_reference.md         # API documentation
-│   └── deployment_guide.md      # Deployment instructions
-├── requirements.txt             # Python dependencies
-├── setup.py                     # Package setup
-└── README.md                    # Main project README
+│   ├── design_decisions.md        # This file
+│   ├── api_reference.md           # API documentation
+│   └── deployment_guide.md        # Deployment instructions
+├── requirements.txt               # Python dependencies
+├── setup.py                       # Package setup
+└── README.md                      # Main project README
 ```
 
 ## 🎯 Design Decisions
@@ -76,7 +78,7 @@ rag_system/
 #### Chunking Strategy
 - **Adaptive Fixed-Size**: 768 tokens with line boundary respect
 - **Overlap**: 100-150 tokens between chunks for context preservation
-- **Object-Oriented Design**: Configurable `LatexChunker` class for flexibility
+- **Object-Oriented Design**: Configurable `DataChunker` class for format-agnostic flexibility
 
 #### Citation Metadata Structure
 ```python
@@ -156,7 +158,7 @@ rag_system/
 
 ### Phase 2: Document Processing
 1. LaTeX parser implementation
-2. Chunking algorithm
+2. Data chunker implementation
 3. Citation extraction
 4. Metadata handling
 
