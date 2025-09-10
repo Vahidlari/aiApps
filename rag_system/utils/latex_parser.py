@@ -116,7 +116,7 @@ class LatexSection:
     title: str
     label: str
     paragraphs: Optional[List[LatexParagraph]] = None
-    subsections: Optional[List[LatexSubsection]] = None
+    # subsections: Optional[List[LatexSubsection]] = None
 
 
 @dataclass
@@ -262,20 +262,17 @@ class LatexParser:
         cleaned_text = self._remove_document_preamble(document_text)
 
         # Parse tables and figures FIRST (to remove them from text)
-        tables = self._parse_tables(cleaned_text)
-        figures = self._parse_figures(cleaned_text)
-
-        # Clean document text by removing table/figure environments
-        cleaned_text = self._remove_table_figure_environments(cleaned_text)
+        tables, cleaned_text = self._parse_tables(cleaned_text)
+        figures, cleaned_text = self._parse_figures(cleaned_text)
 
         # Parse chapters hierarchically from cleaned text
-        chapters, remaining_text = self._parse_chapters(cleaned_text)
+        chapters, cleaned_text = self._parse_chapters(cleaned_text)
 
         # Parse sections hierarchically from cleaned text
-        sections, remaining_text = self._parse_sections(remaining_text)
+        sections, cleaned_text = self._parse_sections(cleaned_text)
 
         # Parse paragraphs from remaining text
-        paragraphs = self._parse_paragraphs(remaining_text)
+        paragraphs = self._parse_paragraphs(cleaned_text)
 
         return LatexDocument(
             title=title,
@@ -294,24 +291,6 @@ class LatexParser:
     def _remove_document_preamble(self, text: str) -> str:
         """Remove document preamble from text."""
         return re.sub(r"\\begin\{document\}|\\end\{document\}", "", text)
-
-    def _remove_table_figure_environments(self, text: str) -> str:
-        """Remove table and figure environments from text to clean paragraphs."""
-        # Remove table environments
-        text = re.sub(r"\\begin\{table\}.*?\\end\{table\}", "", text, flags=re.DOTALL)
-
-        # Remove figure environments
-        text = re.sub(r"\\begin\{figure\}.*?\\end\{figure\}", "", text, flags=re.DOTALL)
-
-        # Remove any remaining table/figure related commands
-        text = re.sub(r"\\caption\{[^}]*\}", "", text)
-        text = re.sub(r"\\label\{[^}]*\}", "", text)
-        text = re.sub(r"\\includegraphics\{[^}]*\}", "", text)
-
-        # Clean up extra whitespace
-        text = re.sub(r"\n\s*\n\s*\n", "\n\n", text)
-
-        return text
 
     def _extract_title(self, text: str) -> str:
         """Extract document title from LaTeX text."""
@@ -375,7 +354,7 @@ class LatexParser:
         title = title_match.group(1)
         label = self._extract_label(chapter_text)
         chapter_text_after_label = re.sub(
-            r"\\label\{[^}]+\}", "", chapter_text_after_title
+            r"\\label\{[^}]+\}", "", chapter_text_after_title, count=1
         )
 
         # capture sections
@@ -464,7 +443,9 @@ class LatexParser:
 
         # capture label
         label = self._extract_label(section_text)
-        section_text_after_label = re.sub(r"\\label\{[^}]+\}", "", section_text)
+        section_text_after_label = re.sub(
+            r"\\label\{[^}]+\}", "", section_text, count=1
+        )
 
         # Extract paragraphs
         paragraphs = self._parse_paragraphs(section_text_after_label)
@@ -554,9 +535,10 @@ class LatexParser:
         else:
             return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
 
-    def _parse_tables(self, text: str) -> List[LatexTable]:
+    def _parse_tables(self, text: str) -> tuple[List[LatexTable], str]:
         """Parse tables from LaTeX text."""
         tables = []
+        remaining_text = text
 
         # Find table environments
         table_pattern = r"\\begin\{table\}.*?\\end\{table\}"
@@ -567,8 +549,10 @@ class LatexParser:
             table = self._parse_single_table(table_text)
             if table:
                 tables.append(table)
+                # remove the table text from the text
+                remaining_text = remaining_text.replace(table_text, "", 1)
 
-        return tables
+        return tables, remaining_text
 
     def _parse_single_table(self, table_text: str) -> Optional[LatexTable]:
         """Parse a single table environment."""
@@ -629,10 +613,10 @@ class LatexParser:
 
         return headers, data_rows
 
-    def _parse_figures(self, text: str) -> List[LatexFigure]:
+    def _parse_figures(self, text: str) -> tuple[List[LatexFigure], str]:
         """Parse figures from LaTeX text."""
         figures = []
-
+        remaining_text = text
         # Find figure environments
         figure_pattern = r"\\begin\{figure\}.*?\\end\{figure\}"
         figure_matches = re.finditer(figure_pattern, text, re.DOTALL)
@@ -642,8 +626,10 @@ class LatexParser:
             figure = self._parse_single_figure(figure_text)
             if figure:
                 figures.append(figure)
+                # remove the figure text from the text
+                remaining_text = remaining_text.replace(figure_text, "", 1)
 
-        return figures
+        return figures, remaining_text
 
     def _parse_single_figure(self, figure_text: str) -> Optional[LatexFigure]:
         """Parse a single figure environment."""

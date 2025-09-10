@@ -245,12 +245,12 @@ Some text after.
 
 More text.
 """
-        cleaned = parser._remove_table_figure_environments(text)
+        tables, cleaned = parser._parse_tables(text)
 
         assert "\\begin{table}" not in cleaned
         assert "\\end{table}" not in cleaned
-        assert "\\begin{figure}" not in cleaned
-        assert "\\end{figure}" not in cleaned
+        assert "\\begin{figure}" in cleaned
+        assert "\\end{figure}" in cleaned
         assert "Some text before." in cleaned
         assert "Some text after." in cleaned
         assert "More text." in cleaned
@@ -542,7 +542,7 @@ class TestTableParsing:
     def test_parse_tables(self, sample_latex_content):
         """Test parsing tables from LaTeX content."""
         parser = LatexParser()
-        tables = parser._parse_tables(sample_latex_content)
+        tables, remaining_text = parser._parse_tables(sample_latex_content)
 
         assert len(tables) == 1
         table = tables[0]
@@ -550,6 +550,8 @@ class TestTableParsing:
         assert table.label == "tab:sample"
         assert len(table.headers) == 2
         assert len(table.rows) == 1
+        assert "\\begin{table}" not in remaining_text
+        assert "\\end{table}" not in remaining_text
 
     def test_parse_single_table(self):
         """Test parsing a single table."""
@@ -591,12 +593,14 @@ class TestFigureParsing:
     def test_parse_figures(self, sample_latex_content):
         """Test parsing figures from LaTeX content."""
         parser = LatexParser()
-        figures = parser._parse_figures(sample_latex_content)
+        figures, remaining_text = parser._parse_figures(sample_latex_content)
 
         assert len(figures) == 1
         figure = figures[0]
         assert figure.caption == "Sample Figure"
         assert figure.label == "fig:sample"
+        assert "\\begin{figure}" not in remaining_text
+        assert "\\end{figure}" not in remaining_text
 
     def test_parse_single_figure(self):
         """Test parsing a single figure."""

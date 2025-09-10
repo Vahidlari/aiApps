@@ -299,7 +299,6 @@ class TestLatexSection:
         assert section.title == "Test Section"
         assert section.label == "sec:test"
         assert section.paragraphs is None
-        assert section.subsections is None
 
     def test_section_with_hierarchy(self, sample_citation):
         """Test LatexSection with full hierarchy."""
@@ -307,19 +306,14 @@ class TestLatexSection:
             content="Section paragraph.", citations=[sample_citation]
         )
 
-        subsection = LatexSubsection(title="Nested Subsection", label="sec:nested")
-
         section = LatexSection(
             title="Section with Hierarchy",
             label="sec:hierarchy",
             paragraphs=[paragraph],
-            subsections=[subsection],
         )
 
         assert len(section.paragraphs) == 1
-        assert len(section.subsections) == 1
         assert section.paragraphs[0] == paragraph
-        assert section.subsections[0] == subsection
 
 
 class TestLatexChapter:
