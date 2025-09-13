@@ -2,7 +2,7 @@
 Unit tests for DataChunker class in the RAG system.
 """
 
-from core.data_chunker import DataChunk, DataChunker
+from core.data_chunker import ChunkMetadata, DataChunk, DataChunker
 
 
 class TestDataChunk:
@@ -10,38 +10,39 @@ class TestDataChunk:
 
     def test_data_chunk_creation(self):
         """Test basic DataChunk object creation."""
+        metadata = ChunkMetadata(chunk_id=0, chunk_size=18, total_chunks=1)
         chunk = DataChunk(
             text="This is a test chunk",
             start_idx=0,
             end_idx=18,
-            metadata={"chunk_id": 0, "chunk_size": 18},
+            metadata=metadata,
         )
 
         assert chunk.text == "This is a test chunk"
         assert chunk.start_idx == 0
         assert chunk.end_idx == 18
-        assert chunk.metadata == {"chunk_id": 0, "chunk_size": 18}
+        assert chunk.metadata.chunk_id == 0
+        assert chunk.metadata.chunk_size == 18
 
     def test_data_chunk_with_empty_text(self):
         """Test DataChunk creation with empty text."""
-        chunk = DataChunk(
-            text="", start_idx=0, end_idx=0, metadata={"chunk_id": 0, "chunk_size": 0}
-        )
+        metadata = ChunkMetadata(chunk_id=0, chunk_size=0, total_chunks=1)
+        chunk = DataChunk(text="", start_idx=0, end_idx=0, metadata=metadata)
 
         assert chunk.text == ""
         assert chunk.start_idx == 0
         assert chunk.end_idx == 0
-        assert chunk.metadata["chunk_size"] == 0
+        assert chunk.metadata.chunk_size == 0
 
     def test_data_chunk_with_complex_metadata(self):
         """Test DataChunk creation with complex metadata."""
-        metadata = {
-            "chunk_id": 5,
-            "chunk_size": 100,
-            "total_chunks": 10,
-            "document_id": "doc123",
-            "section": "introduction",
-        }
+        metadata = ChunkMetadata(
+            chunk_id=5,
+            chunk_size=100,
+            total_chunks=10,
+            source_document="doc123",
+            section_title="introduction",
+        )
 
         chunk = DataChunk(
             text="Complex chunk with metadata",
@@ -50,9 +51,11 @@ class TestDataChunk:
             metadata=metadata,
         )
 
-        assert chunk.metadata == metadata
-        assert chunk.metadata["chunk_id"] == 5
-        assert chunk.metadata["total_chunks"] == 10
+        assert chunk.metadata.chunk_id == 5
+        assert chunk.metadata.chunk_size == 100
+        assert chunk.metadata.total_chunks == 10
+        assert chunk.metadata.source_document == "doc123"
+        assert chunk.metadata.section_title == "introduction"
 
 
 class TestDataChunker:
@@ -113,9 +116,9 @@ class TestDataChunker:
         assert result[0].text == "a"
         assert result[0].start_idx == 0
         assert result[0].end_idx == 1
-        assert result[0].metadata["chunk_id"] == 0
-        assert result[0].metadata["chunk_size"] == 1
-        assert result[0].metadata["total_chunks"] == 1
+        assert result[0].metadata.chunk_id == 0
+        assert result[0].metadata.chunk_size == 1
+        assert result[0].metadata.total_chunks == 1
 
     def test_chunk_small_text_no_overlap_needed(self):
         """Test chunking small text that fits in one chunk."""
@@ -128,9 +131,9 @@ class TestDataChunker:
         assert result[0].text == text
         assert result[0].start_idx == 0
         assert result[0].end_idx == len(text)
-        assert result[0].metadata["chunk_id"] == 0
-        assert result[0].metadata["chunk_size"] == len(text)
-        assert result[0].metadata["total_chunks"] == 1
+        assert result[0].metadata.chunk_id == 0
+        assert result[0].metadata.chunk_size == len(text)
+        assert result[0].metadata.total_chunks == 1
 
     def test_chunk_text_exactly_chunk_size(self):
         """Test chunking text that is exactly the chunk size."""
@@ -143,7 +146,7 @@ class TestDataChunker:
         assert result[0].text == text
         assert result[0].start_idx == 0
         assert result[0].end_idx == 10
-        assert result[0].metadata["chunk_size"] == 10
+        assert result[0].metadata.chunk_size == 10
 
     def test_chunk_text_requires_multiple_chunks(self):
         """Test chunking text that requires multiple chunks."""
@@ -158,20 +161,20 @@ class TestDataChunker:
         assert result[0].text == "12345"
         assert result[0].start_idx == 0
         assert result[0].end_idx == 5
-        assert result[0].metadata["chunk_id"] == 0
-        assert result[0].metadata["total_chunks"] == 3
+        assert result[0].metadata.chunk_id == 0
+        assert result[0].metadata.total_chunks == 3
 
         # Second chunk (with overlap)
         assert result[1].text == "56789"
         assert result[1].start_idx == 4  # 5 - 1 overlap
         assert result[1].end_idx == 9
-        assert result[1].metadata["chunk_id"] == 1
+        assert result[1].metadata.chunk_id == 1
 
         # Third chunk (with overlap)
         assert result[2].text == "90"
         assert result[2].start_idx == 8  # 9 - 1 overlap
         assert result[2].end_idx == 10
-        assert result[2].metadata["chunk_id"] == 2
+        assert result[2].metadata.chunk_id == 2
 
     def test_chunk_with_zero_overlap(self):
         """Test chunking with zero overlap."""
@@ -222,15 +225,15 @@ class TestDataChunker:
 
         # Verify all chunks have correct total_chunks
         for chunk in result:
-            assert chunk.metadata["total_chunks"] == len(result)
+            assert chunk.metadata.total_chunks == len(result)
 
         # Verify chunk_id sequence
         for i, chunk in enumerate(result):
-            assert chunk.metadata["chunk_id"] == i
+            assert chunk.metadata.chunk_id == i
 
         # Verify chunk_size matches actual text length
         for chunk in result:
-            assert chunk.metadata["chunk_size"] == len(chunk.text)
+            assert chunk.metadata.chunk_size == len(chunk.text)
 
     def test_chunk_boundary_accuracy(self):
         """Test that chunk boundaries are calculated correctly."""
@@ -258,7 +261,7 @@ class TestDataChunker:
         # Verify all chunks are properly sized
         for chunk in result:
             assert len(chunk.text) <= chunker.chunk_size
-            assert chunk.metadata["chunk_size"] == len(chunk.text)
+            assert chunk.metadata.chunk_size == len(chunk.text)
 
         # Verify total coverage
         total_covered = sum(len(chunk.text) for chunk in result)

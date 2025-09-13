@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from core.data_chunker import DataChunk
+from core.data_chunker import ChunkMetadata, DataChunk
 from core.embedding_engine import EmbeddingEngine
 
 
@@ -82,8 +82,9 @@ class TestEmbeddingEngine:
             mock_st.return_value = mock_model
 
             engine = EmbeddingEngine()
+            metadata = ChunkMetadata(chunk_id=1, chunk_size=10, total_chunks=1)
             chunk = DataChunk(
-                text="test chunk", start_idx=0, end_idx=10, metadata={"chunk_id": 1}
+                text="test chunk", start_idx=0, end_idx=10, metadata=metadata
             )
 
             result = engine.embed_chunk(chunk)

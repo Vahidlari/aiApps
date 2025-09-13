@@ -5,6 +5,25 @@ fixed-size segments with overlap.
 """
 
 from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class ChunkMetadata:
+    """Metadata for a data chunk in the RAG system.
+
+    This dataclass provides structured metadata for document chunks,
+    ensuring type safety and clear field definitions.
+    """
+
+    chunk_id: int
+    chunk_size: int
+    total_chunks: int
+    source_document: Optional[str] = None
+    page_number: Optional[int] = None
+    section_title: Optional[str] = None
+    chunk_type: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 @dataclass
@@ -14,10 +33,13 @@ class DataChunk:
     This class represents a chunk of data from a document.
     """
 
-    text: str
-    start_idx: int
-    end_idx: int
-    metadata: dict
+    text: str  # The text of the chunk
+    start_idx: int  # The start index of the chunk
+    end_idx: int  # The end index of the chunk
+    metadata: ChunkMetadata  # The metadata of the chunk
+    chunk_id: Optional[str] = None  # Unique identifier for the chunk
+    source_document: Optional[str] = None  # Source document filename
+    chunk_type: Optional[str] = None  # Type of chunk (text, citation, equation, etc.)
 
 
 class DataChunker:
@@ -66,11 +88,13 @@ class DataChunker:
                 text=chunk_text,
                 start_idx=start_idx,
                 end_idx=end_idx,
-                metadata={
-                    "chunk_id": chunk_id,
-                    "chunk_size": len(chunk_text),
-                    "total_chunks": 0,  # Will be updated after all chunks
-                },
+                metadata=ChunkMetadata(
+                    chunk_id=chunk_id,
+                    chunk_size=len(chunk_text),
+                    total_chunks=0,  # Will be updated after all chunks
+                ),
+                chunk_id=str(chunk_id),
+                chunk_type="text",  # Default chunk type
             )
 
             chunks.append(chunk)
@@ -84,6 +108,16 @@ class DataChunker:
 
         # Update total_chunks in metadata
         for chunk in chunks:
-            chunk.metadata["total_chunks"] = len(chunks)
+            # Create new metadata with updated total_chunks
+            chunk.metadata = ChunkMetadata(
+                chunk_id=chunk.metadata.chunk_id,
+                chunk_size=chunk.metadata.chunk_size,
+                total_chunks=len(chunks),
+                source_document=chunk.metadata.source_document,
+                page_number=chunk.metadata.page_number,
+                section_title=chunk.metadata.section_title,
+                chunk_type=chunk.metadata.chunk_type,
+                created_at=chunk.metadata.created_at,
+            )
 
         return chunks
