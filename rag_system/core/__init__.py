@@ -1,12 +1,15 @@
 """Core modules for the LaTeX RAG system.
 
 This package contains the core functionality for document processing,
-embedding generation, vector storage, and retrieval operations.
+embedding generation, vector storage, retrieval operations, and the
+main RAG system orchestrator.
 """
 
 from .data_chunker import DataChunk, DataChunker
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
+from .rag_system import RAGSystem
+from .retriever import Retriever
 from .vector_store import VectorStore
 
 __all__ = [
@@ -14,5 +17,7 @@ __all__ = [
     "DataChunker",
     "DocumentPreprocessor",
     "EmbeddingEngine",
+    "RAGSystem",
+    "Retriever",
     "VectorStore",
 ]

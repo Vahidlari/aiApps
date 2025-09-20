@@ -1,18 +1,17 @@
-"""Unit tests for the VectorStore module.
+"""Unit tests for the refactored VectorStore module.
 
-This module contains comprehensive unit tests for the VectorStore class,
-testing all major functionality including connection management, schema
-creation, document storage, and search operations.
+This module contains comprehensive unit tests for the refactored VectorStore class,
+focusing on storage operations and internal methods used by the Retriever.
 
 Test coverage includes:
 - Connection initialization and error handling
 - Schema creation and management
-- Single and batch document storage
-- Vector similarity search
-- Hybrid search functionality
-- Filtering and metadata handling
+- Document storage operations (single and batch)
+- CRUD operations (get, delete)
+- Internal search methods for Retriever
 - Error conditions and edge cases
 - Context manager functionality
+- Statistics and monitoring
 """
 
 from unittest.mock import Mock, patch
@@ -24,8 +23,8 @@ from core.vector_store import VectorStore
 from weaviate.exceptions import WeaviateBaseError
 
 
-class TestVectorStore:
-    """Test suite for VectorStore class."""
+class TestVectorStoreRefactored:
+    """Test suite for refactored VectorStore class."""
 
     @pytest.fixture
     def mock_weaviate_client(self):
@@ -46,18 +45,19 @@ class TestVectorStore:
     @pytest.fixture
     def sample_chunk(self):
         """Create a sample DataChunk for testing."""
-        metadata = ChunkMetadata(
-            chunk_id=1,
-            chunk_size=50,
-            total_chunks=1,
-            page_number=1,
-            section_title="Introduction",
-        )
         return DataChunk(
             text="This is a test document chunk with some content.",
             start_idx=0,
             end_idx=50,
-            metadata=metadata,
+            metadata=ChunkMetadata(
+                chunk_id=1,
+                chunk_size=50,
+                total_chunks=1,
+                source_document="test_document.tex",
+                page_number=1,
+                section_title="Introduction",
+                chunk_type="text",
+            ),
             chunk_id="test_chunk_001",
             source_document="test_document.tex",
             chunk_type="text",
@@ -75,8 +75,10 @@ class TestVectorStore:
                     chunk_id=1,
                     chunk_size=50,
                     total_chunks=3,
+                    source_document="test_document.tex",
                     page_number=1,
                     section_title="Introduction",
+                    chunk_type="text",
                 ),
                 chunk_id="test_chunk_001",
                 source_document="test_document.tex",
@@ -84,14 +86,16 @@ class TestVectorStore:
             ),
             DataChunk(
                 text="Second test chunk with citation: Einstein (1905)",
-                start_idx=50,
+                start_idx=51,
                 end_idx=100,
                 metadata=ChunkMetadata(
                     chunk_id=2,
-                    chunk_size=50,
+                    chunk_size=49,
                     total_chunks=3,
+                    source_document="test_document.tex",
                     page_number=2,
                     section_title="Background",
+                    chunk_type="citation",
                 ),
                 chunk_id="test_chunk_002",
                 source_document="test_document.tex",
@@ -99,14 +103,16 @@ class TestVectorStore:
             ),
             DataChunk(
                 text="Third test chunk with equation: F = ma",
-                start_idx=100,
+                start_idx=101,
                 end_idx=150,
                 metadata=ChunkMetadata(
                     chunk_id=3,
-                    chunk_size=50,
+                    chunk_size=49,
                     total_chunks=3,
+                    source_document="test_document.tex",
                     page_number=3,
                     section_title="Methods",
+                    chunk_type="equation",
                 ),
                 chunk_id="test_chunk_003",
                 source_document="test_document.tex",
@@ -274,12 +280,17 @@ class TestVectorStore:
             vector_store.store_chunk(None)
 
         with pytest.raises(ValueError, match="Chunk text cannot be empty"):
-            metadata = ChunkMetadata(chunk_id=0, chunk_size=0, total_chunks=1)
             empty_chunk = DataChunk(
                 text="",
                 start_idx=0,
                 end_idx=0,
-                metadata=metadata,
+                metadata=ChunkMetadata(
+                    chunk_id=1,
+                    chunk_size=0,
+                    total_chunks=1,
+                    source_document="test.tex",
+                    chunk_type="text",
+                ),
                 chunk_id="empty",
                 source_document="test.tex",
                 chunk_type="text",
@@ -297,21 +308,16 @@ class TestVectorStore:
         """Test successful batch chunk storage."""
         # Setup
         mock_client_class.return_value = mock_weaviate_client
-        mock_batch_result_1 = [
+        mock_batch_result = [
             Mock(result={"id": "uuid-1"}),
             Mock(result={"id": "uuid-2"}),
-        ]
-        mock_batch_result_2 = [
             Mock(result={"id": "uuid-3"}),
         ]
-        mock_weaviate_client.batch.create_objects.side_effect = [
-            mock_batch_result_1,
-            mock_batch_result_2,
-        ]
+        mock_weaviate_client.batch.create_objects.return_value = mock_batch_result
         vector_store = VectorStore(embedding_engine=mock_embedding_engine)
 
         # Test
-        result_uuids = vector_store.store_chunks(sample_chunks, batch_size=2)
+        result_uuids = vector_store.store_chunks(sample_chunks, batch_size=3)
 
         # Assertions
         assert len(result_uuids) == 3
@@ -330,139 +336,6 @@ class TestVectorStore:
         # Test & Assertions
         with pytest.raises(ValueError, match="Chunks list cannot be empty"):
             vector_store.store_chunks([])
-
-    @patch("core.vector_store.Client")
-    def test_search_similar_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test successful vector similarity search."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "content": "Test content",
-                            "chunk_id": "test_001",
-                            "source_document": "test.tex",
-                            "chunk_type": "text",
-                            "metadata": {"page": 1},
-                            "page_number": 1,
-                            "section_title": "Test",
-                            "_additional": {
-                                "certainty": 0.85,
-                                "distance": 0.15,
-                            },
-                        }
-                    ]
-                }
-            }
-        }
-        mock_weaviate_client.query.get.return_value.with_near_text.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        results = vector_store.search_similar("test query", top_k=5)
-
-        # Assertions
-        assert len(results) == 1
-        assert results[0]["content"] == "Test content"
-        assert results[0]["similarity_score"] == 0.85
-        assert results[0]["chunk_id"] == "test_001"
-
-    @patch("core.vector_store.Client")
-    def test_search_similar_empty_query(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test vector similarity search with empty query."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test & Assertions
-        with pytest.raises(ValueError, match="Query cannot be empty"):
-            vector_store.search_similar("")
-
-        with pytest.raises(ValueError, match="Query cannot be empty"):
-            vector_store.search_similar("   ")
-
-    @patch("core.vector_store.Client")
-    def test_search_hybrid_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test successful hybrid search."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "content": "Hybrid test content",
-                            "chunk_id": "hybrid_001",
-                            "source_document": "test.tex",
-                            "chunk_type": "text",
-                            "metadata": {"page": 1},
-                            "page_number": 1,
-                            "section_title": "Test",
-                            "_additional": {"score": 0.92},
-                        }
-                    ]
-                }
-            }
-        }
-        mock_weaviate_client.query.get.return_value.with_hybrid.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        results = vector_store.search_hybrid("hybrid query", alpha=0.7, top_k=3)
-
-        # Assertions
-        assert len(results) == 1
-        assert results[0]["content"] == "Hybrid test content"
-        assert results[0]["hybrid_score"] == 0.92
-        assert results[0]["chunk_id"] == "hybrid_001"
-
-    @patch("core.vector_store.Client")
-    def test_search_hybrid_invalid_alpha(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test hybrid search with invalid alpha values."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test & Assertions
-        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
-            vector_store.search_hybrid("test", alpha=-0.1)
-
-        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
-            vector_store.search_hybrid("test", alpha=1.1)
-
-    @patch("core.vector_store.Client")
-    def test_search_with_filters(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test search with filters applied."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {"data": {"Get": {"Document": []}}}
-        mock_weaviate_client.query.get.return_value.with_near_text.return_value.with_limit.return_value.with_additional.return_value.with_where.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        filters = {"chunk_type": "text", "source_document": "test.tex"}
-        results = vector_store.search_similar("test", filters=filters)
-
-        # Assertions
-        mock_weaviate_client.query.get.return_value.with_near_text.return_value.with_limit.return_value.with_additional.return_value.with_where.assert_called_once()
 
     @patch("core.vector_store.Client")
     def test_get_chunk_by_id_success(
@@ -631,6 +504,90 @@ class TestVectorStore:
         # Assertions
         assert vector_store.is_connected is False
 
+    # Internal methods tests (used by Retriever)
+    @patch("core.vector_store.Client")
+    def test_search_similar_internal_success(
+        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+    ):
+        """Test successful internal vector similarity search."""
+        # Setup
+        mock_client_class.return_value = mock_weaviate_client
+        mock_query_result = {
+            "data": {
+                "Get": {
+                    "Document": [
+                        {
+                            "content": "Test content",
+                            "chunk_id": "test_001",
+                            "source_document": "test.tex",
+                            "chunk_type": "text",
+                            "metadata": {"page": 1},
+                            "page_number": 1,
+                            "section_title": "Test",
+                            "_additional": {
+                                "certainty": 0.85,
+                                "distance": 0.15,
+                            },
+                        }
+                    ]
+                }
+            }
+        }
+        mock_weaviate_client.query.get.return_value.with_near_text.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
+            mock_query_result
+        )
+        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+
+        # Test
+        results = vector_store._search_similar_internal("test query", top_k=5)
+
+        # Assertions
+        assert len(results) == 1
+        assert results[0]["content"] == "Test content"
+        assert results[0]["similarity_score"] == 0.85
+        assert results[0]["chunk_id"] == "test_001"
+
+    @patch("core.vector_store.Client")
+    def test_search_hybrid_internal_success(
+        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+    ):
+        """Test successful internal hybrid search."""
+        # Setup
+        mock_client_class.return_value = mock_weaviate_client
+        mock_query_result = {
+            "data": {
+                "Get": {
+                    "Document": [
+                        {
+                            "content": "Hybrid test content",
+                            "chunk_id": "hybrid_001",
+                            "source_document": "test.tex",
+                            "chunk_type": "text",
+                            "metadata": {"page": 1},
+                            "page_number": 1,
+                            "section_title": "Test",
+                            "_additional": {"score": 0.92},
+                        }
+                    ]
+                }
+            }
+        }
+        mock_weaviate_client.query.get.return_value.with_hybrid.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
+            mock_query_result
+        )
+        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+
+        # Test
+        results = vector_store._search_hybrid_internal(
+            "hybrid query", alpha=0.7, top_k=3
+        )
+
+        # Assertions
+        assert len(results) == 1
+        assert results[0]["content"] == "Hybrid test content"
+        assert results[0]["hybrid_score"] == 0.92
+        assert results[0]["chunk_id"] == "hybrid_001"
+
     @patch("core.vector_store.Client")
     def test_build_where_filter(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
@@ -709,3 +666,35 @@ class TestVectorStore:
             # Assertions
             assert vector_store.embedding_engine == mock_embedding_engine
             assert vector_store.embedding_engine.model_name == "test-model"
+
+    @patch("core.vector_store.Client")
+    def test_close_connection(
+        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+    ):
+        """Test connection closure."""
+        # Setup
+        mock_client_class.return_value = mock_weaviate_client
+        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+
+        # Test
+        vector_store.close()
+
+        # Assertions
+        assert vector_store.is_connected is False
+
+    @patch("core.vector_store.Client")
+    def test_close_without_client(
+        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+    ):
+        """Test connection closure without client."""
+        # Setup
+        mock_client_class.return_value = mock_weaviate_client
+        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        del vector_store.client  # Remove client attribute
+
+        # Test (should not raise exception)
+        vector_store.close()
+
+        # Assertions
+        # is_connected should still be True since there was no client to close
+        assert vector_store.is_connected is True

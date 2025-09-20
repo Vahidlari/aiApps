@@ -1,18 +1,17 @@
 """Vector store implementation for RAG system using Weaviate.
 
-This module provides the VectorStore class that handles the storage and retrieval
-of document embeddings using Weaviate as the vector database. It integrates with
-the EmbeddingEngine to store vectorized text chunks and provides efficient
-search capabilities.
+This module provides the VectorStore class that handles the storage and
+retrieval of document embeddings using Weaviate as the vector database.
+It focuses solely on storage operations, with search functionality
+delegated to the Retriever class.
 
 Key responsibilities:
 - Initialize and manage Weaviate client connections
 - Store document chunks with embeddings and metadata
-- Perform vector similarity searches
-- Support hybrid search (vector + keyword)
 - Handle batch operations for efficient indexing
 - Provide schema management for different document types
 - Integrate with the DataChunk objects from document preprocessing
+- Provide internal methods for the Retriever class
 
 The vector store uses Weaviate's built-in text2vec-transformers module for
 consistent embedding generation and supports rich metadata filtering.
@@ -28,11 +27,12 @@ from weaviate.exceptions import WeaviateBaseError
 
 
 class VectorStore:
-    """Vector store implementation using Weaviate for document storage and retrieval.
+    """Vector store implementation using Weaviate for document storage.
 
-    This class provides a comprehensive interface for storing and retrieving
-    document embeddings using Weaviate as the vector database. It supports
-    both vector similarity search and hybrid search with keyword matching.
+    This class provides a focused interface for storing and retrieving
+    document embeddings using Weaviate as the vector database. It handles
+    only storage operations, with search functionality delegated to the
+    Retriever class.
 
     Attributes:
         client: Weaviate client instance
@@ -377,233 +377,6 @@ class VectorStore:
             self.logger.error(f"Failed to store chunks: {str(e)}")
             raise
 
-    def search_similar(
-        self,
-        query: str,
-        top_k: int = 5,
-        score_threshold: float = 0.0,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        """Search for similar documents using vector similarity.
-
-        Args:
-            query: Search query text
-            top_k: Number of results to return
-            score_threshold: Minimum similarity score threshold
-            filters: Optional filters to apply to the search
-
-        Returns:
-            List[Dict[str, Any]]: List of search results with metadata
-
-        Raises:
-            ValueError: If query is empty
-            WeaviateBaseError: If search operation fails
-        """
-        if not query or not query.strip():
-            raise ValueError("Query cannot be empty")
-
-        try:
-            # Build the query
-            query_builder = (
-                self.client.query.get(
-                    self.class_name,
-                    [
-                        "content",
-                        "chunk_id",
-                        "source_document",
-                        "chunk_type",
-                        "metadata",
-                        "page_number",
-                        "section_title",
-                    ],
-                )
-                .with_near_text({"concepts": [query]})
-                .with_limit(top_k)
-                .with_additional(["certainty", "distance"])
-            )
-
-            # Apply filters if provided
-            if filters:
-                where_filter = self._build_where_filter(filters)
-                if where_filter:
-                    query_builder = query_builder.with_where(where_filter)
-
-            # Execute the query
-            self.logger.debug(f"Searching for: '{query}' with top_k={top_k}")
-            result = query_builder.do()
-
-            # Process results
-            search_results = []
-            if result and "data" in result and "Get" in result["data"]:
-                for item in result["data"]["Get"][self.class_name]:
-                    # Calculate similarity score from certainty
-                    certainty = item.get("_additional", {}).get("certainty", 0.0)
-                    distance = item.get("_additional", {}).get("distance", 1.0)
-
-                    # Convert certainty to similarity score (0-1 range)
-                    similarity_score = certainty if certainty > 0 else 1.0 - distance
-
-                    if similarity_score >= score_threshold:
-                        search_results.append(
-                            {
-                                "content": item.get("content", ""),
-                                "chunk_id": item.get("chunk_id", ""),
-                                "source_document": item.get("source_document", ""),
-                                "chunk_type": item.get("chunk_type", ""),
-                                "metadata": item.get("metadata", {}),
-                                "page_number": item.get("page_number", 0),
-                                "section_title": item.get("section_title", ""),
-                                "similarity_score": similarity_score,
-                                "certainty": certainty,
-                                "distance": distance,
-                            }
-                        )
-
-            self.logger.debug(
-                f"Found {len(search_results)} results for query: '{query}'"
-            )
-            return search_results
-
-        except WeaviateBaseError as e:
-            self.logger.error(f"Failed to search similar documents: {str(e)}")
-            raise
-
-    def search_hybrid(
-        self,
-        query: str,
-        top_k: int = 5,
-        alpha: float = 0.5,
-        score_threshold: float = 0.0,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        """Perform hybrid search combining vector and keyword search.
-
-        Args:
-            query: Search query text
-            top_k: Number of results to return
-            alpha: Weight for vector search (0.0 = keyword only, 1.0 = vector only)
-            score_threshold: Minimum similarity score threshold
-            filters: Optional filters to apply to the search
-
-        Returns:
-            List[Dict[str, Any]]: List of search results with metadata
-
-        Raises:
-            ValueError: If query is empty or alpha is out of range
-            WeaviateBaseError: If search operation fails
-        """
-        if not query or not query.strip():
-            raise ValueError("Query cannot be empty")
-
-        if not 0.0 <= alpha <= 1.0:
-            raise ValueError("Alpha must be between 0.0 and 1.0")
-
-        try:
-            # Build the hybrid query
-            query_builder = (
-                self.client.query.get(
-                    self.class_name,
-                    [
-                        "content",
-                        "chunk_id",
-                        "source_document",
-                        "chunk_type",
-                        "metadata",
-                        "page_number",
-                        "section_title",
-                    ],
-                )
-                .with_hybrid(
-                    query=query,
-                    alpha=alpha,
-                )
-                .with_limit(top_k)
-                .with_additional(["score"])
-            )
-
-            # Apply filters if provided
-            if filters:
-                where_filter = self._build_where_filter(filters)
-                if where_filter:
-                    query_builder = query_builder.with_where(where_filter)
-
-            # Execute the query
-            self.logger.debug(
-                f"Hybrid search for: '{query}' with alpha={alpha}, top_k={top_k}"
-            )
-            result = query_builder.do()
-
-            # Process results
-            search_results = []
-            if result and "data" in result and "Get" in result["data"]:
-                for item in result["data"]["Get"][self.class_name]:
-                    # Get hybrid score
-                    hybrid_score = item.get("_additional", {}).get("score", 0.0)
-
-                    if hybrid_score >= score_threshold:
-                        search_results.append(
-                            {
-                                "content": item.get("content", ""),
-                                "chunk_id": item.get("chunk_id", ""),
-                                "source_document": item.get("source_document", ""),
-                                "chunk_type": item.get("chunk_type", ""),
-                                "metadata": item.get("metadata", {}),
-                                "page_number": item.get("page_number", 0),
-                                "section_title": item.get("section_title", ""),
-                                "similarity_score": hybrid_score,
-                                "hybrid_score": hybrid_score,
-                            }
-                        )
-
-            self.logger.debug(
-                f"Found {len(search_results)} results for hybrid query: '{query}'"
-            )
-            return search_results
-
-        except WeaviateBaseError as e:
-            self.logger.error(f"Failed to perform hybrid search: {str(e)}")
-            raise
-
-    def _build_where_filter(self, filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Build Weaviate where filter from filters dictionary.
-
-        Args:
-            filters: Dictionary of filter conditions
-
-        Returns:
-            Optional[Dict[str, Any]]: Weaviate where filter or None
-        """
-        if not filters:
-            return None
-
-        # Simple filter building - can be extended for more complex conditions
-        where_conditions = []
-
-        for key, value in filters.items():
-            if isinstance(value, str):
-                where_conditions.append(
-                    {"path": [key], "operator": "Equal", "valueString": value}
-                )
-            elif isinstance(value, int):
-                where_conditions.append(
-                    {"path": [key], "operator": "Equal", "valueInt": value}
-                )
-            elif isinstance(value, list):
-                where_conditions.append(
-                    {
-                        "path": [key],
-                        "operator": "ContainsAny",
-                        "valueStringArray": value,
-                    }
-                )
-
-        if len(where_conditions) == 1:
-            return where_conditions[0]
-        elif len(where_conditions) > 1:
-            return {"operator": "And", "operands": where_conditions}
-
-        return None
-
     def get_chunk_by_id(self, chunk_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id.
 
@@ -770,3 +543,237 @@ class VectorStore:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.close()
+
+    # Internal methods for Retriever class
+    def _search_similar_internal(
+        self,
+        query: str,
+        top_k: int = 5,
+        score_threshold: float = 0.0,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Internal method for vector similarity search.
+
+        This method is used by the Retriever class and should not be called
+        directly by users. Use the Retriever class for search operations.
+
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            score_threshold: Minimum similarity score threshold
+            filters: Optional filters to apply to the search
+
+        Returns:
+            List[Dict[str, Any]]: List of search results with metadata
+
+        Raises:
+            ValueError: If query is empty
+            WeaviateBaseError: If search operation fails
+        """
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
+
+        try:
+            # Build the query
+            query_builder = (
+                self.client.query.get(
+                    self.class_name,
+                    [
+                        "content",
+                        "chunk_id",
+                        "source_document",
+                        "chunk_type",
+                        "metadata",
+                        "page_number",
+                        "section_title",
+                    ],
+                )
+                .with_near_text({"concepts": [query]})
+                .with_limit(top_k)
+                .with_additional(["certainty", "distance"])
+            )
+
+            # Apply filters if provided
+            if filters:
+                where_filter = self._build_where_filter(filters)
+                if where_filter:
+                    query_builder = query_builder.with_where(where_filter)
+
+            # Execute the query
+            self.logger.debug(f"Searching for: '{query}' with top_k={top_k}")
+            result = query_builder.do()
+
+            # Process results
+            search_results = []
+            if result and "data" in result and "Get" in result["data"]:
+                for item in result["data"]["Get"][self.class_name]:
+                    # Calculate similarity score from certainty
+                    certainty = item.get("_additional", {}).get("certainty", 0.0)
+                    distance = item.get("_additional", {}).get("distance", 1.0)
+
+                    # Convert certainty to similarity score (0-1 range)
+                    similarity_score = certainty if certainty > 0 else 1.0 - distance
+
+                    if similarity_score >= score_threshold:
+                        search_results.append(
+                            {
+                                "content": item.get("content", ""),
+                                "chunk_id": item.get("chunk_id", ""),
+                                "source_document": item.get("source_document", ""),
+                                "chunk_type": item.get("chunk_type", ""),
+                                "metadata": item.get("metadata", {}),
+                                "page_number": item.get("page_number", 0),
+                                "section_title": item.get("section_title", ""),
+                                "similarity_score": similarity_score,
+                                "certainty": certainty,
+                                "distance": distance,
+                            }
+                        )
+
+            self.logger.debug(
+                f"Found {len(search_results)} results for query: '{query}'"
+            )
+            return search_results
+
+        except WeaviateBaseError as e:
+            self.logger.error(f"Failed to search similar documents: {str(e)}")
+            raise
+
+    def _search_hybrid_internal(
+        self,
+        query: str,
+        top_k: int = 5,
+        alpha: float = 0.5,
+        score_threshold: float = 0.0,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Internal method for hybrid search.
+
+        This method is used by the Retriever class and should not be called
+        directly by users. Use the Retriever class for search operations.
+
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            alpha: Weight for vector search (0.0 = keyword only, 1.0 = vector only)
+            score_threshold: Minimum similarity score threshold
+            filters: Optional filters to apply to the search
+
+        Returns:
+            List[Dict[str, Any]]: List of search results with metadata
+
+        Raises:
+            ValueError: If query is empty or alpha is out of range
+            WeaviateBaseError: If search operation fails
+        """
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
+
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("Alpha must be between 0.0 and 1.0")
+
+        try:
+            # Build the hybrid query
+            query_builder = (
+                self.client.query.get(
+                    self.class_name,
+                    [
+                        "content",
+                        "chunk_id",
+                        "source_document",
+                        "chunk_type",
+                        "metadata",
+                        "page_number",
+                        "section_title",
+                    ],
+                )
+                .with_hybrid(
+                    query=query,
+                    alpha=alpha,
+                )
+                .with_limit(top_k)
+                .with_additional(["score"])
+            )
+
+            # Apply filters if provided
+            if filters:
+                where_filter = self._build_where_filter(filters)
+                if where_filter:
+                    query_builder = query_builder.with_where(where_filter)
+
+            # Execute the query
+            self.logger.debug(
+                f"Hybrid search for: '{query}' with alpha={alpha}, top_k={top_k}"
+            )
+            result = query_builder.do()
+
+            # Process results
+            search_results = []
+            if result and "data" in result and "Get" in result["data"]:
+                for item in result["data"]["Get"][self.class_name]:
+                    # Get hybrid score
+                    hybrid_score = item.get("_additional", {}).get("score", 0.0)
+
+                    if hybrid_score >= score_threshold:
+                        search_results.append(
+                            {
+                                "content": item.get("content", ""),
+                                "chunk_id": item.get("chunk_id", ""),
+                                "source_document": item.get("source_document", ""),
+                                "chunk_type": item.get("chunk_type", ""),
+                                "metadata": item.get("metadata", {}),
+                                "page_number": item.get("page_number", 0),
+                                "section_title": item.get("section_title", ""),
+                                "similarity_score": hybrid_score,
+                                "hybrid_score": hybrid_score,
+                            }
+                        )
+
+            self.logger.debug(
+                f"Found {len(search_results)} results for hybrid query: '{query}'"
+            )
+            return search_results
+
+        except WeaviateBaseError as e:
+            self.logger.error(f"Failed to perform hybrid search: {str(e)}")
+            raise
+
+    def _build_where_filter(self, filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Build Weaviate where filter from filters dictionary.
+
+        Args:
+            filters: Dictionary of filter conditions
+
+        Returns:
+            Optional[Dict[str, Any]]: Weaviate where filter or None
+        """
+        if not filters:
+            return None
+
+        # Simple filter building - can be extended for more complex conditions
+        where_conditions = []
+
+        for key, value in filters.items():
+            if isinstance(value, str):
+                where_conditions.append(
+                    {"path": [key], "operator": "Equal", "valueString": value}
+                )
+            elif isinstance(value, int):
+                where_conditions.append(
+                    {"path": [key], "operator": "Equal", "valueInt": value}
+                )
+            elif isinstance(value, list):
+                where_conditions.append(
+                    {
+                        "path": [key],
+                        "operator": "ContainsAny",
+                        "valueStringArray": value,
+                    }
+                )
+
+        if len(where_conditions) == 1:
+            return where_conditions[0]
+        elif len(where_conditions) > 1:
+            return {"operator": "And", "operands": where_conditions}
+
+        return None
