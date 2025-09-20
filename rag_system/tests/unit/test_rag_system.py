@@ -18,12 +18,15 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
-from core.data_chunker import DataChunk, DataChunker
-from core.document_preprocessor import DocumentPreprocessor
-from core.embedding_engine import EmbeddingEngine
-from core.rag_system import RAGSystem
-from core.retriever import Retriever
-from core.vector_store import VectorStore
+from rag_system_package import (
+    DataChunk,
+    DataChunker,
+    DocumentPreprocessor,
+    EmbeddingEngine,
+    RAGSystem,
+    Retriever,
+    VectorStore,
+)
 
 
 class TestRAGSystem:
@@ -49,7 +52,7 @@ class TestRAGSystem:
     @pytest.fixture
     def sample_chunks(self):
         """Create sample DataChunk objects for testing."""
-        from core.data_chunker import ChunkMetadata
+        from rag_system_package.core.data_chunker import ChunkMetadata
 
         return [
             DataChunk(
@@ -108,11 +111,11 @@ class TestRAGSystem:
             },
         ]
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_rag_system_initialization_success(
         self,
         mock_data_chunker,
@@ -146,7 +149,7 @@ class TestRAGSystem:
         mock_document_preprocessor.assert_called_once()
         mock_data_chunker.assert_called_once_with(chunk_size=512, overlap=50)
 
-    @patch("core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
     def test_rag_system_initialization_failure(self, mock_embedding_engine):
         """Test RAGSystem initialization failure."""
         mock_embedding_engine.side_effect = Exception("Embedding engine failed")

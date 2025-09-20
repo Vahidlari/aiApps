@@ -20,10 +20,11 @@ consistent embedding generation and supports rich metadata filtering.
 import logging
 from typing import Any, Dict, List, Optional
 
-from core.data_chunker import DataChunk
-from core.embedding_engine import EmbeddingEngine
 from weaviate import Client
 from weaviate.exceptions import WeaviateBaseError
+
+from .data_chunker import DataChunk
+from .embedding_engine import EmbeddingEngine
 
 
 class VectorStore:

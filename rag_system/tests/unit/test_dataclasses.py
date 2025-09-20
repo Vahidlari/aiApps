@@ -2,7 +2,7 @@
 Unit tests for dataclasses in the RAG system.
 """
 
-from utils.latex_parser import (
+from rag_system_package.utils.latex_parser import (
     Citation,
     LatexChapter,
     LatexDocument,

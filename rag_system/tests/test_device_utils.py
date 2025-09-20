@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import the device utilities
-from utils.device_utils import (
+from rag_system_package.utils.device_utils import (
     DeviceManager,
     configure_pytorch_for_platform,
     get_device_info,
@@ -74,7 +74,7 @@ class TestDeviceManager:
             assert platform_info["is_windows"] is False
             assert platform_info["is_linux"] is True
 
-    @patch("utils.device_utils.subprocess.run")
+    @patch("rag_system_package.utils.device_utils.subprocess.run")
     def test_cuda_detection_via_nvidia_smi(self, mock_run):
         """Test CUDA detection using nvidia-smi."""
         manager = DeviceManager()
@@ -309,7 +309,7 @@ class TestPlatformScenarios:
     def test_macos_scenario(self):
         """Test macOS scenario (should always use CPU)."""
         # Create a new device manager with mocked data
-        from utils.device_utils import DeviceManager
+        from rag_system_package.utils.device_utils import DeviceManager
 
         manager = DeviceManager()
 
@@ -344,7 +344,7 @@ class TestPlatformScenarios:
     def test_windows_no_gpu_scenario(self):
         """Test Windows without GPU scenario."""
         # Create a new device manager with mocked data
-        from utils.device_utils import DeviceManager
+        from rag_system_package.utils.device_utils import DeviceManager
 
         manager = DeviceManager()
 
@@ -372,7 +372,7 @@ class TestPlatformScenarios:
     def test_linux_gpu_no_cuda_scenario(self):
         """Test Linux with GPU but no CUDA scenario."""
         # Create a new device manager with mocked data
-        from utils.device_utils import DeviceManager
+        from rag_system_package.utils.device_utils import DeviceManager
 
         manager = DeviceManager()
 
@@ -400,7 +400,7 @@ class TestPlatformScenarios:
     def test_linux_gpu_with_cuda_scenario(self):
         """Test Linux with GPU and CUDA scenario."""
         # Create a new device manager with mocked data
-        from utils.device_utils import DeviceManager
+        from rag_system_package.utils.device_utils import DeviceManager
 
         manager = DeviceManager()
 

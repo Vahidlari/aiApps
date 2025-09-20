@@ -9,8 +9,12 @@ import os
 import tempfile
 
 import pytest
-from core.data_chunker import ChunkMetadata, DataChunk, DataChunker
-from core.document_preprocessor import DocumentPreprocessor
+from rag_system_package import (
+    ChunkMetadata,
+    DataChunk,
+    DataChunker,
+    DocumentPreprocessor,
+)
 
 
 class TestDocumentPreprocessorIntegration:

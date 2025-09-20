@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
-from utils.latex_parser import LatexDocument, LatexFigure, LatexTable
+from rag_system_package.utils.latex_parser import LatexDocument, LatexFigure, LatexTable
 
 
 def create_temp_latex_file(content: str, suffix: str = ".tex") -> Path:

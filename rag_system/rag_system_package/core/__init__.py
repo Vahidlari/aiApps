@@ -5,7 +5,7 @@ embedding generation, vector storage, retrieval operations, and the
 main RAG system orchestrator.
 """
 
-from .data_chunker import DataChunk, DataChunker
+from .data_chunker import ChunkMetadata, DataChunk, DataChunker
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .rag_system import RAGSystem
@@ -15,6 +15,7 @@ from .vector_store import VectorStore
 __all__ = [
     "DataChunk",
     "DataChunker",
+    "ChunkMetadata",
     "DocumentPreprocessor",
     "EmbeddingEngine",
     "RAGSystem",

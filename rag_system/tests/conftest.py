@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from utils.latex_parser import Citation, LatexDocument, LatexParser
+from rag_system_package.utils.latex_parser import Citation, LatexDocument, LatexParser
 
 
 @pytest.fixture

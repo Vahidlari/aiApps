@@ -19,8 +19,8 @@ the embedding engine for vector database storage.
 
 import os
 
-from core.data_chunker import DataChunk, DataChunker
-from utils.latex_parser import LatexDocument, LatexParser
+from ..utils.latex_parser import LatexDocument, LatexParser
+from .data_chunker import DataChunk, DataChunker
 
 
 class DocumentPreprocessor:

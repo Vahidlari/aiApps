@@ -17,13 +17,13 @@ of concerns between storage, retrieval, and generation layers.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from core.data_chunker import DataChunk, DataChunker
-from core.document_preprocessor import DocumentPreprocessor
-from core.embedding_engine import EmbeddingEngine
-from core.retriever import Retriever
-from core.vector_store import VectorStore
+from .data_chunker import DataChunk, DataChunker
+from .document_preprocessor import DocumentPreprocessor
+from .embedding_engine import EmbeddingEngine
+from .retriever import Retriever
+from .vector_store import VectorStore
 
 
 class RAGSystem:
@@ -46,6 +46,7 @@ class RAGSystem:
 
     def __init__(
         self,
+        config: Optional[Any] = None,
         weaviate_url: str = "http://localhost:8080",
         class_name: str = "Document",
         embedding_model: str = "all-mpnet-base-v2",
@@ -55,11 +56,12 @@ class RAGSystem:
         """Initialize the RAG system.
 
         Args:
-            weaviate_url: Weaviate server URL
-            class_name: Name of the Weaviate class for document storage
-            embedding_model: Name of the embedding model to use
-            chunk_size: Size of text chunks in tokens
-            chunk_overlap: Overlap between chunks in tokens
+            config: RAGConfig object with system configuration (optional)
+            weaviate_url: Weaviate server URL (used if config not provided)
+            class_name: Name of the Weaviate class for document storage (used if config not provided)
+            embedding_model: Name of the embedding model to use (used if config not provided)
+            chunk_size: Size of text chunks in tokens (used if config not provided)
+            chunk_overlap: Overlap between chunks in tokens (used if config not provided)
 
         Raises:
             ConnectionError: If unable to connect to Weaviate
@@ -69,6 +71,14 @@ class RAGSystem:
         self.logger = logging.getLogger(__name__)
 
         try:
+            # Handle configuration - use provided config or create from individual parameters
+            if config is not None:
+                embedding_model = config.embedding_config.model_name
+                weaviate_url = config.vector_store_config.url
+                class_name = config.vector_store_config.class_name
+                chunk_size = config.chunk_config.chunk_size
+                chunk_overlap = config.chunk_config.overlap
+
             # Initialize embedding engine
             self.logger.info(
                 f"Initializing embedding engine with model: {embedding_model}"

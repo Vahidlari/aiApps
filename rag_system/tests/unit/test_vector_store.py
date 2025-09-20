@@ -17,9 +17,7 @@ Test coverage includes:
 from unittest.mock import Mock, patch
 
 import pytest
-from core.data_chunker import ChunkMetadata, DataChunk
-from core.embedding_engine import EmbeddingEngine
-from core.vector_store import VectorStore
+from rag_system_package import ChunkMetadata, DataChunk, EmbeddingEngine, VectorStore
 from weaviate.exceptions import WeaviateBaseError
 
 
@@ -120,7 +118,7 @@ class TestVectorStoreRefactored:
             ),
         ]
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_vector_store_initialization_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -144,7 +142,7 @@ class TestVectorStoreRefactored:
             "http://localhost:8080", timeout_config=(60, 60)
         )
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_vector_store_initialization_with_default_embedding_engine(
         self, mock_client_class, mock_weaviate_client
     ):
@@ -152,7 +150,7 @@ class TestVectorStoreRefactored:
         # Setup
         mock_client_class.return_value = mock_weaviate_client
 
-        with patch("core.vector_store.EmbeddingEngine") as mock_embedding_class:
+        with patch("rag_system_package.core.vector_store.EmbeddingEngine") as mock_embedding_class:
             mock_embedding_engine = Mock()
             mock_embedding_class.return_value = mock_embedding_engine
 
@@ -163,7 +161,7 @@ class TestVectorStoreRefactored:
             assert vector_store.embedding_engine == mock_embedding_engine
             mock_embedding_class.assert_called_once()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_vector_store_initialization_connection_failure(self, mock_client_class):
         """Test VectorStore initialization with connection failure."""
         # Setup
@@ -173,7 +171,7 @@ class TestVectorStoreRefactored:
         with pytest.raises(ConnectionError, match="Could not connect to Weaviate"):
             VectorStore()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_vector_store_initialization_weaviate_not_ready(self, mock_client_class):
         """Test VectorStore initialization when Weaviate is not ready."""
         # Setup
@@ -185,7 +183,7 @@ class TestVectorStoreRefactored:
         with pytest.raises(ConnectionError, match="Weaviate is not ready"):
             VectorStore()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_create_schema_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -204,7 +202,7 @@ class TestVectorStoreRefactored:
         assert call_args["vectorizer"] == "text2vec-transformers"
         assert "content" in [prop["name"] for prop in call_args["properties"]]
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_create_schema_already_exists(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -222,7 +220,7 @@ class TestVectorStoreRefactored:
         # Assertions
         mock_weaviate_client.schema.create_class.assert_not_called()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_create_schema_force_recreate(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -241,7 +239,7 @@ class TestVectorStoreRefactored:
         mock_weaviate_client.schema.delete_class.assert_called_once_with("Document")
         mock_weaviate_client.schema.create_class.assert_called_once()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_store_chunk_success(
         self,
         mock_client_class,
@@ -266,7 +264,7 @@ class TestVectorStoreRefactored:
         assert call_args[1]["data_object"]["content"] == sample_chunk.text
         assert call_args[1]["data_object"]["chunk_id"] == sample_chunk.chunk_id
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_store_chunk_invalid_chunk(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -297,7 +295,7 @@ class TestVectorStoreRefactored:
             )
             vector_store.store_chunk(empty_chunk)
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_store_chunks_success(
         self,
         mock_client_class,
@@ -324,7 +322,7 @@ class TestVectorStoreRefactored:
         assert result_uuids == ["uuid-1", "uuid-2", "uuid-3"]
         mock_weaviate_client.batch.create_objects.assert_called()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_store_chunks_empty_list(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -337,7 +335,7 @@ class TestVectorStoreRefactored:
         with pytest.raises(ValueError, match="Chunks list cannot be empty"):
             vector_store.store_chunks([])
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_get_chunk_by_id_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -374,7 +372,7 @@ class TestVectorStoreRefactored:
         assert result["content"] == "Retrieved content"
         assert result["chunk_id"] == "test_001"
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_get_chunk_by_id_not_found(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -393,7 +391,7 @@ class TestVectorStoreRefactored:
         # Assertions
         assert result is None
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_delete_chunk_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -426,7 +424,7 @@ class TestVectorStoreRefactored:
             uuid="weaviate-uuid-123", class_name="Document"
         )
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_delete_chunk_not_found(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -446,7 +444,7 @@ class TestVectorStoreRefactored:
         assert result is False
         mock_weaviate_client.data_object.delete.assert_not_called()
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_get_stats_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -474,7 +472,7 @@ class TestVectorStoreRefactored:
         assert stats["is_connected"] is True
         assert stats["url"] == "http://localhost:8080"
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_clear_all_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -489,7 +487,7 @@ class TestVectorStoreRefactored:
         # Assertions
         mock_weaviate_client.schema.delete_class.assert_called_once_with("Document")
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_context_manager(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -505,7 +503,7 @@ class TestVectorStoreRefactored:
         assert vector_store.is_connected is False
 
     # Internal methods tests (used by Retriever)
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_search_similar_internal_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -547,7 +545,7 @@ class TestVectorStoreRefactored:
         assert results[0]["similarity_score"] == 0.85
         assert results[0]["chunk_id"] == "test_001"
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_search_hybrid_internal_success(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -588,7 +586,7 @@ class TestVectorStoreRefactored:
         assert results[0]["hybrid_score"] == 0.92
         assert results[0]["chunk_id"] == "hybrid_001"
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_build_where_filter(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -628,7 +626,7 @@ class TestVectorStoreRefactored:
         empty_filter = vector_store._build_where_filter({})
         assert empty_filter is None
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_weaviate_error_handling(
         self,
         mock_client_class,
@@ -654,7 +652,7 @@ class TestVectorStoreRefactored:
         mock_embedding_engine.model_name = "test-model"
         mock_embedding_engine.embedding_dimension = 512
 
-        with patch("core.vector_store.Client") as mock_client_class:
+        with patch("rag_system_package.core.vector_store.Client") as mock_client_class:
             mock_client = Mock()
             mock_client.is_ready.return_value = True
             mock_client.schema.get.return_value = {"classes": []}
@@ -667,7 +665,7 @@ class TestVectorStoreRefactored:
             assert vector_store.embedding_engine == mock_embedding_engine
             assert vector_store.embedding_engine.model_name == "test-model"
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_close_connection(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):
@@ -682,7 +680,7 @@ class TestVectorStoreRefactored:
         # Assertions
         assert vector_store.is_connected is False
 
-    @patch("core.vector_store.Client")
+    @patch("rag_system_package.core.vector_store.Client")
     def test_close_without_client(
         self, mock_client_class, mock_weaviate_client, mock_embedding_engine
     ):

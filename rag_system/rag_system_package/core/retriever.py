@@ -19,8 +19,8 @@ logic independently, enabling better testability and maintainability.
 import logging
 from typing import Any, Dict, List, Optional
 
-from core.embedding_engine import EmbeddingEngine
-from core.vector_store import VectorStore
+from .embedding_engine import EmbeddingEngine
+from .vector_store import VectorStore
 
 
 class Retriever:

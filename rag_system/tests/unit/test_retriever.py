@@ -16,9 +16,7 @@ Test coverage includes:
 from unittest.mock import Mock
 
 import pytest
-from core.embedding_engine import EmbeddingEngine
-from core.retriever import Retriever
-from core.vector_store import VectorStore
+from rag_system_package import EmbeddingEngine, Retriever, VectorStore
 
 
 class TestRetriever:

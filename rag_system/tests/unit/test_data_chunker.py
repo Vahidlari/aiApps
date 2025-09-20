@@ -2,7 +2,7 @@
 Unit tests for DataChunker class in the RAG system.
 """
 
-from core.data_chunker import ChunkMetadata, DataChunk, DataChunker
+from rag_system_package import ChunkMetadata, DataChunk, DataChunker
 
 
 class TestDataChunk:

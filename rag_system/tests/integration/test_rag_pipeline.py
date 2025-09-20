@@ -18,8 +18,7 @@ import tempfile
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from core.data_chunker import ChunkMetadata, DataChunk
-from core.rag_system import RAGSystem
+from rag_system_package import ChunkMetadata, DataChunk, RAGSystem
 
 
 class TestRAGPipeline:
@@ -117,11 +116,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             ),
         ]
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_complete_rag_system_initialization(
         self,
         mock_data_chunker,
@@ -155,11 +154,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert rag.document_preprocessor is not None
         assert rag.data_chunker is not None
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_document_processing_pipeline(
         self,
         mock_data_chunker,
@@ -217,11 +216,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         finally:
             os.unlink(temp_path)
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_query_processing_pipeline(
         self,
         mock_data_chunker,
@@ -286,11 +285,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "What is Einstein's famous equation?", top_k=5
         )
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_system_statistics_integration(
         self,
         mock_data_chunker,
@@ -336,11 +335,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert "components" in stats
         assert "retrieval" in stats
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_error_handling_integration(
         self,
         mock_data_chunker,
@@ -369,11 +368,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         with pytest.raises(Exception, match="Search failed"):
             rag.search_similar("test query")
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_context_manager_integration(
         self,
         mock_data_chunker,
@@ -399,11 +398,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Verify cleanup
         assert rag.is_initialized is False
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_component_communication(
         self,
         mock_data_chunker,
@@ -429,11 +428,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag.vector_store, "embedding_engine")
         assert rag.is_initialized is True
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_performance_characteristics(
         self,
         mock_data_chunker,
@@ -461,11 +460,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag, "document_preprocessor")
         assert hasattr(rag, "data_chunker")
 
-    @patch("core.rag_system.EmbeddingEngine")
-    @patch("core.rag_system.VectorStore")
-    @patch("core.rag_system.Retriever")
-    @patch("core.rag_system.DocumentPreprocessor")
-    @patch("core.rag_system.DataChunker")
+    @patch("rag_system_package.core.rag_system.EmbeddingEngine")
+    @patch("rag_system_package.core.rag_system.VectorStore")
+    @patch("rag_system_package.core.rag_system.Retriever")
+    @patch("rag_system_package.core.rag_system.DocumentPreprocessor")
+    @patch("rag_system_package.core.rag_system.DataChunker")
     def test_configuration_validation(
         self,
         mock_data_chunker,

@@ -11,13 +11,13 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="latex-rag-system",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Vahid Lari",
+    author_email="vahidlari@gmail.com",
     description="A RAG system for creating knowledge bases from LaTeX documents",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/latex-rag-system",
-    packages=find_packages(),
+    url="https://github.com/vahidlari/aiapps",
+    packages=find_packages(include=["rag_system_package*"]),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -48,11 +48,16 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "latex-rag=rag_system.cli:main",
+            "rag-system=rag_system_package.cli:main",
         ],
     },
     include_package_data=True,
     package_data={
-        "rag_system": ["config/*.yaml", "config/*.yml"],
+        "rag_system_package": [
+            "config/*.yaml",
+            "config/*.yml",
+            "examples/*.py",
+            "examples/latex_samples/*.tex",
+        ],
     },
 )

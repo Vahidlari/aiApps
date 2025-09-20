@@ -20,9 +20,10 @@ import logging
 from typing import List, Optional
 
 import numpy as np
-from core.data_chunker import DataChunk
 from sentence_transformers import SentenceTransformer
-from utils.device_utils import get_sentence_transformer_device
+
+from ..utils.device_utils import get_sentence_transformer_device
+from .data_chunker import DataChunk
 
 
 class EmbeddingEngine:

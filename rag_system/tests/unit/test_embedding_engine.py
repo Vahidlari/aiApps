@@ -4,8 +4,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from core.data_chunker import ChunkMetadata, DataChunk
-from core.embedding_engine import EmbeddingEngine
+from rag_system_package import ChunkMetadata, DataChunk, EmbeddingEngine
 
 
 class TestEmbeddingEngine:
@@ -13,7 +12,9 @@ class TestEmbeddingEngine:
 
     def test_init_with_valid_model(self):
         """Test initialization with a valid model name."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -46,7 +47,9 @@ class TestEmbeddingEngine:
 
     def test_embed_text_success(self):
         """Test successful text embedding."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_embedding = np.array([0.1, 0.2, 0.3])
             mock_model.encode.return_value = mock_embedding
@@ -62,7 +65,9 @@ class TestEmbeddingEngine:
 
     def test_embed_text_empty(self):
         """Test embedding with empty text."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -76,7 +81,9 @@ class TestEmbeddingEngine:
 
     def test_embed_chunk_success(self):
         """Test successful chunk embedding."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_embedding = np.array([0.1, 0.2, 0.3])
             mock_model.encode.return_value = mock_embedding
@@ -97,7 +104,9 @@ class TestEmbeddingEngine:
 
     def test_embed_chunk_none(self):
         """Test embedding with None chunk."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -108,7 +117,9 @@ class TestEmbeddingEngine:
 
     def test_embed_chunks_success(self):
         """Test successful batch chunk embedding."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_embeddings = np.array([[0.1, 0.2], [0.3, 0.4]])
             mock_model.encode.return_value = mock_embeddings
@@ -131,7 +142,9 @@ class TestEmbeddingEngine:
 
     def test_embed_chunks_empty_list(self):
         """Test embedding with empty chunks list."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -142,7 +155,9 @@ class TestEmbeddingEngine:
 
     def test_embed_texts_success(self):
         """Test successful batch text embedding."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_embeddings = np.array([[0.1, 0.2], [0.3, 0.4]])
             mock_model.encode.return_value = mock_embeddings
@@ -162,7 +177,9 @@ class TestEmbeddingEngine:
 
     def test_embed_texts_empty_list(self):
         """Test embedding with empty texts list."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -173,7 +190,9 @@ class TestEmbeddingEngine:
 
     def test_get_embedding_dimension(self):
         """Test getting embedding dimension."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -185,7 +204,9 @@ class TestEmbeddingEngine:
 
     def test_get_model_info(self):
         """Test getting model information."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -199,7 +220,9 @@ class TestEmbeddingEngine:
 
     def test_similarity_calculation(self):
         """Test cosine similarity calculation."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -225,7 +248,9 @@ class TestEmbeddingEngine:
 
     def test_similarity_method_parameter(self):
         """Test similarity method parameter selection."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -247,7 +272,9 @@ class TestEmbeddingEngine:
 
     def test_euclidean_distance_calculation(self):
         """Test euclidean distance calculation."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -273,7 +300,9 @@ class TestEmbeddingEngine:
 
     def test_invalid_similarity_method(self):
         """Test invalid similarity method."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -286,7 +315,9 @@ class TestEmbeddingEngine:
 
     def test_cosine_similarity_private_method(self):
         """Test private cosine similarity method."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -299,7 +330,9 @@ class TestEmbeddingEngine:
 
     def test_euclidean_distance_private_method(self):
         """Test private euclidean distance method."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -312,7 +345,9 @@ class TestEmbeddingEngine:
 
     def test_similarity_different_dimensions(self):
         """Test similarity calculation with different dimension vectors."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -328,7 +363,9 @@ class TestEmbeddingEngine:
 
     def test_similarity_zero_vectors(self):
         """Test similarity calculation with zero vectors."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_st.return_value = mock_model
 
@@ -342,7 +379,9 @@ class TestEmbeddingEngine:
 
     def test_model_loading_error(self):
         """Test handling of model loading errors."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_st.side_effect = Exception("Model loading failed")
 
             with pytest.raises(
@@ -352,7 +391,9 @@ class TestEmbeddingEngine:
 
     def test_embedding_generation_error(self):
         """Test handling of embedding generation errors."""
-        with patch("core.embedding_engine.SentenceTransformer") as mock_st:
+        with patch(
+            "rag_system_package.core.embedding_engine.SentenceTransformer"
+        ) as mock_st:
             mock_model = Mock()
             mock_model.encode.side_effect = Exception("Embedding generation failed")
             mock_st.return_value = mock_model

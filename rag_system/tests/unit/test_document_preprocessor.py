@@ -5,9 +5,8 @@ Unit tests for DocumentPreprocessor in the RAG system.
 from unittest.mock import Mock, patch
 
 import pytest
-from core.data_chunker import DataChunk, DataChunker
-from core.document_preprocessor import DocumentPreprocessor
-from utils.latex_parser import (
+from rag_system_package import DataChunk, DataChunker, DocumentPreprocessor
+from rag_system_package.utils.latex_parser import (
     LatexChapter,
     LatexDocument,
     LatexParagraph,
@@ -50,7 +49,7 @@ class TestDocumentPreprocessor:
         assert preprocessor.chunker.chunk_size == 256
         assert preprocessor.chunker.overlap_size == 25
 
-    @patch("core.document_preprocessor.LatexParser")
+    @patch("rag_system_package.core.document_preprocessor.LatexParser")
     def test_preprocess_document_success(self, mock_latex_parser_class):
         """Test preprocess_document method with successful parsing."""
         # Setup mocks
@@ -94,7 +93,7 @@ class TestDocumentPreprocessor:
         mock_chunker.chunk.assert_called_once()
         assert result == expected_chunks
 
-    @patch("core.document_preprocessor.LatexParser")
+    @patch("rag_system_package.core.document_preprocessor.LatexParser")
     def test_preprocess_document_file_not_found(self, mock_latex_parser_class):
         """Test preprocess_document method with file not found."""
         # Setup mocks
@@ -113,7 +112,7 @@ class TestDocumentPreprocessor:
         with pytest.raises(AttributeError):
             preprocessor.preprocess_document("nonexistent.tex")
 
-    @patch("core.document_preprocessor.LatexParser")
+    @patch("rag_system_package.core.document_preprocessor.LatexParser")
     def test_preprocess_documents_success(self, mock_latex_parser_class):
         """Test preprocess_documents method with multiple files."""
         # Setup mocks
@@ -166,7 +165,7 @@ class TestDocumentPreprocessor:
         mock_chunker.chunk.assert_called_once()
         assert result == expected_chunks
 
-    @patch("core.document_preprocessor.LatexParser")
+    @patch("rag_system_package.core.document_preprocessor.LatexParser")
     def test_preprocess_documents_empty_list(self, mock_latex_parser_class):
         """Test preprocess_documents method with empty file list."""
         mock_parser = Mock()
@@ -188,7 +187,7 @@ class TestDocumentPreprocessor:
 
     @patch("os.listdir")
     @patch("os.path.join")
-    @patch("core.document_preprocessor.LatexParser")
+    @patch("rag_system_package.core.document_preprocessor.LatexParser")
     def test_preprocess_document_folder_success(
         self, mock_latex_parser_class, mock_join, mock_listdir
     ):
