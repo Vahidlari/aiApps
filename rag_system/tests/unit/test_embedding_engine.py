@@ -22,8 +22,9 @@ class TestEmbeddingEngine:
             assert engine.model_name == "all-mpnet-base-v2"
             assert engine.embedding_dimension == 768
             assert engine.model == mock_model
+            # The device should be automatically selected by device_utils
             mock_st.assert_called_once_with(
-                "all-mpnet-base-v2", device=None, cache_folder=None
+                "all-mpnet-base-v2", device="cpu", cache_folder=None
             )
 
     def test_init_with_invalid_model(self):

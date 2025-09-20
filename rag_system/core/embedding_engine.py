@@ -22,6 +22,7 @@ from typing import List, Optional
 import numpy as np
 from core.data_chunker import DataChunk
 from sentence_transformers import SentenceTransformer
+from utils.device_utils import get_sentence_transformer_device
 
 
 class EmbeddingEngine:
@@ -63,7 +64,8 @@ class EmbeddingEngine:
         Args:
             model_name: Name of the Sentence Transformer model to use
             device: Device to run the model on ('cpu', 'cuda', 'mps', or None
-                for auto)
+                for auto). If None, will automatically select the optimal device
+                for the current platform.
             cache_folder: Folder to cache the model files
 
         Raises:
@@ -82,13 +84,22 @@ class EmbeddingEngine:
         # Set up logging
         self.logger = logging.getLogger(__name__)
 
+        # Auto-select device if not provided
+        if device is None:
+            device = get_sentence_transformer_device()
+            self.logger.info(f"Auto-selected device: {device}")
+
         try:
             # Initialize the Sentence Transformer model
-            self.logger.info(f"Loading Sentence Transformer model: {model_name}")
+            self.logger.info(
+                f"Loading Sentence Transformer model: {model_name} on device: {device}"
+            )
             self.model = SentenceTransformer(
                 model_name, device=device, cache_folder=cache_folder
             )
-            self.logger.info(f"Successfully loaded model: {model_name}")
+            self.logger.info(
+                f"Successfully loaded model: {model_name} on device: {device}"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to load model {model_name}: {str(e)}")
