@@ -9,7 +9,7 @@ import os
 import tempfile
 
 import pytest
-from core.data_chunker import DataChunk, DataChunker
+from core.data_chunker import ChunkMetadata, DataChunk, DataChunker
 from core.document_preprocessor import DocumentPreprocessor
 
 
@@ -213,7 +213,7 @@ This is a simple section with minimal content.
                 assert len(chunk.text) > 0
                 assert isinstance(chunk.start_idx, int)
                 assert isinstance(chunk.end_idx, int)
-                assert isinstance(chunk.metadata, dict)
+                assert isinstance(chunk.metadata, ChunkMetadata)
 
             # Verify content is extracted
             all_text = " ".join(chunk.text for chunk in chunks)
@@ -637,7 +637,7 @@ E = mc^2
 
             # Verify metadata is present
             for chunk in chunks:
-                assert isinstance(chunk.metadata, dict)
+                assert isinstance(chunk.metadata, ChunkMetadata)
                 # Metadata structure depends on implementation
                 # but should be present
 
