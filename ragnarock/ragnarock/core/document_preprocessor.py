@@ -1,14 +1,13 @@
 """Document preprocessor for LaTeX RAG system.
 
-This module handles the preprocessing pipeline for LaTeX documents before they are used
-in the RAG (Retrieval-Augmented Generation) system. It orchestrates the parsing of LaTeX
-documents using the LatexParser utility and converts the structured content into
+This module handles the preprocessing pipeline for different formats of document, including
+LaTeX documents before they are used before they are used in the RAG (Retrieval-Augmented Generation) system.
+It orchestrates the parsing of documents using utility modules such the LatexParser and converts the structured content into
 chunked text segments suitable for embedding and vector storage.
 
 Key responsibilities:
-- Parse LaTeX documents into structured data (chapters, sections, paragraphs, citations)
-- Extract and preserve mathematical equations while cleaning LaTeX formatting
-- Process citations and bibliography references with rich metadata
+- Provide a unified interface for parsing different formats of documents
+- Parse documents into structured data (chapters, sections, paragraphs, citations)
 - Chunk documents into fixed-size segments (768 tokens) with overlap (100-150 tokens)
 - Prepare clean text content for the embedding engine
 - Maintain document structure and citation relationships
@@ -24,13 +23,13 @@ from .data_chunker import DataChunk, DataChunker
 
 
 class DocumentPreprocessor:
-    """Document preprocessor for LaTeX documents in RAG system.
+    """Document preprocessor for different formats of documents in RAG system.
 
-    This class orchestrates the complete preprocessing pipeline for LaTeX documents,
+    This class orchestrates the complete preprocessing pipeline for different formats of documents,
     from parsing to chunking, preparing them for embedding and vector storage.
 
     Attributes:
-        latex_parser: LatexParser instance for document parsing
+        chunker: DataChunker instance for chunking documents
         chunk_size: Size of text chunks in tokens (default: 768)
         overlap_size: Overlap between chunks in tokens (default: 100-150)
     """
@@ -50,37 +49,59 @@ class DocumentPreprocessor:
         self.chunker = (
             chunker if chunker is not None else DataChunker(chunk_size, overlap_size)
         )
+        self.file_extension_map = {
+            "latex": [".tex", ".latex", ".bib"],
+            "pdf": [".pdf"],
+            "docx": [".docx"],
+            "doc": [".doc"],
+            "txt": [".txt"],
+        }
 
         self.latex_parser = LatexParser()
 
-    def preprocess_document(self, file_path: str) -> list[DataChunk]:
+    def preprocess_document(
+        self, file_path: str, format: str = "latex"
+    ) -> list[DataChunk]:
         """Preprocess the document and return a list of DataChunks.
 
         Args:
-            file_path: Path to the LaTeX document file
+            file_path: Path to the document file
+            format: Format of the document (default: "latex")
 
         Returns:
             list[DataChunk]: List of DataChunks with metadata
         """
-        document = self.latex_parser.parse_document(file_path)
+        if format == "latex":
+            document = self.latex_parser.parse_document(file_path)
+        else:
+            raise ValueError(f"Unsupported document format: {format}")
 
         document_text = self._extract_document_text([document])
         return self.chunker.chunk(document_text)
 
-    def preprocess_documents(self, file_paths: list[str]) -> list[DataChunk]:
+    def preprocess_documents(
+        self, file_paths: list[str], format: str = "latex"
+    ) -> list[DataChunk]:
         """Preprocess the documents and return a list of DataChunks."""
-        documents = [
-            self.latex_parser.parse_document(file_path) for file_path in file_paths
-        ]
-        document_text = self._extract_document_text(documents)
-        return self.chunker.chunk(document_text)
+        if format == "latex":
+            documents = [
+                self.latex_parser.parse_document(file_path) for file_path in file_paths
+            ]
+            document_text = self._extract_document_text(documents)
+            return self.chunker.chunk(document_text)
+        else:
+            raise ValueError(f"Unsupported document format: {format}")
 
-    def preprocess_document_folder(self, folder_path: str) -> list[DataChunk]:
+    def preprocess_document_folder(
+        self, folder_path: str, format: str = "latex"
+    ) -> list[DataChunk]:
         """Preprocess the documents in the folder and return a list of DataChunks."""
         file_paths = [
-            os.path.join(folder_path, file) for file in os.listdir(folder_path)
+            os.path.join(folder_path, file)
+            for file in os.listdir(folder_path)
+            if any(file.endswith(ext) for ext in self.file_extension_map[format])
         ]
-        return self.preprocess_documents(file_paths)
+        return self.preprocess_documents(file_paths, format)
 
     def _extract_document_text(self, documentList: list[LatexDocument]) -> str:
         """Extract the text from the document.

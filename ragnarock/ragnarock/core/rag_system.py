@@ -120,12 +120,14 @@ class RAGSystem:
             self.logger.error(f"Failed to initialize RAG system: {str(e)}")
             raise
 
-    def process_document(self, document_path: str) -> List[str]:
+    def process_document(
+        self, document_path: str, document_type: str = "latex"
+    ) -> List[str]:
         """Process a LaTeX document and store it in the vector database.
 
         Args:
             document_path: Path to the LaTeX document file
-
+            document_type: Type of document to process ("latex", "pdf", "txt")
         Returns:
             List[str]: List of chunk IDs that were stored
 
@@ -140,18 +142,14 @@ class RAGSystem:
             self.logger.info(f"Processing document: {document_path}")
 
             # Step 1: Preprocess the LaTeX document
-            self.logger.debug("Step 1: Preprocessing LaTeX document")
-            processed_doc = self.document_preprocessor.preprocess_document(
-                document_path
+            self.logger.debug(f"Step 1: Preprocessing {document_type} document")
+            chunks = self.document_preprocessor.preprocess_document(
+                document_path, document_type
             )
 
-            # Step 2: Chunk the processed document
-            self.logger.debug("Step 2: Chunking processed document")
-            chunks = self.data_chunker.chunk_document(processed_doc)
-
-            # Step 3: Store chunks in vector database
+            # Step 2: Store chunks in vector database
             self.logger.debug(
-                f"Step 3: Storing {len(chunks)} chunks in vector database"
+                f"Step 2: Storing {len(chunks)} chunks in vector database"
             )
             stored_uuids = self.vector_store.store_chunks(chunks)
 
