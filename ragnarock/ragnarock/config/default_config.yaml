@@ -1,0 +1,97 @@
+# Default configuration for LaTeX RAG System
+
+# Document Processing Configuration
+document_processing:
+  chunk_size: 768
+  overlap: 100
+  preserve_equations: true
+  remove_latex_commands: true
+  separate_citations: true
+  citation_metadata:
+    - author
+    - year
+    - title
+    - doi
+    - source_document
+    - page_reference
+
+# Embedding Configuration
+embedding:
+  model: "all-mpnet-base-v2"
+  pooling_strategy: "masked_mean"
+  vectorize_class_name: false
+  batch_size: 32
+  device: "auto" # "cpu", "cuda", or "auto"
+
+# Vector Database Configuration
+vector_database:
+  type: "weaviate"
+  url: "http://localhost:8080"
+  timeout: 60
+  retry_attempts: 3
+  schema:
+    class_name: "Document"
+    properties:
+      - name: "content"
+        data_type: "text"
+      - name: "metadata"
+        data_type: "object"
+      - name: "chunk_id"
+        data_type: "text"
+      - name: "source_document"
+        data_type: "text"
+      - name: "chunk_type"
+        data_type: "text"
+
+# Retrieval Configuration
+retrieval:
+  search_type: "hybrid"
+  alpha: 0.5 # Weight between vector (alpha) and keyword (1-alpha) search
+  fusion_type: "relative_score"
+  top_k: 5
+  score_threshold: 0.7
+  query_expansion: false
+
+# Generation Configuration
+generation:
+  model: "mistral:7b"
+  provider: "ollama"
+  url: "http://localhost:11434"
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 0.9
+  context_window: 4096
+
+# Prompt Templates
+prompts:
+  rag_template: |
+    You are a helpful assistant that answers questions based on the provided context.
+
+    Context:
+    {context}
+
+    Question: {question}
+
+    Answer the question based on the context provided. If the information is not in the context, say so. Include relevant citations when available.
+
+    Answer:
+
+  citation_template: |
+    Based on the provided context, here is what {author} ({year}) says about this topic:
+
+    {content}
+
+    Source: {title}
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "ragnarock.log"
+
+# Performance Configuration
+performance:
+  max_workers: 4
+  cache_size: 1000
+  enable_caching: true
+  batch_processing: true

@@ -38,5 +38,6 @@
             }
         }
     },
+    "postCreateCommand": "cd /workspaces/aiApps/ragnarock && pip install -e . && echo 'export PATH=\"/home/vscode/.local/bin:$PATH\"' >> ~/.bashrc",
     "remoteUser": "vscode"
 }
