@@ -37,6 +37,7 @@ persistence:
 modules:
   # List of enabled modules
   enabled: [
+    "text2vec-transformers",
     "text2vec-cohere",
     "text2vec-huggingface", 
     "text2vec-palm",
@@ -44,6 +45,31 @@ modules:
     "generative-openai",
     "qna-openai"
   ]
+
+# Transformers Inference API Configuration
+transformers:
+  # Inference API URL for text2vec-transformers
+  inference_api: "http://t2v-transformers:8080"
+  
+  # Container name for the transformers service
+  container_name: "t2v-transformers"
+  
+  # Port mapping for transformers service
+  port: 8081
+  
+  # Restart policy for transformers service
+  restart_policy: "unless-stopped"
+  
+  # Enable CUDA acceleration (set to 1 if you have GPU support)
+  enable_cuda: 0
+  
+  # Health check configuration
+  health_check:
+    enabled: true
+    interval: 30
+    timeout: 10
+    retries: 5
+    start_period: 60
 
 # Cluster Configuration
 cluster:

@@ -36,7 +36,21 @@ DEFAULT_CONFIG="{
     \"volume_name\": \"weaviate_data\"
   },
   \"modules\": {
-    \"enabled\": [\"text2vec-cohere\", \"text2vec-huggingface\", \"text2vec-palm\", \"text2vec-openai\", \"generative-openai\", \"qna-openai\"]
+    \"enabled\": [\"text2vec-transformers\", \"text2vec-cohere\", \"text2vec-huggingface\", \"text2vec-palm\", \"text2vec-openai\", \"generative-openai\", \"qna-openai\"]
+  },
+  \"transformers\": {
+    \"inference_api\": \"http://t2v-transformers:8080\",
+    \"container_name\": \"t2v-transformers\",
+    \"port\": 8081,
+    \"restart_policy\": \"unless-stopped\",
+    \"enable_cuda\": 0,
+    \"health_check\": {
+      \"enabled\": true,
+      \"interval\": 30,
+      \"timeout\": 10,
+      \"retries\": 5,
+      \"start_period\": 60
+    }
   },
   \"cluster\": {
     \"hostname\": \"node1\"
@@ -130,6 +144,19 @@ export_config_vars() {
     # Modules configuration
     local modules=$(echo "$CONFIG" | jq -r '.modules.enabled[]? // empty' | tr '\n' ',' | sed 's/,$//')
     export ENABLE_MODULES="$modules"
+    
+    # Transformers configuration
+    export TRANSFORMERS_INFERENCE_API=$(echo "$CONFIG" | jq -r '.transformers.inference_api // "http://t2v-transformers:8080"')
+    export TRANSFORMERS_CONTAINER_NAME=$(echo "$CONFIG" | jq -r '.transformers.container_name // "t2v-transformers"')
+    export TRANSFORMERS_PORT=$(echo "$CONFIG" | jq -r '.transformers.port // 8081')
+    export TRANSFORMERS_RESTART_POLICY=$(echo "$CONFIG" | jq -r '.transformers.restart_policy // "unless-stopped"')
+    export ENABLE_CUDA=$(echo "$CONFIG" | jq -r '.transformers.enable_cuda // 0')
+    
+    # Transformers health check configuration
+    export TRANSFORMERS_HEALTH_CHECK_INTERVAL="${TRANSFORMERS_HEALTH_CHECK_INTERVAL:-30s}"
+    export TRANSFORMERS_HEALTH_CHECK_TIMEOUT="${TRANSFORMERS_HEALTH_CHECK_TIMEOUT:-10s}"
+    export TRANSFORMERS_HEALTH_CHECK_RETRIES="${TRANSFORMERS_HEALTH_CHECK_RETRIES:-5}"
+    export TRANSFORMERS_HEALTH_CHECK_START_PERIOD="${TRANSFORMERS_HEALTH_CHECK_START_PERIOD:-60s}"
     
     # Cluster configuration
     export CLUSTER_HOSTNAME=$(echo "$CONFIG" | jq -r '.cluster.hostname // "node1"')

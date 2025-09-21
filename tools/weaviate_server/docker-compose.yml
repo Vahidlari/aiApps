@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  # Transformers inference API for text2vec-transformers
+  t2v-transformers:
+    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
+    container_name: ${TRANSFORMERS_CONTAINER_NAME:-t2v-transformers}
+    environment:
+      ENABLE_CUDA: ${ENABLE_CUDA:-0}
+    ports:
+      - "${TRANSFORMERS_PORT:-8081}:8080"
+    restart: ${TRANSFORMERS_RESTART_POLICY:-unless-stopped}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: ${TRANSFORMERS_HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${TRANSFORMERS_HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${TRANSFORMERS_HEALTH_CHECK_RETRIES:-5}
+      start_period: ${TRANSFORMERS_HEALTH_CHECK_START_PERIOD:-60s}
+
   weaviate:
     image: semitechnologies/weaviate:${WEAVIATE_VERSION:-1.22.4}
     container_name: ${WEAVIATE_CONTAINER_NAME:-weaviate}
@@ -17,7 +33,10 @@ services:
       - PERSISTENCE_DATA_PATH=${PERSISTENCE_DATA_PATH:-/var/lib/weaviate}
       
       # Modules configuration
-      - ENABLE_MODULES=${ENABLE_MODULES:-text2vec-cohere,text2vec-huggingface,text2vec-palm,text2vec-openai,generative-openai,qna-openai}
+      - ENABLE_MODULES=${ENABLE_MODULES:-text2vec-transformers,text2vec-cohere,text2vec-huggingface,text2vec-palm,text2vec-openai,generative-openai,qna-openai}
+      
+      # Transformers inference API configuration
+      - TRANSFORMERS_INFERENCE_API=${TRANSFORMERS_INFERENCE_API:-http://t2v-transformers:8080}
       
       # Cluster settings
       - CLUSTER_HOSTNAME=${CLUSTER_HOSTNAME:-node1}
@@ -39,8 +58,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: ${MEMORY_LIMIT:-}
-          cpus: ${CPU_LIMIT:-}
+          memory: ${MEMORY_LIMIT:-2g}
+          cpus: ${CPU_LIMIT:-1}
 
 volumes:
   weaviate_data:
