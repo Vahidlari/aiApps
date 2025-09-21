@@ -110,7 +110,7 @@ class RAGSystem:
             )
             self.data_chunker = DataChunker(
                 chunk_size=chunk_size,
-                overlap=chunk_overlap,
+                overlap_size=chunk_overlap,
             )
 
             self.is_initialized = True

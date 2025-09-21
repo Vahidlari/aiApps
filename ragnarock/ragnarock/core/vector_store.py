@@ -199,9 +199,42 @@ class VectorStore:
                         },
                     },
                     {
-                        "name": "metadata",
-                        "dataType": ["object"],
-                        "description": "Additional metadata for the chunk",
+                        "name": "metadata_chunk_id",
+                        "dataType": ["int"],
+                        "description": "Chunk ID from metadata",
+                        "moduleConfig": {
+                            "text2vec-transformers": {
+                                "skip": True,
+                                "vectorizePropertyName": False,
+                            }
+                        },
+                    },
+                    {
+                        "name": "metadata_chunk_size",
+                        "dataType": ["int"],
+                        "description": "Chunk size from metadata",
+                        "moduleConfig": {
+                            "text2vec-transformers": {
+                                "skip": True,
+                                "vectorizePropertyName": False,
+                            }
+                        },
+                    },
+                    {
+                        "name": "metadata_total_chunks",
+                        "dataType": ["int"],
+                        "description": "Total chunks from metadata",
+                        "moduleConfig": {
+                            "text2vec-transformers": {
+                                "skip": True,
+                                "vectorizePropertyName": False,
+                            }
+                        },
+                    },
+                    {
+                        "name": "metadata_created_at",
+                        "dataType": ["text"],
+                        "description": "Created at timestamp from metadata",
                         "moduleConfig": {
                             "text2vec-transformers": {
                                 "skip": True,
@@ -271,7 +304,10 @@ class VectorStore:
                 "chunk_id": chunk.chunk_id,
                 "source_document": chunk.source_document,
                 "chunk_type": chunk.chunk_type,
-                "metadata": chunk.metadata,
+                "metadata_chunk_id": chunk.metadata.chunk_id,
+                "metadata_chunk_size": chunk.metadata.chunk_size,
+                "metadata_total_chunks": chunk.metadata.total_chunks,
+                "metadata_created_at": chunk.metadata.created_at or "",
                 "page_number": chunk.metadata.page_number or 0,
                 "section_title": chunk.metadata.section_title or "",
             }
@@ -325,6 +361,9 @@ class VectorStore:
         total_chunks = len(valid_chunks)
 
         try:
+            # Ensure schema exists before storing chunks
+            self.create_schema()
+
             self.logger.info(
                 f"Storing {total_chunks} chunks in batches of {batch_size}"
             )
@@ -342,7 +381,10 @@ class VectorStore:
                         "chunk_id": chunk.chunk_id,
                         "source_document": chunk.source_document,
                         "chunk_type": chunk.chunk_type,
-                        "metadata": chunk.metadata,
+                        "metadata_chunk_id": chunk.metadata.chunk_id,
+                        "metadata_chunk_size": chunk.metadata.chunk_size,
+                        "metadata_total_chunks": chunk.metadata.total_chunks,
+                        "metadata_created_at": chunk.metadata.created_at or "",
                         "page_number": chunk.metadata.page_number or 0,
                         "section_title": chunk.metadata.section_title or "",
                     }
@@ -352,19 +394,29 @@ class VectorStore:
                 self.logger.debug(
                     f"Storing batch {i//batch_size + 1} with {len(batch)} chunks"
                 )
-                batch_result = self.client.batch.create_objects(
-                    objects=batch_data,
-                    class_name=self.class_name,
-                )
+
+                # Add objects to batch first
+                for obj_data in batch_data:
+                    self.client.batch.add_data_object(
+                        data_object=obj_data, class_name=self.class_name
+                    )
+
+                # Create objects in batch
+                batch_result = self.client.batch.create_objects()
 
                 # Extract UUIDs from batch result
                 for result in batch_result:
-                    if hasattr(result, "result") and result.result:
-                        batch_uuids.append(result.result.get("id"))
+                    if isinstance(result, dict):
+                        # Check if the operation was successful
+                        if result.get("result", {}).get("status") == "SUCCESS":
+                            # Get the ID from the result
+                            chunk_id = result.get("id")
+                            if chunk_id:
+                                batch_uuids.append(chunk_id)
+                        else:
+                            self.logger.warning(f"Failed to store batch item: {result}")
                     else:
-                        self.logger.warning(
-                            f"Failed to get UUID for batch item: {result}"
-                        )
+                        self.logger.warning(f"Unexpected result format: {result}")
 
                 stored_uuids.extend(batch_uuids)
                 self.logger.debug(
@@ -399,7 +451,10 @@ class VectorStore:
                         "chunk_id",
                         "source_document",
                         "chunk_type",
-                        "metadata",
+                        "metadata_chunk_id",
+                        "metadata_chunk_size",
+                        "metadata_total_chunks",
+                        "metadata_created_at",
                         "page_number",
                         "section_title",
                     ],
@@ -584,7 +639,10 @@ class VectorStore:
                         "chunk_id",
                         "source_document",
                         "chunk_type",
-                        "metadata",
+                        "metadata_chunk_id",
+                        "metadata_chunk_size",
+                        "metadata_total_chunks",
+                        "metadata_created_at",
                         "page_number",
                         "section_title",
                     ],
@@ -622,7 +680,18 @@ class VectorStore:
                                 "chunk_id": item.get("chunk_id", ""),
                                 "source_document": item.get("source_document", ""),
                                 "chunk_type": item.get("chunk_type", ""),
-                                "metadata": item.get("metadata", {}),
+                                "metadata": {
+                                    "chunk_id": item.get("metadata_chunk_id", 0),
+                                    "chunk_size": item.get("metadata_chunk_size", 0),
+                                    "total_chunks": item.get(
+                                        "metadata_total_chunks", 0
+                                    ),
+                                    "created_at": item.get("metadata_created_at", ""),
+                                    "source_document": item.get("source_document", ""),
+                                    "page_number": item.get("page_number", 0),
+                                    "section_title": item.get("section_title", ""),
+                                    "chunk_type": item.get("chunk_type", ""),
+                                },
                                 "page_number": item.get("page_number", 0),
                                 "section_title": item.get("section_title", ""),
                                 "similarity_score": similarity_score,
@@ -683,7 +752,10 @@ class VectorStore:
                         "chunk_id",
                         "source_document",
                         "chunk_type",
-                        "metadata",
+                        "metadata_chunk_id",
+                        "metadata_chunk_size",
+                        "metadata_total_chunks",
+                        "metadata_created_at",
                         "page_number",
                         "section_title",
                     ],
@@ -722,7 +794,18 @@ class VectorStore:
                                 "chunk_id": item.get("chunk_id", ""),
                                 "source_document": item.get("source_document", ""),
                                 "chunk_type": item.get("chunk_type", ""),
-                                "metadata": item.get("metadata", {}),
+                                "metadata": {
+                                    "chunk_id": item.get("metadata_chunk_id", 0),
+                                    "chunk_size": item.get("metadata_chunk_size", 0),
+                                    "total_chunks": item.get(
+                                        "metadata_total_chunks", 0
+                                    ),
+                                    "created_at": item.get("metadata_created_at", ""),
+                                    "source_document": item.get("source_document", ""),
+                                    "page_number": item.get("page_number", 0),
+                                    "section_title": item.get("section_title", ""),
+                                    "chunk_type": item.get("chunk_type", ""),
+                                },
                                 "page_number": item.get("page_number", 0),
                                 "section_title": item.get("section_title", ""),
                                 "similarity_score": hybrid_score,
