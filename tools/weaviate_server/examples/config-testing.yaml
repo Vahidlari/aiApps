@@ -1,0 +1,46 @@
+# Testing Configuration for Weaviate
+# Optimized for CI/CD and testing environments
+
+server:
+  version: "1.22.4"
+  port: 8081 # Different port to avoid conflicts
+  container_name: "weaviate-test"
+  restart_policy: "no" # Don't auto-restart in testing
+
+authentication:
+  # Disable authentication for easier testing
+  anonymous_access_enabled: true
+  api_key_enabled: false
+  api_key_allowed_keys: []
+  api_key_users: []
+
+persistence:
+  data_path: "/var/lib/weaviate"
+  volume_name: "weaviate_test_data"
+
+modules:
+  # Minimal modules for faster testing
+  enabled: ["text2vec-cohere"]
+
+cluster:
+  hostname: "test-node1"
+
+health_check:
+  enabled: true
+  interval: 10 # Faster health checks for testing
+  timeout: 5
+  retries: 3
+  start_period: 20
+
+logging:
+  level: "WARN" # Minimal logging for testing
+  format: "json"
+
+resources:
+  # Minimal resources for testing
+  memory_limit: "256m"
+  cpu_limit: "0.25"
+
+environment:
+  TEST_MODE: "true"
+  SKIP_TELEMETRY: "true"

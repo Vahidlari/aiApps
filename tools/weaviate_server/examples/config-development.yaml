@@ -1,0 +1,46 @@
+# Development Configuration for Weaviate
+# Optimized for local development with minimal resource usage
+
+server:
+  version: "1.22.4"
+  port: 8080
+  container_name: "weaviate-dev"
+  restart_policy: "unless-stopped"
+
+authentication:
+  # Disable authentication for easier development
+  anonymous_access_enabled: true
+  api_key_enabled: false
+  api_key_allowed_keys: []
+  api_key_users: []
+
+persistence:
+  data_path: "/var/lib/weaviate"
+  volume_name: "weaviate_dev_data"
+
+modules:
+  # Minimal modules for development
+  enabled: ["text2vec-cohere", "text2vec-huggingface"]
+
+cluster:
+  hostname: "dev-node1"
+
+health_check:
+  enabled: true
+  interval: 30
+  timeout: 10
+  retries: 5
+  start_period: 40
+
+logging:
+  level: "DEBUG" # More verbose logging for development
+  format: "text" # Human-readable format
+
+resources:
+  # Light resource limits for development
+  memory_limit: "512m"
+  cpu_limit: "0.5"
+
+environment:
+  DEBUG: "true"
+  DEVELOPMENT_MODE: "true"

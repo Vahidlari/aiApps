@@ -1,0 +1,84 @@
+# Weaviate Server Configuration Template
+# Copy this file to config.yaml and modify as needed
+
+# Server Configuration
+server:
+  # Weaviate version to use
+  version: "1.22.4"
+  
+  # Port mapping (host:container)
+  port: 8080
+  
+  # Container name
+  container_name: "weaviate"
+  
+  # Restart policy: no, always, on-failure, unless-stopped
+  restart_policy: "unless-stopped"
+
+# Authentication Configuration
+authentication:
+  # Enable anonymous access (recommended for development)
+  anonymous_access_enabled: true
+  
+  # API Key authentication (optional)
+  api_key_enabled: false
+  api_key_allowed_keys: []
+  api_key_users: []
+
+# Persistence Configuration
+persistence:
+  # Data path inside container
+  data_path: "/var/lib/weaviate"
+  
+  # Volume name for data persistence
+  volume_name: "weaviate_data"
+
+# Modules Configuration
+modules:
+  # List of enabled modules
+  enabled: [
+    "text2vec-cohere",
+    "text2vec-huggingface", 
+    "text2vec-palm",
+    "text2vec-openai",
+    "generative-openai",
+    "qna-openai"
+  ]
+
+# Cluster Configuration
+cluster:
+  hostname: "node1"
+
+# Health Check Configuration
+health_check:
+  # Enable health checks
+  enabled: true
+  
+  # Check interval in seconds
+  interval: 30
+  
+  # Timeout in seconds
+  timeout: 10
+  
+  # Number of retries
+  retries: 5
+  
+  # Start period in seconds
+  start_period: 40
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+
+# Resource Limits (optional)
+resources:
+  memory_limit: null
+  cpu_limit: null
+
+# Environment Variables (additional)
+environment: {}
+  # Add any additional environment variables here
+  # Example:
+  # CUSTOM_VAR: "value"
+  # DEBUG: "true"

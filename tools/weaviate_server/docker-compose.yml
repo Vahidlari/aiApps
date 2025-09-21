@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:${WEAVIATE_VERSION:-1.22.4}
+    container_name: ${WEAVIATE_CONTAINER_NAME:-weaviate}
+    ports:
+      - "${WEAVIATE_PORT:-8080}:8080"
+    environment:
+      # Authentication settings
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=${AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED:-true}
+      - AUTHENTICATION_APIKEY_ENABLED=${AUTHENTICATION_APIKEY_ENABLED:-false}
+      - AUTHENTICATION_APIKEY_ALLOWED_KEYS=${AUTHENTICATION_APIKEY_ALLOWED_KEYS:-}
+      - AUTHENTICATION_APIKEY_USERS=${AUTHENTICATION_APIKEY_USERS:-}
+      
+      # Persistence settings
+      - PERSISTENCE_DATA_PATH=${PERSISTENCE_DATA_PATH:-/var/lib/weaviate}
+      
+      # Modules configuration
+      - ENABLE_MODULES=${ENABLE_MODULES:-text2vec-cohere,text2vec-huggingface,text2vec-palm,text2vec-openai,generative-openai,qna-openai}
+      
+      # Cluster settings
+      - CLUSTER_HOSTNAME=${CLUSTER_HOSTNAME:-node1}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      
+      # Additional environment variables will be added by the script if needed
+    volumes:
+      - ${WEAVIATE_VOLUME_NAME:-weaviate_data}:${PERSISTENCE_DATA_PATH:-/var/lib/weaviate}
+    restart: ${WEAVIATE_RESTART_POLICY:-unless-stopped}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-5}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-}
+          cpus: ${CPU_LIMIT:-}
+
+volumes:
+  weaviate_data:
+    driver: local

@@ -1,0 +1,58 @@
+# Production Configuration for Weaviate
+# Optimized for production use with security and performance considerations
+
+server:
+  version: "1.22.4"
+  port: 8080
+  container_name: "weaviate-prod"
+  restart_policy: "unless-stopped"
+
+authentication:
+  # Disable anonymous access for security
+  anonymous_access_enabled: false
+  api_key_enabled: true
+  api_key_allowed_keys:
+    - "your-secure-api-key-here"
+    - "backup-api-key-here"
+  api_key_users:
+    - "admin@yourcompany.com"
+    - "service@yourcompany.com"
+
+persistence:
+  data_path: "/var/lib/weaviate"
+  volume_name: "weaviate_prod_data"
+
+modules:
+  # Full module set for production
+  enabled:
+    [
+      "text2vec-cohere",
+      "text2vec-huggingface",
+      "text2vec-palm",
+      "text2vec-openai",
+      "generative-openai",
+      "qna-openai",
+    ]
+
+cluster:
+  hostname: "prod-node1"
+
+health_check:
+  enabled: true
+  interval: 30
+  timeout: 10
+  retries: 5
+  start_period: 40
+
+logging:
+  level: "INFO" # Less verbose logging for production
+  format: "json" # Structured logging for monitoring
+
+resources:
+  # Generous resource limits for production
+  memory_limit: "2g"
+  cpu_limit: "2.0"
+
+environment:
+  PRODUCTION_MODE: "true"
+  ENABLE_TELEMETRY: "false"
