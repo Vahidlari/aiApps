@@ -18,6 +18,7 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ragnarock import (
     DataChunk,
     DataChunker,
@@ -111,11 +112,11 @@ class TestRAGSystem:
             },
         ]
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_rag_system_initialization_success(
         self,
         mock_data_chunker,
@@ -147,9 +148,9 @@ class TestRAGSystem:
         mock_vector_store.assert_called_once()
         mock_retriever.assert_called_once()
         mock_document_preprocessor.assert_called_once()
-        mock_data_chunker.assert_called_once_with(chunk_size=512, overlap=50)
+        mock_data_chunker.assert_called_once_with(chunk_size=512, overlap_size=50)
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     def test_rag_system_initialization_failure(self, mock_embedding_engine):
         """Test RAGSystem initialization failure."""
         mock_embedding_engine.side_effect = Exception("Embedding engine failed")
@@ -161,10 +162,7 @@ class TestRAGSystem:
         """Test successful document processing."""
         # Setup
         mock_components["document_preprocessor"].preprocess_document.return_value = (
-            Mock()
-        )
-        mock_components["data_chunker"].chunk_document = Mock(
-            return_value=sample_chunks
+            sample_chunks
         )
         mock_components["vector_store"].store_chunks.return_value = ["uuid1", "uuid2"]
 
@@ -172,7 +170,6 @@ class TestRAGSystem:
         rag = RAGSystem.__new__(RAGSystem)
         rag.is_initialized = True
         rag.document_preprocessor = mock_components["document_preprocessor"]
-        rag.data_chunker = mock_components["data_chunker"]
         rag.vector_store = mock_components["vector_store"]
         rag.logger = Mock()
 
@@ -190,8 +187,7 @@ class TestRAGSystem:
             assert result == ["uuid1", "uuid2"]
             mock_components[
                 "document_preprocessor"
-            ].preprocess_document.assert_called_once_with(temp_path)
-            mock_components["data_chunker"].chunk_document.assert_called_once()
+            ].preprocess_document.assert_called_once_with(temp_path, "latex")
             mock_components["vector_store"].store_chunks.assert_called_once_with(
                 sample_chunks
             )

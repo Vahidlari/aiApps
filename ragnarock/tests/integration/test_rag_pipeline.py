@@ -18,6 +18,7 @@ import tempfile
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
 from ragnarock import ChunkMetadata, DataChunk, RAGSystem
 
 
@@ -116,11 +117,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             ),
         ]
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_complete_rag_system_initialization(
         self,
         mock_data_chunker,
@@ -154,11 +155,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert rag.document_preprocessor is not None
         assert rag.data_chunker is not None
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_document_processing_pipeline(
         self,
         mock_data_chunker,
@@ -178,11 +179,10 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Setup document processing mocks
-        mock_processed_doc = Mock()
+        # The document preprocessor should return chunks directly
         mock_document_preprocessor.return_value.preprocess_document.return_value = (
-            mock_processed_doc
+            sample_chunks
         )
-        mock_data_chunker.return_value.chunk_document.return_value = sample_chunks
         mock_vector_store.return_value.store_chunks.return_value = [
             "uuid1",
             "uuid2",
@@ -204,10 +204,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             # Assertions
             assert result == ["uuid1", "uuid2", "uuid3"]
             mock_document_preprocessor.return_value.preprocess_document.assert_called_once_with(
-                temp_path
-            )
-            mock_data_chunker.return_value.chunk_document.assert_called_once_with(
-                mock_processed_doc
+                temp_path, "latex"
             )
             mock_vector_store.return_value.store_chunks.assert_called_once_with(
                 sample_chunks
@@ -216,11 +213,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         finally:
             os.unlink(temp_path)
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_query_processing_pipeline(
         self,
         mock_data_chunker,
@@ -285,11 +282,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "What is Einstein's famous equation?", top_k=5
         )
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_system_statistics_integration(
         self,
         mock_data_chunker,
@@ -335,11 +332,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert "components" in stats
         assert "retrieval" in stats
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_error_handling_integration(
         self,
         mock_data_chunker,
@@ -368,11 +365,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         with pytest.raises(Exception, match="Search failed"):
             rag.search_similar("test query")
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_context_manager_integration(
         self,
         mock_data_chunker,
@@ -398,11 +395,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Verify cleanup
         assert rag.is_initialized is False
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_component_communication(
         self,
         mock_data_chunker,
@@ -428,11 +425,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag.vector_store, "embedding_engine")
         assert rag.is_initialized is True
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_performance_characteristics(
         self,
         mock_data_chunker,
@@ -460,11 +457,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag, "document_preprocessor")
         assert hasattr(rag, "data_chunker")
 
-    @patch("ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
+    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
+    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
     def test_configuration_validation(
         self,
         mock_data_chunker,
