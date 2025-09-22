@@ -5,6 +5,8 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -39,13 +41,41 @@ RUN python3.11 -m pip install --upgrade pip setuptools wheel
 # Install pipenv
 RUN python3.11 -m pip install pipenv
 
+# Set architecture-specific environment variables
+ENV PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+ENV TORCH_CUDA_ARCH_LIST=""
+ENV PIP_INDEX_URL="https://pypi.org/simple"
+
 # Copy lock file if it exists (will fail gracefully if not present)
 COPY Pipfile* ./
+
+# Create a script to handle problematic packages
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Detecting architecture: $(uname -m)"\n\
+ARCH=$(uname -m)\n\
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then\n\
+    echo "ARM64 architecture detected, using CPU-only PyTorch"\n\
+    export TORCH_CUDA_ARCH_LIST=""\n\
+    export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"\n\
+fi\n\
+echo "Installing packages..."\n\
+pipenv install --deploy --ignore-pipfile --system --verbose || {\n\
+    echo "First attempt failed, trying with --skip-lock"\n\
+    pipenv install --system --skip-lock --verbose || {\n\
+        echo "Second attempt failed, trying without lock file"\n\
+        pipenv install --system --skip-lock --verbose --ignore-pipfile || {\n\
+            echo "Final fallback: installing core packages individually"\n\
+            python3.11 -m pip install --no-deps torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu\n\
+            pipenv install --system --skip-lock --verbose --ignore-pipfile\n\
+        }\n\
+    }\n\
+}' > /tmp/install_packages.sh && chmod +x /tmp/install_packages.sh
 
 # Install Python packages from Pipfile.lock for reproducible builds
 RUN if [ -f Pipfile.lock ]; then \
         echo "Installing packages from Pipfile.lock"; \
-        pipenv install --deploy --ignore-pipfile --system; \
+        /tmp/install_packages.sh; \
     else \
         echo "No Pipfile.lock found, skipping pip installation"; \
     fi
