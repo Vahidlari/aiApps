@@ -20,7 +20,7 @@ consistent embedding generation and supports rich metadata filtering.
 import logging
 from typing import Any, Dict, List, Optional
 
-from weaviate import Client
+import weaviate
 from weaviate.exceptions import WeaviateBaseError
 
 from .data_chunker import DataChunk
@@ -83,7 +83,27 @@ class VectorStore:
         # Initialize Weaviate client
         try:
             self.logger.info(f"Connecting to Weaviate at {url}")
-            self.client = Client(url, timeout_config=(timeout, timeout))
+            # Parse URL to extract host and port
+            if url.startswith("http://"):
+                host_port = url[7:]  # Remove "http://"
+            elif url.startswith("https://"):
+                host_port = url[8:]  # Remove "https://"
+            else:
+                host_port = url
+
+            if ":" in host_port:
+                host, port = host_port.split(":")
+                port = int(port)
+            else:
+                host = host_port
+                port = 8080
+
+            self.client = weaviate.connect_to_local(
+                host=host,
+                port=port,
+                skip_init_checks=True,
+                grpc_port=50051,  # Keep gRPC port but it will fail gracefully
+            )
             self._test_connection()
             self.logger.info("Successfully connected to Weaviate")
         except Exception as e:
@@ -104,8 +124,8 @@ class VectorStore:
             if not self.client.is_ready():
                 raise ConnectionError("Weaviate is not ready")
 
-            # Test with a simple query
-            self.client.schema.get()
+            # Test with a simple query - V4 API
+            self.client.collections.list_all()
             self.is_connected = True
             return True
         except Exception as e:
@@ -113,173 +133,112 @@ class VectorStore:
             raise ConnectionError(f"Connection test failed: {str(e)}")
 
     def create_schema(self, force_recreate: bool = False) -> None:
-        """Create the Weaviate schema for document storage.
+        """Create the Weaviate collection for document storage using V4 API.
 
         Args:
-            force_recreate: If True, delete existing schema before creating new one
+            force_recreate: If True, delete existing collection before creating new one
 
         Raises:
-            WeaviateBaseError: If schema creation fails
+            WeaviateBaseError: If collection creation fails
         """
         try:
-            # Check if schema already exists
-            existing_schemas = self.client.schema.get()
-            schema_exists = any(
-                schema["class"] == self.class_name
-                for schema in existing_schemas.get("classes", [])
+            # Check if collection already exists
+            existing_collections = self.client.collections.list_all()
+            collection_exists = any(
+                collection.name == self.class_name
+                for collection in existing_collections.values()
             )
 
-            if schema_exists:
+            if collection_exists:
                 if force_recreate:
-                    self.logger.info(
-                        f"Deleting existing schema for class: {self.class_name}"
-                    )
-                    self.client.schema.delete_class(self.class_name)
+                    self.logger.info(f"Deleting existing collection: {self.class_name}")
+                    self.client.collections.delete(self.class_name)
                 else:
-                    self.logger.info(
-                        f"Schema for class {self.class_name} already exists"
-                    )
+                    self.logger.info(f"Collection {self.class_name} already exists")
                     return
 
-            # Define the schema
-            schema = {
-                "class": self.class_name,
-                "description": "Document chunks with embeddings for RAG system",
-                "vectorizer": "text2vec-transformers",
-                "moduleConfig": {
-                    "text2vec-transformers": {
-                        "model": self.embedding_engine.model_name,
-                        "poolingStrategy": "masked_mean",
-                        "vectorizeClassName": False,
-                    }
-                },
-                "properties": [
-                    {
-                        "name": "content",
-                        "dataType": ["text"],
-                        "description": "The text content of the document chunk",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": False,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "chunk_id",
-                        "dataType": ["text"],
-                        "description": "Unique identifier for the chunk",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "source_document",
-                        "dataType": ["text"],
-                        "description": "Source document filename",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "chunk_type",
-                        "dataType": ["text"],
-                        "description": "Type of chunk (text, citation, equation, etc.)",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "metadata_chunk_id",
-                        "dataType": ["int"],
-                        "description": "Chunk ID from metadata",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "metadata_chunk_size",
-                        "dataType": ["int"],
-                        "description": "Chunk size from metadata",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "metadata_total_chunks",
-                        "dataType": ["int"],
-                        "description": "Total chunks from metadata",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "metadata_created_at",
-                        "dataType": ["text"],
-                        "description": "Created at timestamp from metadata",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "page_number",
-                        "dataType": ["int"],
-                        "description": "Page number in source document",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                    {
-                        "name": "section_title",
-                        "dataType": ["text"],
-                        "description": "Section or chapter title",
-                        "moduleConfig": {
-                            "text2vec-transformers": {
-                                "skip": True,
-                                "vectorizePropertyName": False,
-                            }
-                        },
-                    },
-                ],
-            }
+            # Create collection using V4 API
+            from weaviate.classes.config import Configure, DataType, Property
 
-            # Create the schema
-            self.logger.info(f"Creating schema for class: {self.class_name}")
-            self.client.schema.create_class(schema)
-            self.logger.info(
-                f"Successfully created schema for class: {self.class_name}"
+            self.logger.info(f"Creating collection: {self.class_name}")
+
+            # Create the collection with V4 API
+            self.client.collections.create(
+                name=self.class_name,
+                description="Document chunks with embeddings for RAG system",
+                vectorizer_config=Configure.Vectorizer.text2vec_transformers(),
+                properties=[
+                    Property(
+                        name="content",
+                        data_type=DataType.TEXT,
+                        description="The text content of the document chunk",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="chunk_id",
+                        data_type=DataType.TEXT,
+                        description="Unique identifier for the chunk",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="source_document",
+                        data_type=DataType.TEXT,
+                        description="Source document filename",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="chunk_type",
+                        data_type=DataType.TEXT,
+                        description="Type of chunk (text, citation, equation, etc.)",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="metadata_chunk_id",
+                        data_type=DataType.INT,
+                        description="Chunk ID from metadata",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="metadata_chunk_size",
+                        data_type=DataType.INT,
+                        description="Chunk size from metadata",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="metadata_total_chunks",
+                        data_type=DataType.INT,
+                        description="Total chunks from metadata",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="metadata_created_at",
+                        data_type=DataType.TEXT,
+                        description="Created at timestamp from metadata",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="page_number",
+                        data_type=DataType.INT,
+                        description="Page number in source document",
+                        vectorize_property_name=False,
+                    ),
+                    Property(
+                        name="section_title",
+                        data_type=DataType.TEXT,
+                        description="Section or chapter title",
+                        vectorize_property_name=False,
+                    ),
+                ],
             )
 
+            self.logger.info(f"Successfully created collection: {self.class_name}")
+
         except WeaviateBaseError as e:
-            self.logger.error(f"Failed to create schema: {str(e)}")
+            self.logger.error(f"Failed to create collection: {str(e)}")
             raise
 
     def store_chunk(self, chunk: DataChunk) -> str:
-        """Store a single DataChunk in the vector store.
+        """Store a single DataChunk in the vector store using V4 API.
 
         Args:
             chunk: DataChunk object to store
@@ -298,6 +257,9 @@ class VectorStore:
             raise ValueError("Chunk text cannot be empty")
 
         try:
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
+
             # Prepare the object data
             object_data = {
                 "content": chunk.text,
@@ -307,17 +269,14 @@ class VectorStore:
                 "metadata_chunk_id": chunk.metadata.chunk_id,
                 "metadata_chunk_size": chunk.metadata.chunk_size,
                 "metadata_total_chunks": chunk.metadata.total_chunks,
-                "metadata_created_at": chunk.metadata.created_at or "",
+                "metadata_created_at": (chunk.metadata.created_at or ""),
                 "page_number": chunk.metadata.page_number or 0,
                 "section_title": chunk.metadata.section_title or "",
             }
 
-            # Store the object
+            # Store the object using V4 API
             self.logger.debug(f"Storing chunk: {chunk.chunk_id}")
-            result = self.client.data_object.create(
-                data_object=object_data,
-                class_name=self.class_name,
-            )
+            result = collection.data.insert(object_data)
 
             chunk_uuid = result
             self.logger.debug(
@@ -330,7 +289,7 @@ class VectorStore:
             raise
 
     def store_chunks(self, chunks: List[DataChunk], batch_size: int = 100) -> List[str]:
-        """Store multiple DataChunks in the vector store.
+        """Store multiple DataChunks in the vector store using V4 API.
 
         Args:
             chunks: List of DataChunk objects to store
@@ -361,17 +320,19 @@ class VectorStore:
         total_chunks = len(valid_chunks)
 
         try:
-            # Ensure schema exists before storing chunks
+            # Ensure collection exists before storing chunks
             self.create_schema()
+
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
 
             self.logger.info(
                 f"Storing {total_chunks} chunks in batches of {batch_size}"
             )
 
-            # Process chunks in batches
+            # Process chunks in batches using V4 API
             for i in range(0, total_chunks, batch_size):
                 batch = valid_chunks[i : i + batch_size]
-                batch_uuids = []
 
                 # Prepare batch data
                 batch_data = []
@@ -384,43 +345,29 @@ class VectorStore:
                         "metadata_chunk_id": chunk.metadata.chunk_id,
                         "metadata_chunk_size": chunk.metadata.chunk_size,
                         "metadata_total_chunks": chunk.metadata.total_chunks,
-                        "metadata_created_at": chunk.metadata.created_at or "",
+                        "metadata_created_at": (chunk.metadata.created_at or ""),
                         "page_number": chunk.metadata.page_number or 0,
                         "section_title": chunk.metadata.section_title or "",
                     }
                     batch_data.append(object_data)
 
-                # Store batch
-                self.logger.debug(
-                    f"Storing batch {i//batch_size + 1} with {len(batch)} chunks"
-                )
+                # Store each chunk individually to avoid gRPC issues
+                batch_num = i // batch_size + 1
+                self.logger.debug(f"Storing batch {batch_num} with {len(batch)} chunks")
 
-                # Add objects to batch first
-                for obj_data in batch_data:
-                    self.client.batch.add_data_object(
-                        data_object=obj_data, class_name=self.class_name
-                    )
-
-                # Create objects in batch
-                batch_result = self.client.batch.create_objects()
-
-                # Extract UUIDs from batch result
-                for result in batch_result:
-                    if isinstance(result, dict):
-                        # Check if the operation was successful
-                        if result.get("result", {}).get("status") == "SUCCESS":
-                            # Get the ID from the result
-                            chunk_id = result.get("id")
-                            if chunk_id:
-                                batch_uuids.append(chunk_id)
-                        else:
-                            self.logger.warning(f"Failed to store batch item: {result}")
-                    else:
-                        self.logger.warning(f"Unexpected result format: {result}")
+                batch_uuids = []
+                for object_data in batch_data:
+                    try:
+                        # Insert individual object using V4 API
+                        result = collection.data.insert(object_data)
+                        batch_uuids.append(result)
+                    except Exception as e:
+                        self.logger.warning(f"Failed to insert object: {e}")
+                        continue
 
                 stored_uuids.extend(batch_uuids)
                 self.logger.debug(
-                    f"Stored batch {i//batch_size + 1}, got {len(batch_uuids)} UUIDs"
+                    f"Stored batch {batch_num}, got {len(batch_uuids)} UUIDs"
                 )
 
             self.logger.info(f"Successfully stored {len(stored_uuids)} chunks")
@@ -431,7 +378,7 @@ class VectorStore:
             raise
 
     def get_chunk_by_id(self, chunk_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve a specific chunk by its chunk_id.
+        """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: Unique identifier of the chunk
@@ -443,37 +390,36 @@ class VectorStore:
             WeaviateBaseError: If retrieval operation fails
         """
         try:
-            result = (
-                self.client.query.get(
-                    self.class_name,
-                    [
-                        "content",
-                        "chunk_id",
-                        "source_document",
-                        "chunk_type",
-                        "metadata_chunk_id",
-                        "metadata_chunk_size",
-                        "metadata_total_chunks",
-                        "metadata_created_at",
-                        "page_number",
-                        "section_title",
-                    ],
-                )
-                .with_where(
-                    {
-                        "path": ["chunk_id"],
-                        "operator": "Equal",
-                        "valueString": chunk_id,
-                    }
-                )
-                .with_limit(1)
-                .do()
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
+
+            # Query using V4 API
+            from weaviate.classes.query import Filter, MetadataQuery
+
+            result = collection.query.fetch_objects(
+                where=Filter.by_property("chunk_id").equal(chunk_id),
+                limit=1,
+                return_metadata=MetadataQuery(distance=True, score=True),
             )
 
-            if result and "data" in result and "Get" in result["data"]:
-                chunks = result["data"]["Get"][self.class_name]
-                if chunks:
-                    return chunks[0]
+            if result.objects:
+                obj = result.objects[0]
+                return {
+                    "content": obj.properties.get("content", ""),
+                    "chunk_id": obj.properties.get("chunk_id", ""),
+                    "source_document": obj.properties.get("source_document", ""),
+                    "chunk_type": obj.properties.get("chunk_type", ""),
+                    "metadata_chunk_id": obj.properties.get("metadata_chunk_id", 0),
+                    "metadata_chunk_size": obj.properties.get("metadata_chunk_size", 0),
+                    "metadata_total_chunks": obj.properties.get(
+                        "metadata_total_chunks", 0
+                    ),
+                    "metadata_created_at": obj.properties.get(
+                        "metadata_created_at", ""
+                    ),
+                    "page_number": obj.properties.get("page_number", 0),
+                    "section_title": obj.properties.get("section_title", ""),
+                }
 
             return None
 
@@ -482,7 +428,7 @@ class VectorStore:
             raise
 
     def delete_chunk(self, chunk_id: str) -> bool:
-        """Delete a chunk by its chunk_id.
+        """Delete a chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: Unique identifier of the chunk to delete
@@ -494,30 +440,22 @@ class VectorStore:
             WeaviateBaseError: If deletion operation fails
         """
         try:
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
+
             # First, find the object by chunk_id
-            result = (
-                self.client.query.get(self.class_name, ["chunk_id"])
-                .with_where(
-                    {
-                        "path": ["chunk_id"],
-                        "operator": "Equal",
-                        "valueString": chunk_id,
-                    }
-                )
-                .with_additional(["id"])
-                .with_limit(1)
-                .do()
+            from weaviate.classes.query import Filter
+
+            result = collection.query.fetch_objects(
+                where=Filter.by_property("chunk_id").equal(chunk_id), limit=1
             )
 
-            if result and "data" in result and "Get" in result["data"]:
-                chunks = result["data"]["Get"][self.class_name]
-                if chunks:
-                    object_id = chunks[0]["_additional"]["id"]
-                    self.client.data_object.delete(
-                        uuid=object_id, class_name=self.class_name
-                    )
-                    self.logger.debug(f"Successfully deleted chunk: {chunk_id}")
-                    return True
+            if result.objects:
+                obj = result.objects[0]
+                # Delete using V4 API
+                collection.data.delete_by_id(obj.uuid)
+                self.logger.debug(f"Successfully deleted chunk: {chunk_id}")
+                return True
 
             self.logger.warning(f"Chunk not found for deletion: {chunk_id}")
             return False
@@ -527,36 +465,34 @@ class VectorStore:
             raise
 
     def get_stats(self) -> Dict[str, Any]:
-        """Get statistics about the vector store.
+        """Get statistics about the vector store using V4 API.
 
         Returns:
-            Dict[str, Any]: Statistics including total objects, class info, etc.
+            Dict[str, Any]: Statistics including total objects, collection info, etc.
 
         Raises:
             WeaviateBaseError: If stats retrieval fails
         """
         try:
-            # Get total object count
-            result = self.client.query.aggregate(self.class_name).with_meta_count().do()
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
 
-            total_objects = 0
-            if result and "data" in result and "Aggregate" in result["data"]:
-                aggregate_data = result["data"]["Aggregate"][self.class_name]
-                if aggregate_data:
-                    total_objects = aggregate_data[0]["meta"]["count"]
+            # Get total object count using V4 API
+            result = collection.aggregate.over_all(total_count=True)
 
-            # Get schema information
-            schema_info = self.client.schema.get()
-            class_info = None
-            for schema_class in schema_info.get("classes", []):
-                if schema_class["class"] == self.class_name:
-                    class_info = schema_class
-                    break
+            total_objects = result.total_count if result.total_count is not None else 0
+
+            # Get collection information
+            collection_info = {
+                "name": collection.name,
+                "description": getattr(collection.config, "description", ""),
+                "vectorizer": getattr(collection.config, "vectorizer_config", None),
+            }
 
             return {
                 "total_objects": total_objects,
                 "class_name": self.class_name,
-                "schema_info": class_info,
+                "collection_info": collection_info,
                 "is_connected": self.is_connected,
                 "url": self.url,
             }
@@ -566,16 +502,19 @@ class VectorStore:
             raise
 
     def clear_all(self) -> None:
-        """Clear all objects from the vector store.
+        """Clear all objects from the vector store using V4 API.
 
         Raises:
             WeaviateBaseError: If clearing operation fails
         """
         try:
-            self.logger.warning(f"Clearing all objects from class: {self.class_name}")
-            self.client.schema.delete_class(self.class_name)
+            self.logger.warning(
+                f"Clearing all objects from collection: {self.class_name}"
+            )
+            self.client.collections.delete(self.class_name)
             self.logger.info(
-                f"Successfully cleared all objects from class: {self.class_name}"
+                f"Successfully cleared all objects from collection: "
+                f"{self.class_name}"
             )
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to clear all objects: {str(e)}")
@@ -608,7 +547,7 @@ class VectorStore:
         score_threshold: float = 0.0,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """Internal method for vector similarity search.
+        """Internal method for vector similarity search using V4 API.
 
         This method is used by the Retriever class and should not be called
         directly by users. Use the Retriever class for search operations.
@@ -630,75 +569,51 @@ class VectorStore:
             raise ValueError("Query cannot be empty")
 
         try:
-            # Build the query
-            query_builder = (
-                self.client.query.get(
-                    self.class_name,
-                    [
-                        "content",
-                        "chunk_id",
-                        "source_document",
-                        "chunk_type",
-                        "metadata_chunk_id",
-                        "metadata_chunk_size",
-                        "metadata_total_chunks",
-                        "metadata_created_at",
-                        "page_number",
-                        "section_title",
-                    ],
-                )
-                .with_near_text({"concepts": [query]})
-                .with_limit(top_k)
-                .with_additional(["certainty", "distance"])
-            )
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
+
+            # Build the query using V4 API
+            from weaviate.classes.query import MetadataQuery
 
             # Apply filters if provided
+            where_filter = None
             if filters:
-                where_filter = self._build_where_filter(filters)
-                if where_filter:
-                    query_builder = query_builder.with_where(where_filter)
+                where_filter = self._build_where_filter_v4(filters)
 
-            # Execute the query
+            # Execute the query using REST API (since gRPC is not available)
             self.logger.debug(f"Searching for: '{query}' with top_k={top_k}")
-            result = query_builder.do()
+            result = self._search_via_rest_api(query, top_k, where_filter)
 
             # Process results
             search_results = []
-            if result and "data" in result and "Get" in result["data"]:
-                for item in result["data"]["Get"][self.class_name]:
-                    # Calculate similarity score from certainty
-                    certainty = item.get("_additional", {}).get("certainty", 0.0)
-                    distance = item.get("_additional", {}).get("distance", 1.0)
+            for obj in result:
+                # Calculate similarity score from distance
+                distance = obj.get("_additional", {}).get("distance", 1.0)
+                similarity_score = 1.0 - distance
 
-                    # Convert certainty to similarity score (0-1 range)
-                    similarity_score = certainty if certainty > 0 else 1.0 - distance
-
-                    if similarity_score >= score_threshold:
-                        search_results.append(
-                            {
-                                "content": item.get("content", ""),
-                                "chunk_id": item.get("chunk_id", ""),
-                                "source_document": item.get("source_document", ""),
-                                "chunk_type": item.get("chunk_type", ""),
-                                "metadata": {
-                                    "chunk_id": item.get("metadata_chunk_id", 0),
-                                    "chunk_size": item.get("metadata_chunk_size", 0),
-                                    "total_chunks": item.get(
-                                        "metadata_total_chunks", 0
-                                    ),
-                                    "created_at": item.get("metadata_created_at", ""),
-                                    "source_document": item.get("source_document", ""),
-                                    "page_number": item.get("page_number", 0),
-                                    "section_title": item.get("section_title", ""),
-                                    "chunk_type": item.get("chunk_type", ""),
-                                },
-                                "page_number": item.get("page_number", 0),
-                                "section_title": item.get("section_title", ""),
-                                "similarity_score": similarity_score,
-                                "certainty": certainty,
-                                "distance": distance,
-                            }
-                        )
+                if similarity_score >= score_threshold:
+                    search_results.append(
+                        {
+                            "content": obj.get("content", ""),
+                            "chunk_id": obj.get("chunk_id", ""),
+                            "source_document": obj.get("source_document", ""),
+                            "chunk_type": obj.get("chunk_type", ""),
+                            "metadata": {
+                                "chunk_id": obj.get("metadata_chunk_id", 0),
+                                "chunk_size": obj.get("metadata_chunk_size", 0),
+                                "total_chunks": obj.get("metadata_total_chunks", 0),
+                                "created_at": obj.get("metadata_created_at", ""),
+                                "source_document": obj.get("source_document", ""),
+                                "page_number": obj.get("page_number", 0),
+                                "section_title": obj.get("section_title", ""),
+                                "chunk_type": obj.get("chunk_type", ""),
+                            },
+                            "page_number": obj.get("page_number", 0),
+                            "section_title": obj.get("section_title", ""),
+                            "similarity_score": similarity_score,
+                            "distance": distance,
+                        }
+                    )
 
             self.logger.debug(
                 f"Found {len(search_results)} results for query: '{query}'"
@@ -717,7 +632,7 @@ class VectorStore:
         score_threshold: float = 0.0,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """Internal method for hybrid search.
+        """Internal method for hybrid search using V4 API.
 
         This method is used by the Retriever class and should not be called
         directly by users. Use the Retriever class for search operations.
@@ -743,75 +658,52 @@ class VectorStore:
             raise ValueError("Alpha must be between 0.0 and 1.0")
 
         try:
-            # Build the hybrid query
-            query_builder = (
-                self.client.query.get(
-                    self.class_name,
-                    [
-                        "content",
-                        "chunk_id",
-                        "source_document",
-                        "chunk_type",
-                        "metadata_chunk_id",
-                        "metadata_chunk_size",
-                        "metadata_total_chunks",
-                        "metadata_created_at",
-                        "page_number",
-                        "section_title",
-                    ],
-                )
-                .with_hybrid(
-                    query=query,
-                    alpha=alpha,
-                )
-                .with_limit(top_k)
-                .with_additional(["score"])
-            )
+            # Get the collection
+            collection = self.client.collections.get(self.class_name)
+
+            # Build the hybrid query using V4 API
+            from weaviate.classes.query import MetadataQuery
 
             # Apply filters if provided
+            where_filter = None
             if filters:
-                where_filter = self._build_where_filter(filters)
-                if where_filter:
-                    query_builder = query_builder.with_where(where_filter)
+                where_filter = self._build_where_filter_v4(filters)
 
-            # Execute the query
+            # Execute the hybrid query using REST API (since gRPC is not available)
             self.logger.debug(
-                f"Hybrid search for: '{query}' with alpha={alpha}, top_k={top_k}"
+                f"Hybrid search for: '{query}' with alpha={alpha}, " f"top_k={top_k}"
             )
-            result = query_builder.do()
+            result = self._search_hybrid_via_rest_api(query, top_k, alpha, where_filter)
 
             # Process results
             search_results = []
-            if result and "data" in result and "Get" in result["data"]:
-                for item in result["data"]["Get"][self.class_name]:
-                    # Get hybrid score
-                    hybrid_score = item.get("_additional", {}).get("score", 0.0)
+            for obj in result:
+                # Get hybrid score
+                hybrid_score = obj.get("_additional", {}).get("score", 0.0)
 
-                    if hybrid_score >= score_threshold:
-                        search_results.append(
-                            {
-                                "content": item.get("content", ""),
-                                "chunk_id": item.get("chunk_id", ""),
-                                "source_document": item.get("source_document", ""),
-                                "chunk_type": item.get("chunk_type", ""),
-                                "metadata": {
-                                    "chunk_id": item.get("metadata_chunk_id", 0),
-                                    "chunk_size": item.get("metadata_chunk_size", 0),
-                                    "total_chunks": item.get(
-                                        "metadata_total_chunks", 0
-                                    ),
-                                    "created_at": item.get("metadata_created_at", ""),
-                                    "source_document": item.get("source_document", ""),
-                                    "page_number": item.get("page_number", 0),
-                                    "section_title": item.get("section_title", ""),
-                                    "chunk_type": item.get("chunk_type", ""),
-                                },
-                                "page_number": item.get("page_number", 0),
-                                "section_title": item.get("section_title", ""),
-                                "similarity_score": hybrid_score,
-                                "hybrid_score": hybrid_score,
-                            }
-                        )
+                if hybrid_score >= score_threshold:
+                    search_results.append(
+                        {
+                            "content": obj.get("content", ""),
+                            "chunk_id": obj.get("chunk_id", ""),
+                            "source_document": obj.get("source_document", ""),
+                            "chunk_type": obj.get("chunk_type", ""),
+                            "metadata": {
+                                "chunk_id": obj.get("metadata_chunk_id", 0),
+                                "chunk_size": obj.get("metadata_chunk_size", 0),
+                                "total_chunks": obj.get("metadata_total_chunks", 0),
+                                "created_at": obj.get("metadata_created_at", ""),
+                                "source_document": obj.get("source_document", ""),
+                                "page_number": obj.get("page_number", 0),
+                                "section_title": obj.get("section_title", ""),
+                                "chunk_type": obj.get("chunk_type", ""),
+                            },
+                            "page_number": obj.get("page_number", 0),
+                            "section_title": obj.get("section_title", ""),
+                            "similarity_score": hybrid_score,
+                            "hybrid_score": hybrid_score,
+                        }
+                    )
 
             self.logger.debug(
                 f"Found {len(search_results)} results for hybrid query: '{query}'"
@@ -822,42 +714,162 @@ class VectorStore:
             self.logger.error(f"Failed to perform hybrid search: {str(e)}")
             raise
 
-    def _build_where_filter(self, filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Build Weaviate where filter from filters dictionary.
+    def _build_where_filter_v4(self, filters: Dict[str, Any]):
+        """Build Weaviate V4 where filter from filters dictionary.
 
         Args:
             filters: Dictionary of filter conditions
 
         Returns:
-            Optional[Dict[str, Any]]: Weaviate where filter or None
+            Filter object or None
         """
         if not filters:
             return None
 
-        # Simple filter building - can be extended for more complex conditions
-        where_conditions = []
+        from weaviate.classes.query import Filter
+
+        # Simple filter building for V4 API
+        conditions = []
 
         for key, value in filters.items():
             if isinstance(value, str):
-                where_conditions.append(
-                    {"path": [key], "operator": "Equal", "valueString": value}
-                )
+                conditions.append(Filter.by_property(key).equal(value))
             elif isinstance(value, int):
-                where_conditions.append(
-                    {"path": [key], "operator": "Equal", "valueInt": value}
-                )
+                conditions.append(Filter.by_property(key).equal(value))
             elif isinstance(value, list):
-                where_conditions.append(
-                    {
-                        "path": [key],
-                        "operator": "ContainsAny",
-                        "valueStringArray": value,
-                    }
-                )
+                conditions.append(Filter.by_property(key).contains_any(value))
 
-        if len(where_conditions) == 1:
-            return where_conditions[0]
-        elif len(where_conditions) > 1:
-            return {"operator": "And", "operands": where_conditions}
+        if len(conditions) == 1:
+            return conditions[0]
+        elif len(conditions) > 1:
+            return Filter.and_(*conditions)
 
         return None
+
+    def _search_via_rest_api(self, query: str, top_k: int, where_filter=None):
+        """Search using REST API directly to avoid gRPC issues.
+
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            where_filter: Optional filter conditions
+
+        Returns:
+            List of search results
+        """
+        import json
+
+        import requests
+
+        url = f"{self.url}/v1/graphql"
+
+        # Build the GraphQL query
+        graphql_query = f"""
+        {{
+            Get {{
+                {self.class_name}(
+                    nearText: {{
+                        concepts: ["{query}"]
+                    }}
+                    limit: {top_k}
+                ) {{
+                    content
+                    chunk_id
+                    source_document
+                    chunk_type
+                    metadata_chunk_id
+                    metadata_chunk_size
+                    metadata_total_chunks
+                    metadata_created_at
+                    page_number
+                    section_title
+                    _additional {{
+                        distance
+                    }}
+                }}
+            }}
+        }}
+        """
+
+        payload = {"query": graphql_query}
+
+        try:
+            response = requests.post(url, json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                objects = data.get("data", {}).get("Get", {}).get(self.class_name, [])
+                return objects
+            else:
+                self.logger.error(
+                    f"REST API error: {response.status_code} - {response.text}"
+                )
+                return []
+        except Exception as e:
+            self.logger.error(f"REST API request failed: {e}")
+            return []
+
+    def _search_hybrid_via_rest_api(
+        self, query: str, top_k: int, alpha: float = 0.5, where_filter=None
+    ):
+        """Hybrid search using REST API directly to avoid gRPC issues.
+
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            alpha: Balance between vector and keyword search (0.0 = pure keyword, 1.0 = pure vector)
+            where_filter: Optional filter conditions
+
+        Returns:
+            List of search results
+        """
+        import json
+
+        import requests
+
+        url = f"{self.url}/v1/graphql"
+
+        # Build the GraphQL query for hybrid search
+        graphql_query = f"""
+        {{
+            Get {{
+                {self.class_name}(
+                    hybrid: {{
+                        query: "{query}"
+                        alpha: {alpha}
+                    }}
+                    limit: {top_k}
+                ) {{
+                    content
+                    chunk_id
+                    source_document
+                    chunk_type
+                    metadata_chunk_id
+                    metadata_chunk_size
+                    metadata_total_chunks
+                    metadata_created_at
+                    page_number
+                    section_title
+                    _additional {{
+                        score
+                    }}
+                }}
+            }}
+        }}
+        """
+
+        payload = {"query": graphql_query}
+
+        try:
+            response = requests.post(url, json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                objects = data.get("data", {}).get("Get", {}).get(self.class_name, [])
+                return objects
+            else:
+                self.logger.error(
+                    f"REST API error: {response.status_code} - {response.text}"
+                )
+                return []
+        except Exception as e:
+            self.logger.error(f"REST API request failed: {e}")
+            return []

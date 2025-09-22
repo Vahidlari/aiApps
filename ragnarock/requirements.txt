@@ -9,7 +9,7 @@ torch>=2.0.0
 transformers>=4.30.0
 
 # Vector database
-weaviate-client>=3.25.0
+weaviate-client>=4.0.0
 
 # LaTeX processing
 pylatexenc>=2.10
