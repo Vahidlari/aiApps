@@ -13,9 +13,9 @@ Features demonstrated:
 
 Prerequisites:
 1. Weaviate server must be running
-   - Start: cd tools/weaviate_server && ./weaviate_manager.sh start
-   - Status: ./weaviate_manager.sh status
-   - Stop: ./weaviate_manager.sh stop
+   - Start: cd tools/database_server && ./database-manager.sh start
+   - Status: ./database-manager.sh status
+   - Stop: ./database-manager.sh stop
 
 2. Sample LaTeX file should exist at: examples/latex_samples/sample_chapter.tex
 
@@ -72,8 +72,8 @@ def check_prerequisites() -> bool:
         print(f"✅ Sample LaTeX file found: {sample_file}")
 
     print("\n💡 Make sure Weaviate server is running:")
-    print("   cd tools/weaviate_server")
-    print("   ./weaviate_manager.sh start")
+    print("   cd tools/database_server")
+    print("   ./database-manager.sh start")
 
     return True
 

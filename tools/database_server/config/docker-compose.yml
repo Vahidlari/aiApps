@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  # Database Management Service
+  database-management:
+    build:
+      context: ..
+      dockerfile: config/Dockerfile.management
+    image: database-management:latest
+    container_name: database-management
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ..:/app
+    working_dir: /app
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    profiles:
+      - management
+    command: ["tail", "-f", "/dev/null"]  # Keep container running for management tasks
+
   # Transformers inference API for text2vec-transformers
   t2v-transformers:
     image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
