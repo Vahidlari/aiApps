@@ -37,7 +37,7 @@ python-dotenv = ">=1.0.0"
 tqdm = ">=4.65.0"
 click = ">=8.1.0"
 rich = ">=13.0.0"
-weaviate-client = ">=3.25.0"
+weaviate-client = ">=4.0.0"
 # Optional but commonly used with Weaviate:
 grpcio = ">=1.59.0"
 grpcio-tools = ">=1.59.0"
