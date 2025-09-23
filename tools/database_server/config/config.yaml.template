@@ -3,8 +3,8 @@
 
 # Server Configuration
 server:
-  # Weaviate version to use
-  version: "1.23.7"
+  # Weaviate version to use --> recommended to use versions above 1.25 to support V4 APIs
+  version: "1.32.9"
   
   # Port mapping (host:container)
   port: 8080

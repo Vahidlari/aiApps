@@ -35,7 +35,7 @@ services:
       start_period: ${TRANSFORMERS_HEALTH_CHECK_START_PERIOD:-60s}
 
   weaviate:
-    image: semitechnologies/weaviate:${WEAVIATE_VERSION:-1.23.7}
+    image: semitechnologies/weaviate:${WEAVIATE_VERSION:-1.32.9}
     container_name: ${WEAVIATE_CONTAINER_NAME:-weaviate}
     ports:
       - "${WEAVIATE_PORT:-8080}:8080"
