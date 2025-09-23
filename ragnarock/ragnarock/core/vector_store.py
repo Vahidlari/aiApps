@@ -21,6 +21,8 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import weaviate
+from weaviate import WeaviateClient
+from weaviate.connect import ConnectionParams
 from weaviate.exceptions import WeaviateBaseError
 
 from .data_chunker import DataChunk
@@ -46,8 +48,10 @@ class VectorStore:
     def __init__(
         self,
         url: str = "http://localhost:8080",
+        grpc_port: int = 50051,
         class_name: str = "Document",
         embedding_engine: Optional[EmbeddingEngine] = None,
+        use_client_side_vectorization: bool = False,
         timeout: int = 60,
         retry_attempts: int = 3,
     ):
@@ -66,7 +70,9 @@ class VectorStore:
             ValueError: If invalid parameters are provided
         """
         self.url = url
+        self.grpc_port = grpc_port
         self.class_name = class_name
+        self.use_client_side_vectorization = use_client_side_vectorization
         self.timeout = timeout
         self.retry_attempts = retry_attempts
         self.is_connected = False
@@ -84,28 +90,15 @@ class VectorStore:
         try:
             self.logger.info(f"Connecting to Weaviate at {url}")
             # Parse URL to extract host and port
-            if url.startswith("http://"):
-                host_port = url[7:]  # Remove "http://"
-            elif url.startswith("https://"):
-                host_port = url[8:]  # Remove "https://"
-            else:
-                host_port = url
-
-            if ":" in host_port:
-                host, port = host_port.split(":")
-                port = int(port)
-            else:
-                host = host_port
-                port = 8080
-
-            self.client = weaviate.connect_to_local(
-                host=host,
-                port=port,
-                skip_init_checks=True,
-                grpc_port=50051,  # Keep gRPC port but it will fail gracefully
+            connectionParam = ConnectionParams.from_url(
+                url=url,
+                grpc_port=grpc_port,  # Keep gRPC port but it will fail gracefully
             )
+            self.client = WeaviateClient(connectionParam)
+            self.client.connect()
             self._test_connection()
             self.logger.info("Successfully connected to Weaviate")
+
         except Exception as e:
             self.logger.error(f"Failed to connect to Weaviate: {str(e)}")
             raise ConnectionError(f"Could not connect to Weaviate at {url}: {str(e)}")

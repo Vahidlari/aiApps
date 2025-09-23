@@ -17,6 +17,7 @@ DEFAULT_CONFIG="{
   \"server\": {
     \"version\": \"1.23.7\",
     \"port\": 8080,
+    \"grpc_port\": 50051,
     \"container_name\": \"weaviate\",
     \"restart_policy\": \"unless-stopped\"
   },
@@ -147,6 +148,7 @@ export_config_vars() {
     # Server configuration
     export WEAVIATE_VERSION=$(echo "$CONFIG" | jq -r '.server.version // "1.23.7"')
     export WEAVIATE_PORT=$(echo "$CONFIG" | jq -r '.server.port // 8080')
+    export WEAVIATE_GRPC_PORT=$(echo "$CONFIG" | jq -r '.server.grpc_port // 50051')
     export WEAVIATE_CONTAINER_NAME=$(echo "$CONFIG" | jq -r '.server.container_name // "weaviate"')
     export WEAVIATE_RESTART_POLICY=$(echo "$CONFIG" | jq -r '.server.restart_policy // "unless-stopped"')
     
@@ -232,6 +234,7 @@ export_config_vars() {
     echo "# Environment variables for docker-compose"
     echo "export WEAVIATE_VERSION=\"$(echo "$CONFIG" | jq -r '.server.version // "1.23.7"')\""
     echo "export WEAVIATE_PORT=\"$(echo "$CONFIG" | jq -r '.server.port // 8080')\""
+    echo "export WEAVIATE_GRPC_PORT=\"$(echo "$CONFIG" | jq -r '.server.grpc_port // 50051')\""
     echo "export WEAVIATE_CONTAINER_NAME=\"$(echo "$CONFIG" | jq -r '.server.container_name // "weaviate"')\""
     echo "export WEAVIATE_RESTART_POLICY=\"$(echo "$CONFIG" | jq -r '.server.restart_policy // "unless-stopped"')\""
     echo "export AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=\"$(echo "$CONFIG" | jq -r '.authentication.anonymous_access_enabled // true')\""
