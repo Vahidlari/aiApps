@@ -118,7 +118,9 @@ def create_rag_config() -> RAGConfig:
     return config
 
 
-def demonstrate_document_processing(rag: RAGSystem, file_path: str) -> None:
+def demonstrate_document_processing(
+    rag: RAGSystem, file_path: str, bibliography_path: str
+) -> None:
     """Demonstrate document processing and ingestion."""
     print_step(2, "Processing LaTeX Document")
 
@@ -126,7 +128,7 @@ def demonstrate_document_processing(rag: RAGSystem, file_path: str) -> None:
 
     try:
         # Process the LaTeX document
-        result = rag.process_document(file_path)
+        result = rag.process_documents([file_path, bibliography_path])
         print("✅ Document processed successfully!")
         print(f"📊 Processing result: {result}")
 
@@ -272,7 +274,8 @@ def main():
 
         # Step 3: Process document
         sample_file = "examples/latex_samples/sample_chapter.tex"
-        demonstrate_document_processing(rag, sample_file)
+        bibliography_file = "examples/latex_samples/references.bib"
+        demonstrate_document_processing(rag, sample_file, bibliography_file)
 
         # Step 4: Demonstrate queries
         demonstrate_queries(rag)
