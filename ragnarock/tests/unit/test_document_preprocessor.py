@@ -5,6 +5,7 @@ Unit tests for DocumentPreprocessor in the RAG system.
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ragnarock import DataChunk, DataChunker, DocumentPreprocessor
 from ragnarock.utils.latex_parser import (
     LatexChapter,
@@ -64,6 +65,7 @@ class TestDocumentPreprocessor:
             doi="10.1000/test",
             source_document="test.tex",
             page_reference="1-10",
+            paragraphs=[LatexParagraph(content="Test content")],
         )
         mock_parser.parse_document.return_value = mock_document
 
@@ -107,9 +109,8 @@ class TestDocumentPreprocessor:
         preprocessor = DocumentPreprocessor(chunker=mock_chunker)
         preprocessor.latex_parser = mock_parser
 
-        # Test - this should raise an AttributeError since None doesn't have
-        # chapters
-        with pytest.raises(AttributeError):
+        # Test - this should raise a ValueError since None document is not allowed
+        with pytest.raises(ValueError, match="Document cannot be None"):
             preprocessor.preprocess_document("nonexistent.tex")
 
     @patch("ragnarock.core.document_preprocessor.LatexParser")
@@ -127,6 +128,7 @@ class TestDocumentPreprocessor:
             doi="10.1000/doc1",
             source_document="doc1.tex",
             page_reference="1-5",
+            paragraphs=[LatexParagraph(content="Doc 1 content")],
         )
         mock_doc2 = LatexDocument(
             title="Document 2",
@@ -135,21 +137,30 @@ class TestDocumentPreprocessor:
             doi="10.1000/doc2",
             source_document="doc2.tex",
             page_reference="6-10",
+            paragraphs=[LatexParagraph(content="Doc 2 content")],
         )
         mock_parser.parse_document.side_effect = [mock_doc1, mock_doc2]
 
         # Create mock chunks
-        expected_chunks = [
+        chunk1 = [
             DataChunk(
-                text="Combined content",
+                text="Doc 1 content",
                 start_idx=0,
                 end_idx=16,
-                metadata={"source": "combined"},
+                metadata={"source": "doc1"},
+            )
+        ]
+        chunk2 = [
+            DataChunk(
+                text="Doc 2 content",
+                start_idx=0,
+                end_idx=16,
+                metadata={"source": "doc2"},
             )
         ]
 
         mock_chunker = Mock()
-        mock_chunker.chunk.return_value = expected_chunks
+        mock_chunker.chunk.side_effect = [chunk1, chunk2]
 
         preprocessor = DocumentPreprocessor(chunker=mock_chunker)
         preprocessor.latex_parser = mock_parser
@@ -162,8 +173,8 @@ class TestDocumentPreprocessor:
         assert mock_parser.parse_document.call_count == 2
         mock_parser.parse_document.assert_any_call("doc1.tex")
         mock_parser.parse_document.assert_any_call("doc2.tex")
-        mock_chunker.chunk.assert_called_once()
-        assert result == expected_chunks
+        assert mock_chunker.chunk.call_count == 2
+        assert result == chunk1 + chunk2
 
     @patch("ragnarock.core.document_preprocessor.LatexParser")
     def test_preprocess_documents_empty_list(self, mock_latex_parser_class):
@@ -182,7 +193,7 @@ class TestDocumentPreprocessor:
 
         # Assertions
         mock_parser.parse_document.assert_not_called()
-        mock_chunker.chunk.assert_called_once_with("")
+        mock_chunker.chunk.assert_not_called()
         assert result == []
 
     @patch("os.listdir")
@@ -206,6 +217,7 @@ class TestDocumentPreprocessor:
             doi="10.1000/doc1",
             source_document="doc1.tex",
             page_reference="1-5",
+            paragraphs=[LatexParagraph(content="Folder doc 1 content")],
         )
         mock_doc2 = LatexDocument(
             title="Document 2",
@@ -214,20 +226,29 @@ class TestDocumentPreprocessor:
             doi="10.1000/doc2",
             source_document="doc2.tex",
             page_reference="6-10",
+            paragraphs=[LatexParagraph(content="Folder doc 2 content")],
         )
         mock_parser.parse_document.side_effect = [mock_doc1, mock_doc2]
 
-        expected_chunks = [
+        chunk1 = [
             DataChunk(
-                text="Folder content",
+                text="Folder doc 1 content",
                 start_idx=0,
-                end_idx=14,
-                metadata={"source": "folder"},
+                end_idx=20,
+                metadata={"source": "folder1"},
+            )
+        ]
+        chunk2 = [
+            DataChunk(
+                text="Folder doc 2 content",
+                start_idx=0,
+                end_idx=20,
+                metadata={"source": "folder2"},
             )
         ]
 
         mock_chunker = Mock()
-        mock_chunker.chunk.return_value = expected_chunks
+        mock_chunker.chunk.side_effect = [chunk1, chunk2]
 
         preprocessor = DocumentPreprocessor(chunker=mock_chunker)
         preprocessor.latex_parser = mock_parser
@@ -241,7 +262,8 @@ class TestDocumentPreprocessor:
         mock_join.assert_any_call("/test/folder", "doc1.tex")
         mock_join.assert_any_call("/test/folder", "doc2.tex")
         assert mock_parser.parse_document.call_count == 2
-        assert result == expected_chunks
+        assert mock_chunker.chunk.call_count == 2
+        assert result == chunk1 + chunk2
 
     @patch("os.listdir")
     def test_preprocess_document_folder_not_found(self, mock_listdir):
@@ -514,3 +536,546 @@ class TestDocumentPreprocessor:
         )
 
         assert result == expected
+
+    def test_chunk_document_none_document(self):
+        """Test _chunk_document method with None document."""
+        preprocessor = DocumentPreprocessor()
+
+        with pytest.raises(ValueError, match="Document cannot be None"):
+            preprocessor._chunk_document(None)
+
+    def test_chunk_document_with_paragraphs_only(self):
+        """Test _chunk_document method with document containing only paragraphs."""
+        # Create mock document with paragraphs
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            paragraphs=[
+                LatexParagraph(content="First paragraph content"),
+                LatexParagraph(content="Second paragraph content"),
+            ],
+        )
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="First paragraph contentSecond paragraph content",
+                start_idx=0,
+                end_idx=47,
+                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 1},
+            )
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.return_value = expected_chunks
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called correctly
+        mock_chunker.chunk.assert_called_once_with(
+            "First paragraph contentSecond paragraph content",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Test Document",
+            created_at=None,
+        )
+        assert result == expected_chunks
+
+    def test_chunk_document_with_chapters_only(self):
+        """Test _chunk_document method with document containing only chapters."""
+        # Create mock document with chapters
+        chapter1 = LatexChapter(
+            title="Chapter 1",
+            label="ch1",
+            paragraphs=[
+                LatexParagraph(content="Chapter 1 paragraph 1"),
+                LatexParagraph(content="Chapter 1 paragraph 2"),
+            ],
+        )
+
+        chapter2 = LatexChapter(
+            title="Chapter 2",
+            label="ch2",
+            paragraphs=[LatexParagraph(content="Chapter 2 paragraph")],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            chapters=[chapter1, chapter2],
+        )
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="# Chapter 1Chapter 1 paragraph 1Chapter 1 paragraph 2",
+                start_idx=0,
+                end_idx=58,
+                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+            ),
+            DataChunk(
+                text="# Chapter 2Chapter 2 paragraph",
+                start_idx=0,
+                end_idx=30,
+                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+            ),
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.side_effect = [[chunk] for chunk in expected_chunks]
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called for each chapter
+        assert mock_chunker.chunk.call_count == 2
+        mock_chunker.chunk.assert_any_call(
+            "# Chapter 1Chapter 1 paragraph 1Chapter 1 paragraph 2",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Chapter 1",
+            created_at=None,
+        )
+        mock_chunker.chunk.assert_any_call(
+            "# Chapter 2Chapter 2 paragraph",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Chapter 2",
+            created_at=None,
+        )
+        assert result == expected_chunks
+
+    def test_chunk_document_with_chapters_and_sections(self):
+        """Test _chunk_document method with chapters containing sections."""
+        # Create mock document with chapter containing sections
+        section1 = LatexSection(
+            title="Section 1.1",
+            label="sec1.1",
+            paragraphs=[
+                LatexParagraph(content="Section 1.1 paragraph 1"),
+                LatexParagraph(content="Section 1.1 paragraph 2"),
+            ],
+        )
+
+        section2 = LatexSection(
+            title="Section 1.2",
+            label="sec1.2",
+            paragraphs=[LatexParagraph(content="Section 1.2 paragraph")],
+        )
+
+        chapter = LatexChapter(
+            title="Chapter 1",
+            label="ch1",
+            paragraphs=[LatexParagraph(content="Chapter paragraph")],
+            sections=[section1, section2],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            chapters=[chapter],
+        )
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="# Chapter 1Chapter paragraph",
+                start_idx=0,
+                end_idx=27,
+                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 3},
+            ),
+            DataChunk(
+                text="## Section 1.1Section 1.1 paragraph 1Section 1.1 paragraph 2",
+                start_idx=0,
+                end_idx=59,
+                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 3},
+            ),
+            DataChunk(
+                text="## Section 1.2Section 1.2 paragraph",
+                start_idx=0,
+                end_idx=33,
+                metadata={"chunk_id": 3, "chunk_size": 768, "total_chunks": 3},
+            ),
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.side_effect = [[chunk] for chunk in expected_chunks]
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called for chapter and each section
+        assert mock_chunker.chunk.call_count == 3
+        mock_chunker.chunk.assert_any_call(
+            "# Chapter 1Chapter paragraph",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Chapter 1",
+            created_at=None,
+        )
+        mock_chunker.chunk.assert_any_call(
+            "## Section 1.1Section 1.1 paragraph 1Section 1.1 paragraph 2",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Section 1.1",
+            created_at=None,
+        )
+        mock_chunker.chunk.assert_any_call(
+            "## Section 1.2Section 1.2 paragraph",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Section 1.2",
+            created_at=None,
+        )
+        assert result == expected_chunks
+
+    def test_chunk_document_with_standalone_sections(self):
+        """Test _chunk_document method with standalone sections."""
+        # Create mock document with standalone sections
+        section1 = LatexSection(
+            title="Standalone Section 1",
+            label="standalone1",
+            paragraphs=[
+                LatexParagraph(content="Standalone section 1 paragraph 1"),
+                LatexParagraph(content="Standalone section 1 paragraph 2"),
+            ],
+        )
+
+        section2 = LatexSection(
+            title="Standalone Section 2",
+            label="standalone2",
+            paragraphs=[LatexParagraph(content="Standalone section 2 paragraph")],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            sections=[section1, section2],
+        )
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="## Standalone Section 1Standalone section 1 paragraph 1Standalone section 1 paragraph 2",
+                start_idx=0,
+                end_idx=78,
+                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+            ),
+            DataChunk(
+                text="## Standalone Section 2Standalone section 2 paragraph",
+                start_idx=0,
+                end_idx=47,
+                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+            ),
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.side_effect = [[chunk] for chunk in expected_chunks]
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called for each standalone section
+        assert mock_chunker.chunk.call_count == 2
+        mock_chunker.chunk.assert_any_call(
+            "## Standalone Section 1Standalone section 1 paragraph 1Standalone section 1 paragraph 2",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Standalone Section 1",
+            created_at=None,
+        )
+        mock_chunker.chunk.assert_any_call(
+            "## Standalone Section 2Standalone section 2 paragraph",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Standalone Section 2",
+            created_at=None,
+        )
+        assert result == expected_chunks
+
+    def test_chunk_document_with_tables(self):
+        """Test _chunk_document method with tables."""
+        # Create mock document with tables
+        table1 = LatexTable(
+            caption="Table 1",
+            label="tab1",
+            headers=["Header 1", "Header 2"],
+            rows=[["Row 1 Col 1", "Row 1 Col 2"], ["Row 2 Col 1", "Row 2 Col 2"]],
+        )
+
+        table2 = LatexTable(
+            caption="Table 2",
+            label="tab2",
+            headers=["A", "B"],
+            rows=[["1", "2"]],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            tables=[table1, table2],
+        )
+
+        # Mock the to_plain_text method for tables
+        table1.to_plain_text = Mock(
+            return_value="Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2"
+        )
+        table2.to_plain_text = Mock(return_value="Table: Table 2\nA | B\n1 | 2")
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2",
+                start_idx=0,
+                end_idx=60,
+                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+            ),
+            DataChunk(
+                text="Table: Table 2\nA | B\n1 | 2",
+                start_idx=0,
+                end_idx=25,
+                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+            ),
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.side_effect = [[chunk] for chunk in expected_chunks]
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called for each table
+        assert mock_chunker.chunk.call_count == 2
+        mock_chunker.chunk.assert_any_call(
+            "Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Test Document",
+            created_at=None,
+        )
+        mock_chunker.chunk.assert_any_call(
+            "Table: Table 2\nA | B\n1 | 2",
+            chunk_type="text",
+            source_document="test.tex",
+            page_number=None,
+            section_title="Test Document",
+            created_at=None,
+        )
+        assert result == expected_chunks
+
+    def test_chunk_document_with_all_content_types(self):
+        """Test _chunk_document method with all content types (paragraphs, chapters, sections, tables)."""
+        # Create comprehensive document
+        chapter = LatexChapter(
+            title="Main Chapter",
+            label="main",
+            paragraphs=[LatexParagraph(content="Chapter paragraph")],
+            sections=[
+                LatexSection(
+                    title="Chapter Section",
+                    label="chsec",
+                    paragraphs=[LatexParagraph(content="Chapter section paragraph")],
+                )
+            ],
+        )
+
+        standalone_section = LatexSection(
+            title="Standalone Section",
+            label="standalone",
+            paragraphs=[LatexParagraph(content="Standalone section paragraph")],
+        )
+
+        standalone_paragraph = LatexParagraph(content="Standalone paragraph")
+
+        table = LatexTable(
+            caption="Data Table",
+            label="data",
+            headers=["X", "Y"],
+            rows=[["1", "2"], ["3", "4"]],
+        )
+
+        document = LatexDocument(
+            title="Comprehensive Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/comprehensive",
+            source_document="comprehensive.tex",
+            page_reference="1-20",
+            chapters=[chapter],
+            sections=[standalone_section],
+            paragraphs=[standalone_paragraph],
+            tables=[table],
+        )
+
+        # Mock the to_plain_text method for table
+        table.to_plain_text = Mock(
+            return_value="Table: Data Table\nX | Y\n1 | 2\n3 | 4"
+        )
+
+        # Create mock chunks
+        expected_chunks = [
+            DataChunk(
+                text="Standalone paragraph", start_idx=0, end_idx=19, metadata={}
+            ),
+            DataChunk(
+                text="# Main ChapterChapter paragraph",
+                start_idx=0,
+                end_idx=32,
+                metadata={},
+            ),
+            DataChunk(
+                text="## Chapter SectionChapter section paragraph",
+                start_idx=0,
+                end_idx=42,
+                metadata={},
+            ),
+            DataChunk(
+                text="## Standalone SectionStandalone section paragraph",
+                start_idx=0,
+                end_idx=51,
+                metadata={},
+            ),
+            DataChunk(
+                text="Table: Data Table\nX | Y\n1 | 2\n3 | 4",
+                start_idx=0,
+                end_idx=35,
+                metadata={},
+            ),
+        ]
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.side_effect = [[chunk] for chunk in expected_chunks]
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify chunker was called for all content types
+        assert mock_chunker.chunk.call_count == 5
+
+        # Verify calls with correct parameters
+        calls = mock_chunker.chunk.call_args_list
+        assert calls[0][0][0] == "Standalone paragraph"
+        assert calls[1][0][0] == "# Main ChapterChapter paragraph"
+        assert calls[2][0][0] == "## Chapter SectionChapter section paragraph"
+        assert calls[3][0][0] == "## Standalone SectionStandalone section paragraph"
+        assert calls[4][0][0] == "Table: Data Table\nX | Y\n1 | 2\n3 | 4"
+
+        assert result == expected_chunks
+
+    def test_chunk_document_empty_chapter_without_paragraphs(self):
+        """Test _chunk_document method with empty chapter (no paragraphs)."""
+        # Create chapter without paragraphs
+        chapter = LatexChapter(
+            title="Empty Chapter",
+            label="empty",
+            paragraphs=[],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            chapters=[chapter],
+        )
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.return_value = []
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify no chunks were created for empty chapter
+        mock_chunker.chunk.assert_not_called()
+        assert result == []
+
+    def test_chunk_document_empty_section_without_paragraphs(self):
+        """Test _chunk_document method with empty section (no paragraphs)."""
+        # Create section without paragraphs
+        section = LatexSection(
+            title="Empty Section",
+            label="empty",
+            paragraphs=[],
+        )
+
+        document = LatexDocument(
+            title="Test Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="test.tex",
+            page_reference="1-10",
+            sections=[section],
+        )
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.return_value = []
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify no chunks were created for empty section
+        mock_chunker.chunk.assert_not_called()
+        assert result == []
+
+    def test_chunk_document_empty_document(self):
+        """Test _chunk_document method with completely empty document."""
+        document = LatexDocument(
+            title="Empty Document",
+            author="Test Author",
+            year="2024",
+            doi="10.1000/test",
+            source_document="empty.tex",
+            page_reference="1",
+        )
+
+        # Mock the chunker
+        mock_chunker = Mock()
+        mock_chunker.chunk.return_value = []
+
+        preprocessor = DocumentPreprocessor(chunker=mock_chunker)
+        result = preprocessor._chunk_document(document)
+
+        # Verify no chunks were created
+        mock_chunker.chunk.assert_not_called()
+        assert result == []

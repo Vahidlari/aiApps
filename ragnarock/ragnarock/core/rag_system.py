@@ -120,6 +120,34 @@ class RAGSystem:
             self.logger.error(f"Failed to initialize RAG system: {str(e)}")
             raise
 
+    def process_documents(
+        self, document_paths: List[str], document_type: str = "latex"
+    ) -> List[str]:
+        """Process a list of documents and store them in the vector database.
+
+        Args:
+            document_paths: List of paths to the LaTeX documents
+            document_type: Type of document to process ("latex", "pdf", "txt")
+        Returns:
+            List[str]: List of chunk IDs that were stored
+        """
+        if not self.is_initialized:
+            raise RuntimeError("RAG system not initialized")
+
+        try:
+            self.logger.info(f"Processing {len(document_paths)} documents")
+            chunks = self.document_preprocessor.preprocess_documents(
+                document_paths, document_type
+            )
+            self.logger.info(f"Storing {len(chunks)} chunks in vector database")
+            stored_uuids = self.vector_store.store_chunks(chunks)
+            self.logger.info(f"Successfully processed {len(document_paths)} documents")
+            self.logger.info(f"Stored {len(stored_uuids)} chunks")
+            return stored_uuids
+        except Exception as e:
+            self.logger.error(f"Failed to process documents: {str(e)}")
+            raise
+
     def process_document(
         self, document_path: str, document_type: str = "latex"
     ) -> List[str]:

@@ -20,6 +20,21 @@ class Citation:
     citation_label: str
     citation_hash: str
 
+    def to_text(self, citation_command: str) -> str:
+        """Convert the citation to a text string."""
+        if citation_command == "\\cite":
+            return f"[{self.author}, {self.year}, {self.citation_label}]"
+        elif citation_command == "\\citep":
+            return f"[{self.author}, {self.year}, {self.citation_label}]"
+        elif citation_command == "\\citet":
+            return f"[{self.author}, {self.year}, {self.citation_label}]"
+        elif citation_command == "\\citeauthor":
+            return self.author
+        elif citation_command == "\\citeyear":
+            return self.year
+        else:
+            return f"[{self.author}, {self.year}, {self.citation_label}]"
+
 
 @dataclass
 class LatexParagraph:
@@ -169,6 +184,15 @@ class LatexParser:
         # If document path is provided, parse the document
         # otherwise, set document to None
         self.document = self.parse_document(document_path) if document_path else None
+
+    def parse_bibliography(self, bibliography_path: str):
+        """Parse the bibliography."""
+        self.bibliography_path = bibliography_path
+        self.bibliography_entries = self._load_bibliography()
+
+    def get_bibliography_entries(self) -> Dict[str, Citation]:
+        """Get the bibliography entries."""
+        return self.bibliography_entries
 
     def _load_bibliography(self) -> Dict[str, Citation]:
         """Load bibliography entries from bibliography_path file or document_path file."""
@@ -495,7 +519,7 @@ class LatexParser:
                 citations.append(citation)
 
                 # Replace citation command with embedded text
-                replacement = self._format_citation_embedding(citation, command)
+                replacement = citation.to_text(command)
                 start, end = match.span()
                 processed_text = (
                     processed_text[:start] + replacement + processed_text[end:]
@@ -519,21 +543,6 @@ class LatexParser:
             citation_label=citation_key,
             citation_hash=hash(citation_key),
         )
-
-    def _format_citation_embedding(self, citation: Citation, command: str) -> str:
-        """Format citation embedding based on the citation command used."""
-        if command == "\\cite":
-            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
-        elif command == "\\citep":
-            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
-        elif command == "\\citet":
-            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
-        elif command == "\\citeauthor":
-            return citation.author
-        elif command == "\\citeyear":
-            return citation.year
-        else:
-            return f"[{citation.author}, {citation.year}, {citation.citation_label}]"
 
     def _parse_tables(self, text: str) -> tuple[List[LatexTable], str]:
         """Parse tables from LaTeX text."""

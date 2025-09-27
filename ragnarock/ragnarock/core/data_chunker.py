@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass(frozen=True)
+@dataclass
 class ChunkMetadata:
     """Metadata for a data chunk in the RAG system.
 
@@ -16,14 +16,14 @@ class ChunkMetadata:
     ensuring type safety and clear field definitions.
     """
 
-    chunk_id: int
-    chunk_size: int
-    total_chunks: int
-    source_document: Optional[str] = None
-    page_number: Optional[int] = None
-    section_title: Optional[str] = None
-    chunk_type: Optional[str] = None
-    created_at: Optional[str] = None
+    chunk_id: int  # Unique identifier for the chunk
+    chunk_size: int  # Size of the chunk in tokens
+    total_chunks: int  # Total number of chunks in the document
+    source_document: Optional[str] = None  # Source document filename
+    page_number: Optional[int] = None  # Page number of the chunk
+    section_title: Optional[str] = None  # Section title of the chunk
+    chunk_type: Optional[str] = None  # Type of chunk (text, citation, equation, etc.)
+    created_at: Optional[str] = None  # Creation date of the chunk
 
 
 @dataclass
@@ -57,13 +57,28 @@ class DataChunker:
         """
         self.chunk_size = chunk_size
         self.overlap_size = overlap_size
+        self.chunk_id = 0
 
-    def chunk(self, text: str) -> list[DataChunk]:
+    def chunk(
+        self,
+        text: str,
+        chunk_type: str = "text",
+        source_document: str = None,
+        page_number: int = None,
+        section_title: str = None,
+        created_at: str = None,
+        start_chunk_id: Optional[int] = None,
+    ) -> list[DataChunk]:
         """Chunk the text into fixed-size segments with overlap.
 
         Args:
             text: Text to chunk
-
+            chunk_type: Type of chunk (text, citation, equation, etc.)
+            source_document: Source document filename
+            page_number: Page number of the chunk
+            section_title: Section title of the chunk
+            created_at: Creation date of the chunk
+            start_chunk_id: Start chunk id
         Returns:
             list[DataChunk]: List of DataChunks
         """
@@ -74,7 +89,8 @@ class DataChunker:
         # In a real implementation, this would use tokenization
         chunks = []
         start_idx = 0
-        chunk_id = 0
+        if start_chunk_id is not None:
+            self.chunk_id = start_chunk_id
 
         while start_idx < len(text):
             # Calculate end index for this chunk
@@ -89,16 +105,22 @@ class DataChunker:
                 start_idx=start_idx,
                 end_idx=end_idx,
                 metadata=ChunkMetadata(
-                    chunk_id=chunk_id,
+                    chunk_id=self.chunk_id,
                     chunk_size=len(chunk_text),
                     total_chunks=0,  # Will be updated after all chunks
+                    source_document=source_document,
+                    page_number=page_number,
+                    section_title=section_title,
+                    chunk_type=chunk_type,
+                    created_at=created_at,
                 ),
-                chunk_id=str(chunk_id),
-                chunk_type="text",  # Default chunk type
+                chunk_id=str(self.chunk_id),
+                chunk_type=chunk_type,
+                source_document=source_document,
             )
 
             chunks.append(chunk)
-            chunk_id += 1
+            self.chunk_id += 1
 
             # Move start index for next chunk with overlap
             # Ensure we make progress to avoid infinite loop
@@ -109,15 +131,6 @@ class DataChunker:
         # Update total_chunks in metadata
         for chunk in chunks:
             # Create new metadata with updated total_chunks
-            chunk.metadata = ChunkMetadata(
-                chunk_id=chunk.metadata.chunk_id,
-                chunk_size=chunk.metadata.chunk_size,
-                total_chunks=len(chunks),
-                source_document=chunk.metadata.source_document,
-                page_number=chunk.metadata.page_number,
-                section_title=chunk.metadata.section_title,
-                chunk_type=chunk.metadata.chunk_type,
-                created_at=chunk.metadata.created_at,
-            )
+            chunk.metadata.total_chunks = len(chunks)
 
         return chunks

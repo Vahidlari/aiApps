@@ -518,20 +518,20 @@ class TestCitationProcessing:
         assert citation.year == "Unknown"
         assert citation.title == "Unknown"
 
-    def test_format_citation_embedding(self, sample_citation):
-        """Test formatting citation embeddings."""
+    def test_citation_to_text(self, sample_citation):
+        """Test formatting citation to text."""
         parser = LatexParser()
 
         # Test different citation commands
-        cite_format = parser._format_citation_embedding(sample_citation, "\\cite")
+        cite_format = sample_citation.to_text("\\cite")
         assert "Einstein" in cite_format
         assert "1905" in cite_format
 
-        citep_format = parser._format_citation_embedding(sample_citation, "\\citep")
+        citep_format = sample_citation.to_text("\\citep")
         assert "Einstein" in citep_format
         assert "1905" in citep_format
 
-        citet_format = parser._format_citation_embedding(sample_citation, "\\citet")
+        citet_format = sample_citation.to_text("\\citet")
         assert "Einstein" in citet_format
         assert "1905" in citet_format
 

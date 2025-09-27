@@ -250,22 +250,14 @@ class VectorStore:
             raise ValueError("Chunk text cannot be empty")
 
         try:
+            # Ensure collection exists before storing chunks
+            self.create_schema()
+
             # Get the collection
             collection = self.client.collections.get(self.class_name)
 
             # Prepare the object data
-            object_data = {
-                "content": chunk.text,
-                "chunk_id": chunk.chunk_id,
-                "source_document": chunk.source_document,
-                "chunk_type": chunk.chunk_type,
-                "metadata_chunk_id": chunk.metadata.chunk_id,
-                "metadata_chunk_size": chunk.metadata.chunk_size,
-                "metadata_total_chunks": chunk.metadata.total_chunks,
-                "metadata_created_at": (chunk.metadata.created_at or ""),
-                "page_number": chunk.metadata.page_number or 0,
-                "section_title": chunk.metadata.section_title or "",
-            }
+            object_data = self.prepare_data_object(chunk)
 
             # Store the object using V4 API
             self.logger.debug(f"Storing chunk: {chunk.chunk_id}")
@@ -330,18 +322,7 @@ class VectorStore:
                 # Prepare batch data
                 batch_data = []
                 for chunk in batch:
-                    object_data = {
-                        "content": chunk.text,
-                        "chunk_id": chunk.chunk_id,
-                        "source_document": chunk.source_document,
-                        "chunk_type": chunk.chunk_type,
-                        "metadata_chunk_id": chunk.metadata.chunk_id,
-                        "metadata_chunk_size": chunk.metadata.chunk_size,
-                        "metadata_total_chunks": chunk.metadata.total_chunks,
-                        "metadata_created_at": (chunk.metadata.created_at or ""),
-                        "page_number": chunk.metadata.page_number or 0,
-                        "section_title": chunk.metadata.section_title or "",
-                    }
+                    object_data = self.prepare_data_object(chunk)
                     batch_data.append(object_data)
 
                 # Store each chunk individually to avoid gRPC issues
@@ -369,6 +350,37 @@ class VectorStore:
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to store chunks: {str(e)}")
             raise
+
+    def prepare_data_object(self, chunk: DataChunk) -> Dict[str, Any]:
+        """Prepare the data object for the chunk.
+
+        Args:
+            chunk: DataChunk object to prepare
+
+        Returns:
+            Dict[str, Any]: Prepared data object
+        """
+        if chunk is None:
+            raise ValueError("Chunk cannot be None")
+
+        if not chunk.text or not chunk.text.strip():
+            raise ValueError("Chunk text cannot be empty")
+
+        if not chunk.chunk_id or not chunk.chunk_id.strip():
+            raise ValueError("Chunk ID cannot be empty")
+
+        return {
+            "content": chunk.text,
+            "chunk_id": chunk.chunk_id,
+            "source_document": chunk.source_document,
+            "chunk_type": chunk.chunk_type,
+            "metadata_chunk_id": chunk.metadata.chunk_id,
+            "metadata_chunk_size": chunk.metadata.chunk_size,
+            "metadata_total_chunks": chunk.metadata.total_chunks,
+            "metadata_created_at": (chunk.metadata.created_at or ""),
+            "page_number": chunk.metadata.page_number or 0,
+            "section_title": chunk.metadata.section_title or "",
+        }
 
     def get_chunk_by_id(self, chunk_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id using V4 API.

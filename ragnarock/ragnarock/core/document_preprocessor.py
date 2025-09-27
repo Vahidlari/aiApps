@@ -72,23 +72,34 @@ class DocumentPreprocessor:
             list[DataChunk]: List of DataChunks with metadata
         """
         if format == "latex":
-            document = self.latex_parser.parse_document(file_path)
+            if file_path.endswith(".bib"):
+                self.latex_parser.parse_bibliography(file_path)
+            else:
+                document = self.latex_parser.parse_document(file_path)
         else:
             raise ValueError(f"Unsupported document format: {format}")
 
-        document_text = self._extract_document_text([document])
-        return self.chunker.chunk(document_text)
+        return self._chunk_documents([document])
 
     def preprocess_documents(
         self, file_paths: list[str], format: str = "latex"
     ) -> list[DataChunk]:
         """Preprocess the documents and return a list of DataChunks."""
         if format == "latex":
+            # Find the bibliography file
+            bibliography_path = None
+            for file_path in file_paths:
+                if file_path.endswith(".bib"):
+                    bibliography_path = file_path
+                    break
+            if bibliography_path:
+                self.latex_parser.parse_bibliography(bibliography_path)
             documents = [
-                self.latex_parser.parse_document(file_path) for file_path in file_paths
+                self.latex_parser.parse_document(file_path)
+                for file_path in file_paths
+                if file_path != bibliography_path
             ]
-            document_text = self._extract_document_text(documents)
-            return self.chunker.chunk(document_text)
+            return self._chunk_documents(documents)
         else:
             raise ValueError(f"Unsupported document format: {format}")
 
@@ -149,3 +160,94 @@ class DocumentPreprocessor:
                     content_parts.append(table.to_plain_text())
 
         return "\n\n".join(content_parts)
+
+    def _chunk_documents(self, documentList: list[LatexDocument]) -> list[DataChunk]:
+        """Chunk the documents into a list of DataChunks."""
+        chunks = []
+        if not documentList:
+            return chunks
+        for document in documentList:
+            chunks.extend(self._chunk_document(document))
+        return chunks
+
+    def _chunk_document(self, document: LatexDocument) -> list[DataChunk]:
+        """Chunk the document into a list of DataChunks."""
+        if document is None:
+            raise ValueError("Document cannot be None")
+        chunks = []
+        if document.paragraphs:
+            paragraph_content = ""
+            for paragraph in document.paragraphs:
+                paragraph_content += paragraph.content
+            chunks.extend(
+                self.chunker.chunk(
+                    paragraph_content,
+                    chunk_type="text",
+                    source_document=document.source_document,
+                    page_number=None,
+                    section_title=document.title,
+                    created_at=None,
+                )
+            )
+        if document.chapters:
+            for chapter in document.chapters:
+                chapter_content = f"# {chapter.title}"
+                if chapter.paragraphs:
+                    for paragraph in chapter.paragraphs:
+                        chapter_content += paragraph.content
+                    chunks.extend(
+                        self.chunker.chunk(
+                            chapter_content,
+                            chunk_type="text",
+                            source_document=document.source_document,
+                            page_number=None,
+                            section_title=chapter.title,
+                            created_at=None,
+                        )
+                    )
+                if chapter.sections:
+                    for section in chapter.sections:
+                        section_content = f"## {section.title}"
+                        if section.paragraphs:
+                            for paragraph in section.paragraphs:
+                                section_content += paragraph.content
+                            chunks.extend(
+                                self.chunker.chunk(
+                                    section_content,
+                                    chunk_type="text",
+                                    source_document=document.source_document,
+                                    page_number=None,
+                                    section_title=section.title,
+                                    created_at=None,
+                                )
+                            )
+        if document.sections:
+            for section in document.sections:
+                section_content = f"## {section.title}"
+                if section.paragraphs:
+                    for paragraph in section.paragraphs:
+                        section_content += paragraph.content
+                    chunks.extend(
+                        self.chunker.chunk(
+                            section_content,
+                            chunk_type="text",
+                            source_document=document.source_document,
+                            page_number=None,
+                            section_title=section.title,
+                            created_at=None,
+                        )
+                    )
+        if document.tables:
+            for table in document.tables:
+                table_content = table.to_plain_text()
+                chunks.extend(
+                    self.chunker.chunk(
+                        table_content,
+                        chunk_type="text",
+                        source_document=document.source_document,
+                        page_number=None,
+                        section_title=document.title,
+                        created_at=None,
+                    )
+                )
+        return chunks
