@@ -1,703 +1,402 @@
-"""Unit tests for the refactored VectorStore module.
+"""Unit tests for refactored VectorStore class."""
 
-This module contains comprehensive unit tests for the refactored VectorStore class,
-focusing on storage operations and internal methods used by the Retriever.
-
-Test coverage includes:
-- Connection initialization and error handling
-- Schema creation and management
-- Document storage operations (single and batch)
-- CRUD operations (get, delete)
-- Internal search methods for Retriever
-- Error conditions and edge cases
-- Context manager functionality
-- Statistics and monitoring
-"""
-
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from weaviate.exceptions import WeaviateBaseError
 
-from ragnarock import ChunkMetadata, DataChunk, EmbeddingEngine, VectorStore
+from ragnarock.core.data_chunker import ChunkMetadata, DataChunk
+from ragnarock.core.database_manager import DatabaseManager
+from ragnarock.core.embedding_engine import EmbeddingEngine
+from ragnarock.core.vector_store import VectorStore
 
 
 class TestVectorStoreRefactored:
-    """Test suite for refactored VectorStore class."""
+    """Test cases for refactored VectorStore class."""
 
     @pytest.fixture
-    def mock_weaviate_client(self):
-        """Create a mock Weaviate client."""
-        mock_client = Mock()
-        mock_client.is_ready.return_value = True
-        mock_client.schema.get.return_value = {"classes": []}
-        return mock_client
+    def mock_db_manager(self):
+        """Create a mock DatabaseManager."""
+        db_manager = Mock(spec=DatabaseManager)
+        db_manager.is_connected = True
+        db_manager.url = "http://localhost:8080"
+        return db_manager
+
+    @pytest.fixture
+    def mock_collection(self):
+        """Create a mock Weaviate collection."""
+        collection = Mock()
+        return collection
 
     @pytest.fixture
     def mock_embedding_engine(self):
-        """Create a mock embedding engine."""
-        mock_engine = Mock(spec=EmbeddingEngine)
-        mock_engine.model_name = "all-mpnet-base-v2"
-        mock_engine.embedding_dimension = 768
-        return mock_engine
+        """Create a mock EmbeddingEngine."""
+        engine = Mock(spec=EmbeddingEngine)
+        return engine
 
     @pytest.fixture
-    def sample_chunk(self):
-        """Create a sample DataChunk for testing."""
-        return DataChunk(
-            text="This is a test document chunk with some content.",
-            start_idx=0,
-            end_idx=50,
-            metadata=ChunkMetadata(
-                chunk_id=1,
-                chunk_size=50,
-                total_chunks=1,
-                source_document="test_document.tex",
-                page_number=1,
-                section_title="Introduction",
-                chunk_type="text",
-            ),
-            chunk_id="test_chunk_001",
-            source_document="test_document.tex",
-            chunk_type="text",
-        )
-
-    @pytest.fixture
-    def sample_chunks(self):
-        """Create multiple sample DataChunks for testing."""
-        return [
-            DataChunk(
-                text="First test chunk with mathematical content: E = mc²",
-                start_idx=0,
-                end_idx=50,
-                metadata=ChunkMetadata(
-                    chunk_id=1,
-                    chunk_size=50,
-                    total_chunks=3,
-                    source_document="test_document.tex",
-                    page_number=1,
-                    section_title="Introduction",
-                    chunk_type="text",
-                ),
-                chunk_id="test_chunk_001",
-                source_document="test_document.tex",
-                chunk_type="text",
-            ),
-            DataChunk(
-                text="Second test chunk with citation: Einstein (1905)",
-                start_idx=51,
-                end_idx=100,
-                metadata=ChunkMetadata(
-                    chunk_id=2,
-                    chunk_size=49,
-                    total_chunks=3,
-                    source_document="test_document.tex",
-                    page_number=2,
-                    section_title="Background",
-                    chunk_type="citation",
-                ),
-                chunk_id="test_chunk_002",
-                source_document="test_document.tex",
-                chunk_type="citation",
-            ),
-            DataChunk(
-                text="Third test chunk with equation: F = ma",
-                start_idx=101,
-                end_idx=150,
-                metadata=ChunkMetadata(
-                    chunk_id=3,
-                    chunk_size=49,
-                    total_chunks=3,
-                    source_document="test_document.tex",
-                    page_number=3,
-                    section_title="Methods",
-                    chunk_type="equation",
-                ),
-                chunk_id="test_chunk_003",
-                source_document="test_document.tex",
-                chunk_type="equation",
-            ),
-        ]
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_vector_store_initialization_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test successful VectorStore initialization."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-
-        # Test
-        vector_store = VectorStore(
-            url="http://localhost:8080",
+    def vector_store(self, mock_db_manager, mock_embedding_engine):
+        """Create a VectorStore instance with mocked dependencies."""
+        return VectorStore(
+            db_manager=mock_db_manager,
             class_name="TestDocument",
             embedding_engine=mock_embedding_engine,
         )
 
-        # Assertions
-        assert vector_store.url == "http://localhost:8080"
+    @pytest.fixture
+    def sample_chunk(self):
+        """Create a sample DataChunk for testing."""
+        metadata = ChunkMetadata(
+            chunk_id=1,
+            chunk_size=100,
+            total_chunks=5,
+            created_at="2023-01-01T00:00:00",
+            page_number=1,
+            section_title="Test Section",
+        )
+        return DataChunk(
+            text="This is a test chunk",
+            start_idx=0,
+            end_idx=19,
+            metadata=metadata,
+            chunk_id="test_chunk_1",
+            source_document="test_doc.pdf",
+            chunk_type="text",
+        )
+
+    def test_init_success(self, mock_db_manager, mock_embedding_engine):
+        """Test successful initialization of VectorStore."""
+        vector_store = VectorStore(
+            db_manager=mock_db_manager,
+            class_name="TestDocument",
+            embedding_engine=mock_embedding_engine,
+        )
+
+        assert vector_store.db_manager == mock_db_manager
         assert vector_store.class_name == "TestDocument"
         assert vector_store.embedding_engine == mock_embedding_engine
-        assert vector_store.is_connected is True
-        mock_client_class.assert_called_once_with(
-            "http://localhost:8080", timeout_config=(60, 60)
-        )
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_vector_store_initialization_with_default_embedding_engine(
-        self, mock_client_class, mock_weaviate_client
-    ):
-        """Test VectorStore initialization with default embedding engine."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
+    def test_init_with_default_embedding_engine(self, mock_db_manager):
+        """Test initialization with default EmbeddingEngine."""
+        with patch("ragnarock.core.vector_store.EmbeddingEngine") as mock_engine_class:
+            mock_engine = Mock(spec=EmbeddingEngine)
+            mock_engine_class.return_value = mock_engine
 
-        with patch(
-            "ragnarock.ragnarock.core.vector_store.EmbeddingEngine"
-        ) as mock_embedding_class:
-            mock_embedding_engine = Mock()
-            mock_embedding_class.return_value = mock_embedding_engine
+            vector_store = VectorStore(
+                db_manager=mock_db_manager,
+                class_name="TestDocument",
+            )
 
-            # Test
-            vector_store = VectorStore()
+            assert vector_store.embedding_engine == mock_engine
+            mock_engine_class.assert_called_once()
 
-            # Assertions
-            assert vector_store.embedding_engine == mock_embedding_engine
-            mock_embedding_class.assert_called_once()
+    def test_init_with_none_db_manager(self):
+        """Test initialization with None DatabaseManager."""
+        with pytest.raises(ValueError, match="DatabaseManager cannot be None"):
+            VectorStore(db_manager=None)
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_vector_store_initialization_connection_failure(self, mock_client_class):
-        """Test VectorStore initialization with connection failure."""
-        # Setup
-        mock_client_class.side_effect = Exception("Connection failed")
+    def test_is_connected(self, vector_store, mock_db_manager):
+        """Test is_connected property."""
+        mock_db_manager.is_connected = True
+        assert vector_store.is_connected() is True
 
-        # Test & Assertions
-        with pytest.raises(ConnectionError, match="Could not connect to Weaviate"):
-            VectorStore()
+        mock_db_manager.is_connected = False
+        assert vector_store.is_connected() is False
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_vector_store_initialization_weaviate_not_ready(self, mock_client_class):
-        """Test VectorStore initialization when Weaviate is not ready."""
-        # Setup
-        mock_client = Mock()
-        mock_client.is_ready.return_value = False
-        mock_client_class.return_value = mock_client
-
-        # Test & Assertions
-        with pytest.raises(ConnectionError, match="Weaviate is not ready"):
-            VectorStore()
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
     def test_create_schema_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+        self, vector_store, mock_db_manager, mock_collection
     ):
         """Test successful schema creation."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        mock_db_manager.collection_exists.return_value = False
+        mock_db_manager.create_collection.return_value = mock_collection
 
-        # Test
-        vector_store.create_schema()
+        vector_store.create_schema("TestDocument")
 
-        # Assertions
-        mock_weaviate_client.schema.create_class.assert_called_once()
-        call_args = mock_weaviate_client.schema.create_class.call_args[0][0]
-        assert call_args["class"] == "Document"
-        assert call_args["vectorizer"] == "text2vec-transformers"
-        assert "content" in [prop["name"] for prop in call_args["properties"]]
+        mock_db_manager.collection_exists.assert_called_once_with("TestDocument")
+        mock_db_manager.create_collection.assert_called_once()
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_create_schema_already_exists(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test schema creation when schema already exists."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_weaviate_client.schema.get.return_value = {
-            "classes": [{"class": "Document"}]
-        }
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+    def test_create_schema_collection_exists(self, vector_store, mock_db_manager):
+        """Test schema creation when collection already exists."""
+        mock_db_manager.collection_exists.return_value = True
 
-        # Test
-        vector_store.create_schema()
+        vector_store.create_schema("TestDocument")
 
-        # Assertions
-        mock_weaviate_client.schema.create_class.assert_not_called()
+        mock_db_manager.collection_exists.assert_called_once_with("TestDocument")
+        mock_db_manager.create_collection.assert_not_called()
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
     def test_create_schema_force_recreate(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+        self, vector_store, mock_db_manager, mock_collection
     ):
         """Test schema creation with force_recreate=True."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_weaviate_client.schema.get.return_value = {
-            "classes": [{"class": "Document"}]
-        }
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        mock_db_manager.collection_exists.return_value = True
+        mock_db_manager.create_collection.return_value = mock_collection
 
-        # Test
-        vector_store.create_schema(force_recreate=True)
+        vector_store.create_schema("TestDocument", force_recreate=True)
 
-        # Assertions
-        mock_weaviate_client.schema.delete_class.assert_called_once_with("Document")
-        mock_weaviate_client.schema.create_class.assert_called_once()
+        mock_db_manager.collection_exists.assert_called_once_with("TestDocument")
+        mock_db_manager.delete_collection.assert_called_once_with("TestDocument")
+        mock_db_manager.create_collection.assert_called_once()
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
+    def test_create_schema_failure(self, vector_store, mock_db_manager):
+        """Test schema creation failure."""
+        mock_db_manager.collection_exists.return_value = False
+        mock_db_manager.create_collection.side_effect = WeaviateBaseError(
+            "Creation failed"
+        )
+
+        with pytest.raises(WeaviateBaseError):
+            vector_store.create_schema("TestDocument")
+
     def test_store_chunk_success(
-        self,
-        mock_client_class,
-        mock_weaviate_client,
-        mock_embedding_engine,
-        sample_chunk,
+        self, vector_store, mock_db_manager, mock_collection, sample_chunk
     ):
         """Test successful chunk storage."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_weaviate_client.data_object.create.return_value = "test-uuid-123"
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        mock_db_manager.get_collection.return_value = mock_collection
+        mock_collection.data.insert.return_value = "test_uuid"
 
-        # Test
-        result_uuid = vector_store.store_chunk(sample_chunk)
+        with patch.object(vector_store, "create_schema"):
+            result = vector_store.store_chunk(sample_chunk, "TestDocument")
 
-        # Assertions
-        assert result_uuid == "test-uuid-123"
-        mock_weaviate_client.data_object.create.assert_called_once()
-        call_args = mock_weaviate_client.data_object.create.call_args
-        assert call_args[1]["class_name"] == "Document"
-        assert call_args[1]["data_object"]["content"] == sample_chunk.text
-        assert call_args[1]["data_object"]["chunk_id"] == sample_chunk.chunk_id
+        assert result == "test_uuid"
+        mock_db_manager.get_collection.assert_called_once_with("TestDocument")
+        mock_collection.data.insert.assert_called_once()
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_store_chunk_invalid_chunk(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test chunk storage with invalid chunk."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test & Assertions
+    def test_store_chunk_none_chunk(self, vector_store):
+        """Test store_chunk with None chunk."""
         with pytest.raises(ValueError, match="Chunk cannot be None"):
-            vector_store.store_chunk(None)
+            vector_store.store_chunk(None, "TestDocument")
+
+    def test_store_chunk_empty_text(self, vector_store, sample_chunk):
+        """Test store_chunk with empty text."""
+        sample_chunk.text = ""
 
         with pytest.raises(ValueError, match="Chunk text cannot be empty"):
-            empty_chunk = DataChunk(
-                text="",
-                start_idx=0,
-                end_idx=0,
-                metadata=ChunkMetadata(
-                    chunk_id=1,
-                    chunk_size=0,
-                    total_chunks=1,
-                    source_document="test.tex",
-                    chunk_type="text",
-                ),
-                chunk_id="empty",
-                source_document="test.tex",
-                chunk_type="text",
-            )
-            vector_store.store_chunk(empty_chunk)
+            vector_store.store_chunk(sample_chunk, "TestDocument")
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
+    def test_store_chunk_storage_failure(
+        self, vector_store, mock_db_manager, mock_collection, sample_chunk
+    ):
+        """Test store_chunk storage failure."""
+        mock_db_manager.get_collection.return_value = mock_collection
+        mock_collection.data.insert.side_effect = WeaviateBaseError("Storage failed")
+
+        with patch.object(vector_store, "create_schema"):
+            with pytest.raises(WeaviateBaseError):
+                vector_store.store_chunk(sample_chunk, "TestDocument")
+
     def test_store_chunks_success(
-        self,
-        mock_client_class,
-        mock_weaviate_client,
-        mock_embedding_engine,
-        sample_chunks,
+        self, vector_store, mock_db_manager, mock_collection, sample_chunk
     ):
-        """Test successful batch chunk storage."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_batch_result = [
-            {"result": {"status": "SUCCESS"}, "id": "uuid-1"},
-            {"result": {"status": "SUCCESS"}, "id": "uuid-2"},
-            {"result": {"status": "SUCCESS"}, "id": "uuid-3"},
-        ]
-        mock_weaviate_client.batch.create_objects.return_value = mock_batch_result
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        """Test successful chunk batch storage."""
+        chunks = [sample_chunk, sample_chunk]
+        mock_db_manager.get_collection.return_value = mock_collection
+        mock_collection.data.insert.return_value = "test_uuid"
 
-        # Test
-        result_uuids = vector_store.store_chunks(sample_chunks, batch_size=3)
+        with patch.object(vector_store, "create_schema"):
+            result = vector_store.store_chunks(chunks, "TestDocument", batch_size=1)
 
-        # Assertions
-        assert len(result_uuids) == 3
-        assert result_uuids == ["uuid-1", "uuid-2", "uuid-3"]
-        mock_weaviate_client.batch.create_objects.assert_called()
+        assert len(result) == 2
+        assert all(uuid == "test_uuid" for uuid in result)
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_store_chunks_empty_list(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test batch chunk storage with empty list."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test & Assertions
+    def test_store_chunks_empty_list(self, vector_store):
+        """Test store_chunks with empty list."""
         with pytest.raises(ValueError, match="Chunks list cannot be empty"):
-            vector_store.store_chunks([])
+            vector_store.store_chunks([], "TestDocument")
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
+    def test_store_chunks_no_valid_chunks(self, vector_store, sample_chunk):
+        """Test store_chunks with no valid chunks."""
+        sample_chunk.text = ""
+        chunks = [sample_chunk]
+
+        with pytest.raises(ValueError, match="No valid chunks found in the list"):
+            vector_store.store_chunks(chunks, "TestDocument")
+
+    def test_prepare_data_object(self, vector_store, sample_chunk):
+        """Test prepare_data_object method."""
+        result = vector_store.prepare_data_object(sample_chunk)
+
+        expected = {
+            "content": "This is a test chunk",
+            "chunk_id": "test_chunk_1",
+            "source_document": "test_doc.pdf",
+            "chunk_type": "text",
+            "metadata_chunk_id": 1,
+            "metadata_chunk_size": 100,
+            "metadata_total_chunks": 5,
+            "metadata_created_at": "2023-01-01T00:00:00",
+            "page_number": 1,
+            "section_title": "Test Section",
+        }
+
+        assert result == expected
+
+    def test_prepare_data_object_none_chunk(self, vector_store):
+        """Test prepare_data_object with None chunk."""
+        with pytest.raises(ValueError, match="Chunk cannot be None"):
+            vector_store.prepare_data_object(None)
+
+    def test_prepare_data_object_empty_text(self, vector_store, sample_chunk):
+        """Test prepare_data_object with empty text."""
+        sample_chunk.text = ""
+
+        with pytest.raises(ValueError, match="Chunk text cannot be empty"):
+            vector_store.prepare_data_object(sample_chunk)
+
+    def test_prepare_data_object_empty_chunk_id(self, vector_store, sample_chunk):
+        """Test prepare_data_object with empty chunk_id."""
+        sample_chunk.chunk_id = ""
+
+        with pytest.raises(ValueError, match="Chunk ID cannot be empty"):
+            vector_store.prepare_data_object(sample_chunk)
+
     def test_get_chunk_by_id_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+        self, vector_store, mock_db_manager, mock_collection
     ):
         """Test successful chunk retrieval by ID."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "content": "Retrieved content",
-                            "chunk_id": "test_001",
-                            "source_document": "test.tex",
-                            "chunk_type": "text",
-                            "metadata": {"page": 1},
-                            "page_number": 1,
-                            "section_title": "Test",
-                        }
-                    ]
-                }
-            }
+        mock_obj = Mock()
+        mock_obj.properties = {
+            "content": "test content",
+            "chunk_id": "test_chunk_1",
+            "source_document": "test_doc.pdf",
+            "chunk_type": "text",
+            "metadata_chunk_id": 1,
+            "metadata_chunk_size": 100,
+            "metadata_total_chunks": 5,
+            "metadata_created_at": "2023-01-01T00:00:00",
+            "page_number": 1,
+            "section_title": "Test Section",
         }
-        mock_weaviate_client.query.get.return_value.with_where.return_value.with_limit.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
 
-        # Test
-        result = vector_store.get_chunk_by_id("test_001")
+        mock_result = Mock()
+        mock_result.objects = [mock_obj]
+        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
 
-        # Assertions
+        result = vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
+
         assert result is not None
-        assert result["content"] == "Retrieved content"
-        assert result["chunk_id"] == "test_001"
+        assert result["content"] == "test content"
+        assert result["chunk_id"] == "test_chunk_1"
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
     def test_get_chunk_by_id_not_found(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+        self, vector_store, mock_db_manager, mock_collection
     ):
-        """Test chunk retrieval by ID when chunk is not found."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {"data": {"Get": {"Document": []}}}
-        mock_weaviate_client.query.get.return_value.with_where.return_value.with_limit.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        """Test chunk retrieval when chunk not found."""
+        mock_result = Mock()
+        mock_result.objects = []
+        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
 
-        # Test
-        result = vector_store.get_chunk_by_id("nonexistent")
+        result = vector_store.get_chunk_by_id("nonexistent_chunk", "TestDocument")
 
-        # Assertions
         assert result is None
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_delete_chunk_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+    def test_get_chunk_by_id_failure(
+        self, vector_store, mock_db_manager, mock_collection
     ):
+        """Test chunk retrieval failure."""
+        mock_collection.query.fetch_objects.side_effect = WeaviateBaseError(
+            "Query failed"
+        )
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with pytest.raises(WeaviateBaseError):
+            vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
+
+    def test_delete_chunk_success(self, vector_store, mock_db_manager, mock_collection):
         """Test successful chunk deletion."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "chunk_id": "test_001",
-                            "_additional": {"id": "weaviate-uuid-123"},
-                        }
-                    ]
-                }
-            }
-        }
-        mock_weaviate_client.query.get.return_value.with_where.return_value.with_additional.return_value.with_limit.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        mock_obj = Mock()
+        mock_obj.uuid = "test_uuid"
+        mock_result = Mock()
+        mock_result.objects = [mock_obj]
+        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
 
-        # Test
-        result = vector_store.delete_chunk("test_001")
+        result = vector_store.delete_chunk("test_chunk_1", "TestDocument")
 
-        # Assertions
         assert result is True
-        mock_weaviate_client.data_object.delete.assert_called_once_with(
-            uuid="weaviate-uuid-123", class_name="Document"
-        )
+        mock_collection.data.delete_by_id.assert_called_once_with("test_uuid")
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
     def test_delete_chunk_not_found(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
+        self, vector_store, mock_db_manager, mock_collection
     ):
-        """Test chunk deletion when chunk is not found."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {"data": {"Get": {"Document": []}}}
-        mock_weaviate_client.query.get.return_value.with_where.return_value.with_additional.return_value.with_limit.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        """Test chunk deletion when chunk not found."""
+        mock_result = Mock()
+        mock_result.objects = []
+        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
 
-        # Test
-        result = vector_store.delete_chunk("nonexistent")
+        result = vector_store.delete_chunk("nonexistent_chunk", "TestDocument")
 
-        # Assertions
         assert result is False
-        mock_weaviate_client.data_object.delete.assert_not_called()
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_get_stats_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
+    def test_delete_chunk_failure(self, vector_store, mock_db_manager, mock_collection):
+        """Test chunk deletion failure."""
+        mock_collection.query.fetch_objects.side_effect = WeaviateBaseError(
+            "Query failed"
+        )
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with pytest.raises(WeaviateBaseError):
+            vector_store.delete_chunk("test_chunk_1", "TestDocument")
+
+    def test_get_stats_success(self, vector_store, mock_db_manager, mock_collection):
         """Test successful stats retrieval."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_aggregate_result = {
-            "data": {"Aggregate": {"Document": [{"meta": {"count": 42}}]}}
-        }
-        mock_schema_result = {
-            "classes": [{"class": "Document", "description": "Test class"}]
-        }
-        mock_weaviate_client.query.aggregate.return_value.with_meta_count.return_value.do.return_value = (
-            mock_aggregate_result
+        mock_result = Mock()
+        mock_result.total_count = 100
+        mock_collection.aggregate.over_all.return_value = mock_result
+        mock_collection.name = "TestDocument"
+        mock_collection.config = Mock()
+        mock_collection.config.description = "Test collection"
+        mock_collection.config.vectorizer_config = None
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        result = vector_store.get_stats("TestDocument")
+
+        assert result["total_objects"] == 100
+        assert result["class_name"] == "TestDocument"
+        assert result["is_connected"] is True
+        assert result["db_manager_url"] == "http://localhost:8080"
+
+    def test_get_stats_failure(self, vector_store, mock_db_manager, mock_collection):
+        """Test stats retrieval failure."""
+        mock_collection.aggregate.over_all.side_effect = WeaviateBaseError(
+            "Stats failed"
         )
-        mock_weaviate_client.schema.get.return_value = mock_schema_result
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        mock_db_manager.get_collection.return_value = mock_collection
 
-        # Test
-        stats = vector_store.get_stats()
+        with pytest.raises(WeaviateBaseError):
+            vector_store.get_stats("TestDocument")
 
-        # Assertions
-        assert stats["total_objects"] == 42
-        assert stats["class_name"] == "Document"
-        assert stats["is_connected"] is True
-        assert stats["url"] == "http://localhost:8080"
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_clear_all_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
+    def test_clear_all_success(self, vector_store, mock_db_manager):
         """Test successful clearing of all objects."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
+        vector_store.clear_all("TestDocument")
 
-        # Test
-        vector_store.clear_all()
+        mock_db_manager.delete_collection.assert_called_once_with("TestDocument")
 
-        # Assertions
-        mock_weaviate_client.schema.delete_class.assert_called_once_with("Document")
+    def test_clear_all_failure(self, vector_store, mock_db_manager):
+        """Test clear_all failure."""
+        mock_db_manager.delete_collection.side_effect = WeaviateBaseError(
+            "Clear failed"
+        )
 
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_context_manager(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
+        with pytest.raises(WeaviateBaseError):
+            vector_store.clear_all("TestDocument")
+
+    def test_close(self, vector_store, mock_db_manager):
+        """Test close method."""
+        vector_store.close()
+
+        mock_db_manager.close.assert_called_once()
+
+    def test_context_manager(self, mock_db_manager, mock_embedding_engine):
         """Test VectorStore as context manager."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
+        with VectorStore(
+            db_manager=mock_db_manager,
+            class_name="TestDocument",
+            embedding_engine=mock_embedding_engine,
+        ) as vector_store:
+            assert vector_store.class_name == "TestDocument"
 
-        # Test
-        with VectorStore(embedding_engine=mock_embedding_engine) as vector_store:
-            assert vector_store.is_connected is True
-
-        # Assertions
-        assert vector_store.is_connected is False
-
-    # Internal methods tests (used by Retriever)
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_search_similar_internal_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test successful internal vector similarity search."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "content": "Test content",
-                            "chunk_id": "test_001",
-                            "source_document": "test.tex",
-                            "chunk_type": "text",
-                            "metadata": {"page": 1},
-                            "page_number": 1,
-                            "section_title": "Test",
-                            "_additional": {
-                                "certainty": 0.85,
-                                "distance": 0.15,
-                            },
-                        }
-                    ]
-                }
-            }
-        }
-        mock_weaviate_client.query.get.return_value.with_near_text.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        results = vector_store._search_similar_internal("test query", top_k=5)
-
-        # Assertions
-        assert len(results) == 1
-        assert results[0]["content"] == "Test content"
-        assert results[0]["similarity_score"] == 0.85
-        assert results[0]["chunk_id"] == "test_001"
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_search_hybrid_internal_success(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test successful internal hybrid search."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_query_result = {
-            "data": {
-                "Get": {
-                    "Document": [
-                        {
-                            "content": "Hybrid test content",
-                            "chunk_id": "hybrid_001",
-                            "source_document": "test.tex",
-                            "chunk_type": "text",
-                            "metadata": {"page": 1},
-                            "page_number": 1,
-                            "section_title": "Test",
-                            "_additional": {"score": 0.92},
-                        }
-                    ]
-                }
-            }
-        }
-        mock_weaviate_client.query.get.return_value.with_hybrid.return_value.with_limit.return_value.with_additional.return_value.do.return_value = (
-            mock_query_result
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        results = vector_store._search_hybrid_internal(
-            "hybrid query", alpha=0.7, top_k=3
-        )
-
-        # Assertions
-        assert len(results) == 1
-        assert results[0]["content"] == "Hybrid test content"
-        assert results[0]["hybrid_score"] == 0.92
-        assert results[0]["chunk_id"] == "hybrid_001"
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_build_where_filter(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test where filter building."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test string filter
-        string_filter = vector_store._build_where_filter({"chunk_type": "text"})
-        assert string_filter["path"] == ["chunk_type"]
-        assert string_filter["operator"] == "Equal"
-        assert string_filter["valueString"] == "text"
-
-        # Test int filter
-        int_filter = vector_store._build_where_filter({"page_number": 1})
-        assert int_filter["path"] == ["page_number"]
-        assert int_filter["operator"] == "Equal"
-        assert int_filter["valueInt"] == 1
-
-        # Test list filter
-        list_filter = vector_store._build_where_filter(
-            {"chunk_type": ["text", "citation"]}
-        )
-        assert list_filter["path"] == ["chunk_type"]
-        assert list_filter["operator"] == "ContainsAny"
-        assert list_filter["valueStringArray"] == ["text", "citation"]
-
-        # Test multiple filters
-        multi_filter = vector_store._build_where_filter(
-            {"chunk_type": "text", "page_number": 1}
-        )
-        assert multi_filter["operator"] == "And"
-        assert len(multi_filter["operands"]) == 2
-
-        # Test empty filter
-        empty_filter = vector_store._build_where_filter({})
-        assert empty_filter is None
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_weaviate_error_handling(
-        self,
-        mock_client_class,
-        mock_weaviate_client,
-        mock_embedding_engine,
-        sample_chunk,
-    ):
-        """Test Weaviate error handling."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        mock_weaviate_client.data_object.create.side_effect = WeaviateBaseError(
-            "Weaviate error"
-        )
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test & Assertions
-        with pytest.raises(WeaviateBaseError, match="Weaviate error"):
-            vector_store.store_chunk(sample_chunk)
-
-    def test_embedding_engine_integration(self, mock_embedding_engine):
-        """Test integration with EmbeddingEngine."""
-        # Setup
-        mock_embedding_engine.model_name = "test-model"
-        mock_embedding_engine.embedding_dimension = 512
-
-        with patch(
-            "ragnarock.ragnarock.core.vector_store.WeaviateClient"
-        ) as mock_client_class:
-            mock_client = Mock()
-            mock_client.is_ready.return_value = True
-            mock_client.schema.get.return_value = {"classes": []}
-            mock_client_class.return_value = mock_client
-
-            # Test
-            vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-            # Assertions
-            assert vector_store.embedding_engine == mock_embedding_engine
-            assert vector_store.embedding_engine.model_name == "test-model"
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_close_connection(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test connection closure."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-
-        # Test
-        vector_store.close()
-
-        # Assertions
-        assert vector_store.is_connected is False
-
-    @patch("ragnarock.ragnarock.core.vector_store.WeaviateClient")
-    def test_close_without_client(
-        self, mock_client_class, mock_weaviate_client, mock_embedding_engine
-    ):
-        """Test connection closure without client."""
-        # Setup
-        mock_client_class.return_value = mock_weaviate_client
-        vector_store = VectorStore(embedding_engine=mock_embedding_engine)
-        del vector_store.client  # Remove client attribute
-
-        # Test (should not raise exception)
-        vector_store.close()
-
-        # Assertions
-        # is_connected should still be True since there was no client to close
-        assert vector_store.is_connected is True
+        # close should be called when exiting context
+        mock_db_manager.close.assert_called_once()

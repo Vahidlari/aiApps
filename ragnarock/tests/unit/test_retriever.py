@@ -1,281 +1,308 @@
-"""Unit tests for the Retriever module.
+"""Unit tests for refactored Retriever class."""
 
-This module contains comprehensive unit tests for the Retriever class,
-testing all major functionality including search operations, query
-preprocessing, and result postprocessing.
-
-Test coverage includes:
-- Vector similarity search
-- Hybrid search functionality
-- Query preprocessing and optimization
-- Result ranking and filtering
-- Error conditions and edge cases
-- Integration with VectorStore
-"""
-
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from ragnarock import EmbeddingEngine, Retriever, VectorStore
+from weaviate.classes.query import Filter, MetadataQuery
+from weaviate.exceptions import WeaviateBaseError
+
+from ragnarock.core.database_manager import DatabaseManager
+from ragnarock.core.embedding_engine import EmbeddingEngine
+from ragnarock.core.retriever import Retriever
 
 
 class TestRetriever:
-    """Test suite for Retriever class."""
+    """Test cases for refactored Retriever class."""
 
     @pytest.fixture
-    def mock_vector_store(self):
-        """Create a mock VectorStore."""
-        mock_store = Mock(spec=VectorStore)
-        mock_store.embedding_engine = Mock(spec=EmbeddingEngine)
-        return mock_store
+    def mock_db_manager(self):
+        """Create a mock DatabaseManager."""
+        db_manager = Mock(spec=DatabaseManager)
+        db_manager.is_connected = True
+        db_manager.url = "http://localhost:8080"
+        db_manager.list_collections.return_value = ["Document"]
+        return db_manager
+
+    @pytest.fixture
+    def mock_collection(self):
+        """Create a mock Weaviate collection."""
+        collection = Mock()
+        return collection
 
     @pytest.fixture
     def mock_embedding_engine(self):
         """Create a mock EmbeddingEngine."""
-        mock_engine = Mock(spec=EmbeddingEngine)
-        mock_engine.model_name = "all-mpnet-base-v2"
-        mock_engine.embedding_dimension = 768
-        return mock_engine
+        engine = Mock(spec=EmbeddingEngine)
+        engine.model_name = "test-model"
+        engine.embedding_dimension = 768
+        return engine
 
     @pytest.fixture
-    def sample_search_results(self):
-        """Create sample search results for testing."""
-        return [
-            {
-                "content": "Test content 1",
-                "chunk_id": "chunk_001",
-                "source_document": "test_doc.pdf",
-                "chunk_type": "text",
-                "metadata": {"page": 1, "author": "Test Author"},
-                "page_number": 1,
-                "section_title": "Test Section",
-                "similarity_score": 0.85,
-                "certainty": 0.85,
-                "distance": 0.15,
-            },
-            {
-                "content": "Test content 2",
-                "chunk_id": "chunk_002",
-                "source_document": "test_doc.pdf",
-                "chunk_type": "text",
-                "metadata": {"page": 2, "author": "Test Author"},
-                "page_number": 2,
-                "section_title": "Test Section",
-                "similarity_score": 0.75,
-                "certainty": 0.75,
-                "distance": 0.25,
-            },
-        ]
+    def retriever(self, mock_db_manager, mock_embedding_engine):
+        """Create a Retriever instance with mocked dependencies."""
+        return Retriever(
+            db_manager=mock_db_manager,
+            embedding_engine=mock_embedding_engine,
+        )
 
-    def test_retriever_initialization_with_embedding_engine(
-        self, mock_vector_store, mock_embedding_engine
-    ):
-        """Test Retriever initialization with embedding engine."""
-        retriever = Retriever(mock_vector_store, mock_embedding_engine)
-
-        assert retriever.vector_store == mock_vector_store
-        assert retriever.embedding_engine == mock_embedding_engine
-
-    def test_retriever_initialization_without_embedding_engine(
-        self, mock_vector_store, mock_embedding_engine
-    ):
-        """Test Retriever initialization without embedding engine."""
-        mock_vector_store.embedding_engine = mock_embedding_engine
-
-        retriever = Retriever(mock_vector_store)
-
-        assert retriever.vector_store == mock_vector_store
-        assert retriever.embedding_engine == mock_embedding_engine
-
-    def test_retriever_initialization_with_none_vector_store(self):
-        """Test Retriever initialization with None vector store."""
-        with pytest.raises(ValueError, match="VectorStore cannot be None"):
-            Retriever(None)
-
-    def test_search_similar_success(self, mock_vector_store, sample_search_results):
-        """Test successful vector similarity search."""
-        # Setup
-        mock_vector_store._search_similar_internal.return_value = sample_search_results
-
-        retriever = Retriever(mock_vector_store)
-
-        # Test
-        results = retriever.search_similar("test query", top_k=5)
-
-        # Assertions
-        assert len(results) == 2
-        assert results[0]["content"] == "Test content 1"
-        assert results[0]["similarity_score"] == 0.85
-        assert results[0]["retrieval_method"] == "vector_similarity"
-        assert "retrieval_timestamp" in results[0]
-
-        # Verify preprocessing was called
-        mock_vector_store._search_similar_internal.assert_called_once()
-        call_args = mock_vector_store._search_similar_internal.call_args
-        assert call_args[1]["query"] == "test query"
-        assert call_args[1]["top_k"] == 5
-
-    def test_search_similar_empty_query(self, mock_vector_store):
-        """Test vector similarity search with empty query."""
-        retriever = Retriever(mock_vector_store)
-
-        with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_similar("")
-
-        with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_similar("   ")
-
-    def test_search_similar_with_filters(
-        self, mock_vector_store, sample_search_results
-    ):
-        """Test vector similarity search with filters."""
-        mock_vector_store._search_similar_internal.return_value = sample_search_results
-        retriever = Retriever(mock_vector_store)
-
-        filters = {"chunk_type": "text", "author": "Test Author"}
-        retriever.search_similar("test query", filters=filters)
-
-        # Verify filters were passed
-        mock_vector_store._search_similar_internal.assert_called_once()
-        call_args = mock_vector_store._search_similar_internal.call_args
-        assert call_args[1]["filters"] == filters
-
-    def test_search_hybrid_success(self, mock_vector_store, sample_search_results):
-        """Test successful hybrid search."""
-        mock_vector_store._search_hybrid_internal.return_value = sample_search_results
-        retriever = Retriever(mock_vector_store)
-
-        results = retriever.search_hybrid("test query", alpha=0.7, top_k=3)
-
-        assert len(results) == 2
-        mock_vector_store._search_hybrid_internal.assert_called_once()
-        call_args = mock_vector_store._search_hybrid_internal.call_args
-        assert call_args[1]["alpha"] == 0.7
-        assert call_args[1]["top_k"] == 3
-
-    def test_search_hybrid_invalid_alpha(self, mock_vector_store):
-        """Test hybrid search with invalid alpha values."""
-        retriever = Retriever(mock_vector_store)
-
-        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
-            retriever.search_hybrid("test", alpha=-0.1)
-
-        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
-            retriever.search_hybrid("test", alpha=1.1)
-
-    def test_search_hybrid_empty_query(self, mock_vector_store):
-        """Test hybrid search with empty query."""
-        retriever = Retriever(mock_vector_store)
-
-        with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_hybrid("")
-
-    def test_preprocess_query_basic(self, mock_vector_store):
-        """Test basic query preprocessing."""
-        retriever = Retriever(mock_vector_store)
-
-        # Test whitespace normalization and case conversion
-        processed = retriever._preprocess_query("  Test Query  ")
-        assert processed == "test query"
-
-    def test_postprocess_results(self, mock_vector_store):
-        """Test result postprocessing."""
-        retriever = Retriever(mock_vector_store)
-
-        results = [
-            {"similarity_score": 0.5, "content": "test 1"},
-            {"similarity_score": 0.8, "content": "test 2"},
-            {"similarity_score": 0.3, "content": "test 3"},
-        ]
-
-        processed = retriever._postprocess_results(results)
-
-        # Should be sorted by similarity score (highest first)
-        assert processed[0]["similarity_score"] == 0.8
-        assert processed[1]["similarity_score"] == 0.5
-        assert processed[2]["similarity_score"] == 0.3
-
-        # Should have additional metadata
-        for result in processed:
-            assert "retrieval_method" in result
-            assert "retrieval_timestamp" in result
-            assert result["retrieval_method"] == "vector_similarity"
-
-    def test_get_retrieval_stats(self, mock_vector_store, mock_embedding_engine):
-        """Test retrieval statistics."""
-        mock_vector_store.get_stats.return_value = {
-            "total_objects": 100,
-            "class_name": "Document",
+    @pytest.fixture
+    def mock_search_result(self):
+        """Create a mock search result object."""
+        obj = Mock()
+        obj.properties = {
+            "content": "This is test content about machine learning",
+            "chunk_id": "test_chunk_1",
+            "source_document": "test_doc.pdf",
+            "chunk_type": "text",
+            "metadata_chunk_id": 1,
+            "metadata_chunk_size": 100,
+            "metadata_total_chunks": 5,
+            "metadata_created_at": "2023-01-01T00:00:00",
+            "page_number": 1,
+            "section_title": "Machine Learning",
         }
 
-        retriever = Retriever(mock_vector_store, mock_embedding_engine)
-        stats = retriever.get_retrieval_stats()
+        # Mock metadata for different search types
+        obj.metadata = Mock()
+        obj.metadata.distance = 0.2  # For vector search
+        obj.metadata.score = 0.8  # For hybrid/keyword search
 
-        assert "vector_store_stats" in stats
-        assert "embedding_model" in stats
-        assert "embedding_dimension" in stats
-        assert "retrieval_methods" in stats
-        assert stats["embedding_model"] == "all-mpnet-base-v2"
-        assert stats["embedding_dimension"] == 768
-        # Verify only generic retrieval methods are included
-        assert "vector_similarity" in stats["retrieval_methods"]
-        assert "hybrid_search" in stats["retrieval_methods"]
-        assert len(stats["retrieval_methods"]) == 2
+        return obj
 
-    def test_get_current_timestamp(self, mock_vector_store):
-        """Test timestamp generation."""
-        retriever = Retriever(mock_vector_store)
-
-        timestamp = retriever._get_current_timestamp()
-        assert isinstance(timestamp, str)
-        # Should be ISO format
-        assert "T" in timestamp
-
-    def test_search_similar_error_handling(self, mock_vector_store):
-        """Test error handling in search_similar."""
-        mock_vector_store._search_similar_internal.side_effect = Exception(
-            "Search failed"
+    def test_init_success(self, mock_db_manager, mock_embedding_engine):
+        """Test successful initialization of Retriever."""
+        retriever = Retriever(
+            db_manager=mock_db_manager,
+            embedding_engine=mock_embedding_engine,
         )
-        retriever = Retriever(mock_vector_store)
 
-        with pytest.raises(Exception, match="Search failed"):
-            retriever.search_similar("test query")
+        assert retriever.db_manager == mock_db_manager
+        assert retriever.embedding_engine == mock_embedding_engine
 
-    def test_search_hybrid_error_handling(self, mock_vector_store):
-        """Test error handling in search_hybrid."""
-        mock_vector_store._search_hybrid_internal.side_effect = Exception(
-            "Hybrid search failed"
-        )
-        retriever = Retriever(mock_vector_store)
+    def test_init_with_default_embedding_engine(self, mock_db_manager):
+        """Test initialization with default EmbeddingEngine."""
+        with patch("ragnarock.core.retriever.EmbeddingEngine") as mock_engine_class:
+            mock_engine = Mock(spec=EmbeddingEngine)
+            mock_engine_class.return_value = mock_engine
 
-        with pytest.raises(Exception, match="Hybrid search failed"):
-            retriever.search_hybrid("test query")
+            retriever = Retriever(
+                db_manager=mock_db_manager,
+            )
 
-    def test_get_retrieval_stats_error_handling(self, mock_vector_store):
-        """Test error handling in get_retrieval_stats."""
-        mock_vector_store.get_stats.side_effect = Exception("Stats failed")
-        retriever = Retriever(mock_vector_store)
+            assert retriever.embedding_engine == mock_engine
+            mock_engine_class.assert_called_once()
+
+    def test_init_with_none_db_manager(self):
+        """Test initialization with None DatabaseManager."""
+        with pytest.raises(ValueError, match="DatabaseManager cannot be None"):
+            Retriever(db_manager=None)
+
+    def test_preprocess_query(self, retriever):
+        """Test query preprocessing."""
+        query = "  This   is   a   test   query  "
+        result = retriever._preprocess_query(query)
+
+        assert result == "this is a test query"
+
+    def test_search_similar_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful vector similarity search."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.near_text.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_vector_results") as mock_process:
+                mock_process.return_value = [
+                    {"content": "test", "similarity_score": 0.8}
+                ]
+
+                result = retriever.search_similar(
+                    "machine learning", class_name="Document", top_k=5
+                )
+
+                assert len(result) == 1
+                mock_collection.query.near_text.assert_called_once_with(
+                    query="machine learning",
+                    limit=5,
+                    return_metadata=MetadataQuery(distance=True),
+                )
+
+    def test_search_similar_empty_query(self, retriever):
+        """Test vector similarity search with empty query."""
+        with pytest.raises(ValueError, match="Query cannot be empty"):
+            retriever.search_similar("", class_name="Document")
+
+    def test_search_similar_failure(self, retriever, mock_db_manager, mock_collection):
+        """Test vector similarity search failure."""
+        mock_collection.query.near_text.side_effect = Exception("Search failed")
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with pytest.raises(Exception, match="Search failed"):
+                retriever.search_similar("machine learning", class_name="Document")
+
+    def test_search_hybrid_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful hybrid search."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.hybrid.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_hybrid_results") as mock_process:
+                mock_process.return_value = [{"content": "test", "hybrid_score": 0.8}]
+
+                result = retriever.search_hybrid(
+                    "machine learning", class_name="Document", alpha=0.7, top_k=5
+                )
+
+                assert len(result) == 1
+                mock_collection.query.hybrid.assert_called_once_with(
+                    query="machine learning",
+                    alpha=0.7,
+                    limit=5,
+                    return_metadata=MetadataQuery(score=True),
+                )
+
+    def test_search_hybrid_invalid_alpha(self, retriever):
+        """Test hybrid search with invalid alpha value."""
+        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
+            retriever.search_hybrid(
+                "machine learning", class_name="Document", alpha=1.5
+            )
+
+    def test_search_hybrid_empty_query(self, retriever):
+        """Test hybrid search with empty query."""
+        with pytest.raises(ValueError, match="Query cannot be empty"):
+            retriever.search_hybrid("", class_name="Document")
+
+    def test_search_keyword_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful keyword search."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.bm25.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_keyword_results") as mock_process:
+                mock_process.return_value = [{"content": "test", "bm25_score": 0.8}]
+
+                result = retriever.search_keyword(
+                    "machine learning", class_name="Document", top_k=5
+                )
+
+                assert len(result) == 1
+                mock_collection.query.bm25.assert_called_once_with(
+                    query="machine learning",
+                    limit=5,
+                    return_metadata=MetadataQuery(score=True),
+                )
+
+    def test_search_keyword_empty_query(self, retriever):
+        """Test keyword search with empty query."""
+        with pytest.raises(ValueError, match="Query cannot be empty"):
+            retriever.search_keyword("", class_name="Document")
+
+    def test_process_vector_results(self, retriever, mock_search_result):
+        """Test processing vector search results."""
+        objects = [mock_search_result]
+
+        result = retriever._process_vector_results(objects, score_threshold=0.5)
+
+        assert len(result) == 1
+        assert result[0]["similarity_score"] == 0.8  # 1.0 - 0.2
+        assert result[0]["distance"] == 0.2
+        assert result[0]["retrieval_method"] == "vector_similarity"
+        assert "retrieval_timestamp" in result[0]
+
+    def test_process_vector_results_score_threshold(
+        self, retriever, mock_search_result
+    ):
+        """Test processing vector search results with score threshold."""
+        objects = [mock_search_result]
+
+        result = retriever._process_vector_results(objects, score_threshold=0.9)
+
+        # Score is 0.8, threshold is 0.9, so no results should be returned
+        assert len(result) == 0
+
+    def test_process_hybrid_results(self, retriever, mock_search_result):
+        """Test processing hybrid search results."""
+        objects = [mock_search_result]
+
+        result = retriever._process_hybrid_results(objects, score_threshold=0.5)
+
+        assert len(result) == 1
+        assert result[0]["hybrid_score"] == 0.8
+        assert result[0]["similarity_score"] == 0.8
+        assert result[0]["retrieval_method"] == "hybrid_search"
+        assert "retrieval_timestamp" in result[0]
+
+    def test_process_keyword_results(self, retriever, mock_search_result):
+        """Test processing keyword search results."""
+        objects = [mock_search_result]
+
+        result = retriever._process_keyword_results(objects, score_threshold=0.5)
+
+        assert len(result) == 1
+        assert result[0]["bm25_score"] == 0.8
+        assert result[0]["similarity_score"] == 0.8
+        assert result[0]["retrieval_method"] == "keyword_search"
+        assert "retrieval_timestamp" in result[0]
+
+    def test_get_current_timestamp(self, retriever):
+        """Test getting current timestamp."""
+        with patch("datetime.datetime") as mock_datetime:
+            mock_datetime.now.return_value.isoformat.return_value = (
+                "2023-01-01T00:00:00"
+            )
+
+            result = retriever._get_current_timestamp()
+
+            assert result == "2023-01-01T00:00:00"
+
+    def test_get_retrieval_stats_success(
+        self, retriever, mock_db_manager, mock_embedding_engine
+    ):
+        """Test successful retrieval stats."""
+        result = retriever.get_retrieval_stats(class_name="Document")
+
+        expected = {
+            "database_stats": {
+                "is_connected": True,
+                "url": "http://localhost:8080",
+                "collections": ["Document"],
+            },
+            "class_name": "Document",
+            "embedding_model": "test-model",
+            "embedding_dimension": 768,
+            "retrieval_methods": [
+                "vector_similarity",
+                "hybrid_search",
+                "keyword_search",
+            ],
+        }
+
+        assert result == expected
+
+    def test_get_retrieval_stats_failure(self, retriever, mock_db_manager):
+        """Test retrieval stats failure."""
+        mock_db_manager.list_collections.side_effect = Exception("Stats failed")
 
         with pytest.raises(Exception, match="Stats failed"):
-            retriever.get_retrieval_stats()
-
-    def test_retriever_integration_with_vector_store(self, mock_embedding_engine):
-        """Test Retriever integration with VectorStore."""
-        # Create a real VectorStore mock but with controlled behavior
-        mock_vector_store = Mock(spec=VectorStore)
-        mock_vector_store.embedding_engine = mock_embedding_engine
-
-        retriever = Retriever(mock_vector_store, mock_embedding_engine)
-
-        # Test that the retriever properly uses the vector store
-        assert retriever.vector_store == mock_vector_store
-        assert retriever.embedding_engine == mock_embedding_engine
-
-    def test_retriever_with_none_embedding_engine(self, mock_vector_store):
-        """Test Retriever with None embedding engine uses vector store's engine."""  # noqa: E501
-        mock_embedding_engine = Mock(spec=EmbeddingEngine)
-        mock_vector_store.embedding_engine = mock_embedding_engine
-
-        retriever = Retriever(mock_vector_store, None)
-
-        assert retriever.embedding_engine == mock_embedding_engine
+            retriever.get_retrieval_stats(class_name="Document")

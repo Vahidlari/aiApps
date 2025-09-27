@@ -20,6 +20,7 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 
 from .data_chunker import DataChunk, DataChunker
+from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .retriever import Retriever
@@ -35,6 +36,7 @@ class RAGSystem:
     separation of concerns.
 
     Attributes:
+        db_manager: DatabaseManager instance for database operations
         vector_store: VectorStore instance for document storage
         retriever: Retriever instance for search operations
         embedding_engine: EmbeddingEngine for vector embeddings
@@ -74,8 +76,7 @@ class RAGSystem:
             # Handle configuration - use provided config or create from individual parameters
             if config is not None:
                 embedding_model = config.embedding_config.model_name
-                weaviate_url = config.vector_store_config.url
-                class_name = config.vector_store_config.class_name
+                weaviate_url = config.database_manager_config.url
                 chunk_size = config.chunk_config.chunk_size
                 chunk_overlap = config.chunk_config.overlap
 
@@ -85,18 +86,21 @@ class RAGSystem:
             )
             self.embedding_engine = EmbeddingEngine(model_name=embedding_model)
 
-            # Initialize vector store
-            self.logger.info(f"Initializing vector store at {weaviate_url}")
+            # Initialize database manager (infrastructure layer)
+            self.logger.info(f"Initializing database manager at {weaviate_url}")
+            self.db_manager = DatabaseManager(url=weaviate_url)
+
+            # Initialize vector store (storage layer)
+            self.logger.info(f"Initializing database manager")
             self.vector_store = VectorStore(
-                url=weaviate_url,
-                class_name=class_name,
+                db_manager=self.db_manager,
                 embedding_engine=self.embedding_engine,
             )
 
-            # Initialize retriever
+            # Initialize retriever (search layer)
             self.logger.info("Initializing retriever")
             self.retriever = Retriever(
-                vector_store=self.vector_store,
+                db_manager=self.db_manager,
                 embedding_engine=self.embedding_engine,
             )
 
@@ -121,7 +125,10 @@ class RAGSystem:
             raise
 
     def process_documents(
-        self, document_paths: List[str], document_type: str = "latex"
+        self,
+        document_paths: List[str],
+        document_type: str = "latex",
+        class_name: str = "Document",
     ) -> List[str]:
         """Process a list of documents and store them in the vector database.
 
@@ -140,7 +147,7 @@ class RAGSystem:
                 document_paths, document_type
             )
             self.logger.info(f"Storing {len(chunks)} chunks in vector database")
-            stored_uuids = self.vector_store.store_chunks(chunks)
+            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
             self.logger.info(f"Successfully processed {len(document_paths)} documents")
             self.logger.info(f"Stored {len(stored_uuids)} chunks")
             return stored_uuids
@@ -149,7 +156,10 @@ class RAGSystem:
             raise
 
     def process_document(
-        self, document_path: str, document_type: str = "latex"
+        self,
+        document_path: str,
+        document_type: str = "latex",
+        class_name: str = "Document",
     ) -> List[str]:
         """Process a LaTeX document and store it in the vector database.
 
@@ -179,7 +189,7 @@ class RAGSystem:
             self.logger.debug(
                 f"Step 2: Storing {len(chunks)} chunks in vector database"
             )
-            stored_uuids = self.vector_store.store_chunks(chunks)
+            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
 
             self.logger.info(f"Successfully processed document: {document_path}")
             self.logger.info(f"Stored {len(stored_uuids)} chunks")
@@ -191,7 +201,11 @@ class RAGSystem:
             raise
 
     def query(
-        self, question: str, search_type: str = "similar", top_k: int = 5
+        self,
+        question: str,
+        search_type: str = "similar",
+        top_k: int = 5,
+        class_name: str = "Document",
     ) -> Dict[str, Any]:
         """Query the RAG system with a question.
 
@@ -219,13 +233,21 @@ class RAGSystem:
             # Step 1: Retrieve relevant chunks
             self.logger.debug("Step 1: Retrieving relevant chunks")
             if search_type == "similar":
-                chunks = self.retriever.search_similar(question, top_k=top_k)
+                chunks = self.retriever.search_similar(
+                    question, top_k=top_k, class_name=class_name
+                )
             elif search_type == "hybrid":
-                chunks = self.retriever.search_hybrid(question, top_k=top_k)
+                chunks = self.retriever.search_hybrid(
+                    question, top_k=top_k, class_name=class_name
+                )
+            elif search_type == "keyword":
+                chunks = self.retriever.search_keyword(
+                    question, top_k=top_k, class_name=class_name
+                )
             else:
                 raise ValueError(
                     f"Invalid search type: {search_type}. "
-                    f"Supported types: 'similar', 'hybrid'"
+                    f"Supported types: 'similar', 'hybrid', 'keyword'"
                 )
 
             # Step 2: Prepare response
@@ -260,26 +282,26 @@ class RAGSystem:
             raise
 
     def search_similar(
-        self, query: str, top_k: int = 5, filters: Optional[Dict[str, Any]] = None
+        self, query: str, top_k: int = 5, class_name: str = "Document"
     ) -> List[Dict[str, Any]]:
         """Search for similar documents using vector similarity.
 
         Args:
             query: Search query text
             top_k: Number of results to return
-            filters: Optional filters to apply to the search
+            class_name: Name of the Weaviate class for document storage
 
         Returns:
             List[Dict[str, Any]]: List of search results with metadata
         """
-        return self.retriever.search_similar(query, top_k=top_k, filters=filters)
+        return self.retriever.search_similar(query, top_k=top_k, class_name=class_name)
 
     def search_hybrid(
         self,
         query: str,
         alpha: float = 0.5,
         top_k: int = 5,
-        filters: Optional[Dict[str, Any]] = None,
+        class_name: str = "Document",
     ) -> List[Dict[str, Any]]:
         """Perform hybrid search combining vector and keyword search.
 
@@ -287,14 +309,32 @@ class RAGSystem:
             query: Search query text
             alpha: Weight for vector search (0.0 = keyword only, 1.0 = vector only)
             top_k: Number of results to return
-            filters: Optional filters to apply to the search
+            class_name: Name of the Weaviate class for document storage
 
         Returns:
             List[Dict[str, Any]]: List of search results with metadata
         """
         return self.retriever.search_hybrid(
-            query, alpha=alpha, top_k=top_k, filters=filters
+            query, alpha=alpha, top_k=top_k, class_name=class_name
         )
+
+    def search_keyword(
+        self,
+        query: str,
+        top_k: int = 5,
+        class_name: str = "Document",
+    ) -> List[Dict[str, Any]]:
+        """Perform keyword search.
+
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            filters: Optional filters to apply to the search
+
+        Returns:
+            List[Dict[str, Any]]: List of search results with metadata
+        """
+        return self.retriever.search_keyword(query, top_k=top_k, class_name=class_name)
 
     def get_chunk(self, chunk_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its ID.
@@ -343,16 +383,23 @@ class RAGSystem:
 
             return {
                 "system_initialized": self.is_initialized,
+                "database_manager": {
+                    "url": self.db_manager.url,
+                    "is_connected": self.db_manager.is_connected,
+                    "collections": self.db_manager.list_collections(),
+                },
                 "vector_store": vector_stats,
                 "retrieval": retrieval_stats,
                 "embedding_engine": embedding_info,
                 "data_chunker": chunker_config,
                 "components": {
-                    "vector_store": "Weaviate",
-                    "retriever": "Hybrid Search",
+                    "database_manager": "Weaviate Infrastructure",
+                    "vector_store": "Weaviate Storage",
+                    "retriever": "Weaviate Search APIs",
                     "embedding_engine": embedding_info["model_name"],
                     "document_preprocessor": "LaTeX Parser",
                 },
+                "architecture": "Three-Layer (DatabaseManager -> VectorStore -> Retriever)",
             }
 
         except Exception as e:

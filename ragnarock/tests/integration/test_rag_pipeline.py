@@ -117,6 +117,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             ),
         ]
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -129,9 +130,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test complete RAG system initialization."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -155,6 +158,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert rag.document_preprocessor is not None
         assert rag.data_chunker is not None
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -167,11 +171,13 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
         sample_latex_document,
         sample_chunks,
     ):
         """Test complete document processing pipeline."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -207,12 +213,13 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
                 temp_path, "latex"
             )
             mock_vector_store.return_value.store_chunks.assert_called_once_with(
-                sample_chunks
+                sample_chunks, class_name="Document"
             )
 
         finally:
             os.unlink(temp_path)
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -225,10 +232,12 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
         sample_chunks,
     ):
         """Test complete query processing pipeline."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -279,9 +288,10 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         # Verify retriever was called correctly
         mock_retriever.return_value.search_hybrid.assert_called_once_with(
-            "What is Einstein's famous equation?", top_k=5
+            "What is Einstein's famous equation?", class_name="Document", top_k=5
         )
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -294,9 +304,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test system statistics integration."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -332,6 +344,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert "components" in stats
         assert "retrieval" in stats
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -344,9 +357,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test error handling across components."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -365,6 +380,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         with pytest.raises(Exception, match="Search failed"):
             rag.search_similar("test query")
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -377,9 +393,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test context manager integration."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -395,6 +413,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Verify cleanup
         assert rag.is_initialized is False
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -407,9 +426,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test communication between components."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -425,6 +446,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag.vector_store, "embedding_engine")
         assert rag.is_initialized is True
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -437,9 +459,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test performance characteristics of the system."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
@@ -457,6 +481,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert hasattr(rag, "document_preprocessor")
         assert hasattr(rag, "data_chunker")
 
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
@@ -469,9 +494,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever,
         mock_vector_store,
         mock_embedding_engine,
+        mock_db_manager,
     ):
         """Test configuration validation."""
         # Setup mocks
+        mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()

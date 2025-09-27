@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from ragnarock import (
+    DatabaseManager,
     DataChunk,
     DataChunker,
     DocumentPreprocessor,
@@ -36,6 +37,7 @@ class TestRAGSystem:
     @pytest.fixture
     def mock_components(self):
         """Create mock components for testing."""
+        mock_db_manager = Mock(spec=DatabaseManager)
         mock_vector_store = Mock(spec=VectorStore)
         mock_retriever = Mock(spec=Retriever)
         mock_embedding_engine = Mock(spec=EmbeddingEngine)
@@ -43,6 +45,7 @@ class TestRAGSystem:
         mock_data_chunker = Mock(spec=DataChunker)
 
         return {
+            "db_manager": mock_db_manager,
             "vector_store": mock_vector_store,
             "retriever": mock_retriever,
             "embedding_engine": mock_embedding_engine,
@@ -113,6 +116,7 @@ class TestRAGSystem:
         ]
 
     @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
     @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
     @patch("ragnarock.ragnarock.core.rag_system.Retriever")
     @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
@@ -123,11 +127,13 @@ class TestRAGSystem:
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
+        mock_db_manager,
         mock_embedding_engine,
     ):
         """Test successful RAGSystem initialization."""
         # Setup mocks
         mock_embedding_engine.return_value = Mock()
+        mock_db_manager.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -145,6 +151,7 @@ class TestRAGSystem:
         # Assertions
         assert rag.is_initialized is True
         mock_embedding_engine.assert_called_once_with(model_name="all-mpnet-base-v2")
+        mock_db_manager.assert_called_once_with(url="http://localhost:8080")
         mock_vector_store.assert_called_once()
         mock_retriever.assert_called_once()
         mock_document_preprocessor.assert_called_once()
@@ -189,7 +196,7 @@ class TestRAGSystem:
                 "document_preprocessor"
             ].preprocess_document.assert_called_once_with(temp_path, "latex")
             mock_components["vector_store"].store_chunks.assert_called_once_with(
-                sample_chunks
+                sample_chunks, class_name="Document"
             )
         finally:
             os.unlink(temp_path)
@@ -242,7 +249,7 @@ class TestRAGSystem:
         assert result["max_similarity"] == 0.85
 
         mock_components["retriever"].search_similar.assert_called_once_with(
-            "What is the test content?", top_k=5
+            "What is the test content?", top_k=5, class_name="Document"
         )
 
     def test_query_hybrid_success(self, mock_components, sample_search_results):
@@ -260,7 +267,27 @@ class TestRAGSystem:
         # Assertions
         assert result["search_type"] == "hybrid"
         mock_components["retriever"].search_hybrid.assert_called_once_with(
-            "What is the test content?", top_k=3
+            "What is the test content?", top_k=3, class_name="Document"
+        )
+
+    def test_query_keyword_success(self, mock_components, sample_search_results):
+        """Test successful query with keyword search."""
+        mock_components["retriever"].search_keyword.return_value = sample_search_results
+
+        rag = RAGSystem.__new__(RAGSystem)
+        rag.is_initialized = True
+        rag.retriever = mock_components["retriever"]
+        rag.logger = Mock()
+
+        # Test
+        result = rag.query(
+            "machine learning algorithms", search_type="keyword", top_k=3
+        )
+
+        # Assertions
+        assert result["search_type"] == "keyword"
+        mock_components["retriever"].search_keyword.assert_called_once_with(
+            "machine learning algorithms", top_k=3, class_name="Document"
         )
 
     def test_query_invalid_search_type(self, mock_components):
@@ -300,14 +327,12 @@ class TestRAGSystem:
         rag.retriever = mock_components["retriever"]
 
         # Test
-        result = rag.search_similar(
-            "test query", top_k=5, filters={"chunk_type": "text"}
-        )
+        result = rag.search_similar("test query", top_k=5)
 
         # Assertions
         assert result == sample_search_results
         mock_components["retriever"].search_similar.assert_called_once_with(
-            "test query", top_k=5, filters={"chunk_type": "text"}
+            "test query", top_k=5, class_name="Document"
         )
 
     def test_search_hybrid_delegation(self, mock_components, sample_search_results):
@@ -319,14 +344,29 @@ class TestRAGSystem:
         rag.retriever = mock_components["retriever"]
 
         # Test
-        result = rag.search_hybrid(
-            "test query", alpha=0.7, top_k=3, filters={"chunk_type": "text"}
-        )
+        result = rag.search_hybrid("test query", alpha=0.7, top_k=3)
 
         # Assertions
         assert result == sample_search_results
         mock_components["retriever"].search_hybrid.assert_called_once_with(
-            "test query", alpha=0.7, top_k=3, filters={"chunk_type": "text"}
+            "test query", alpha=0.7, top_k=3, class_name="Document"
+        )
+
+    def test_search_keyword_delegation(self, mock_components, sample_search_results):
+        """Test that search_keyword delegates to retriever."""
+        mock_components["retriever"].search_keyword.return_value = sample_search_results
+
+        rag = RAGSystem.__new__(RAGSystem)
+        rag.is_initialized = True
+        rag.retriever = mock_components["retriever"]
+
+        # Test
+        result = rag.search_keyword("machine learning", top_k=3)
+
+        # Assertions
+        assert result == sample_search_results
+        mock_components["retriever"].search_keyword.assert_called_once_with(
+            "machine learning", top_k=3, class_name="Document"
         )
 
     def test_get_chunk_delegation(self, mock_components):
@@ -380,8 +420,14 @@ class TestRAGSystem:
             "dimension": 768,
         }
 
+        # Setup DatabaseManager mock
+        mock_components["db_manager"].url = "http://localhost:8080"
+        mock_components["db_manager"].is_connected = True
+        mock_components["db_manager"].list_collections.return_value = ["Document"]
+
         rag = RAGSystem.__new__(RAGSystem)
         rag.is_initialized = True
+        rag.db_manager = mock_components["db_manager"]
         rag.vector_store = mock_components["vector_store"]
         rag.retriever = mock_components["retriever"]
         rag.embedding_engine = mock_components["embedding_engine"]
@@ -395,11 +441,19 @@ class TestRAGSystem:
 
         # Assertions
         assert stats["system_initialized"] is True
+        assert stats["database_manager"]["url"] == "http://localhost:8080"
+        assert stats["database_manager"]["is_connected"] is True
+        assert stats["database_manager"]["collections"] == ["Document"]
         assert stats["vector_store"]["total_objects"] == 100
         assert stats["embedding_engine"]["model_name"] == "all-mpnet-base-v2"
         assert stats["data_chunker"]["chunk_size"] == 768
         assert stats["data_chunker"]["overlap"] == 100
         assert "components" in stats
+        assert "architecture" in stats
+        assert (
+            stats["architecture"]
+            == "Three-Layer (DatabaseManager -> VectorStore -> Retriever)"
+        )
 
     def test_get_system_stats_error_handling(self, mock_components):
         """Test error handling in get_system_stats."""
@@ -409,6 +463,7 @@ class TestRAGSystem:
 
         rag = RAGSystem.__new__(RAGSystem)
         rag.is_initialized = True
+        rag.db_manager = mock_components["db_manager"]
         rag.vector_store = mock_components["vector_store"]
         rag.retriever = mock_components["retriever"]
         rag.embedding_engine = mock_components["embedding_engine"]

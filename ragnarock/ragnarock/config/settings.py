@@ -23,12 +23,13 @@ class EmbeddingConfig:
 
 
 @dataclass
-class VectorStoreConfig:
+class DatabaseManagerConfig:
     """Configuration for vector store."""
 
     url: str = "http://localhost:8080"
-    class_name: str = "Document"
+    grpc_port: int = 50051
     timeout: int = 30
+    retry_attempts: int = 3
 
 
 @dataclass
@@ -37,7 +38,7 @@ class RAGConfig:
 
     chunk_config: ChunkConfig
     embedding_config: EmbeddingConfig
-    vector_store_config: VectorStoreConfig
+    database_manager_config: DatabaseManagerConfig
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "RAGConfig":
@@ -45,8 +46,8 @@ class RAGConfig:
         return cls(
             chunk_config=ChunkConfig(**config_dict.get("chunk", {})),
             embedding_config=EmbeddingConfig(**config_dict.get("embedding", {})),
-            vector_store_config=VectorStoreConfig(
-                **config_dict.get("vector_store", {})
+            database_manager_config=DatabaseManagerConfig(
+                **config_dict.get("database_manager", {})
             ),
         )
 
@@ -56,5 +57,5 @@ class RAGConfig:
         return cls(
             chunk_config=ChunkConfig(),
             embedding_config=EmbeddingConfig(),
-            vector_store_config=VectorStoreConfig(),
+            database_manager_config=DatabaseManagerConfig(),
         )

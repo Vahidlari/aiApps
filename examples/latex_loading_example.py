@@ -30,10 +30,10 @@ from pathlib import Path
 
 from ragnarock import (
     ChunkConfig,
+    DatabaseManagerConfig,
     EmbeddingConfig,
     RAGConfig,
     RAGSystem,
-    VectorStoreConfig,
 )
 
 # Configure logging with more detailed formatting
@@ -101,17 +101,17 @@ def create_rag_config() -> RAGConfig:
     print(f"🧠 Embedding Model: {embedding_config.model_name}")
 
     # Vector store configuration - determines where vectors are stored
-    vector_store_config = VectorStoreConfig(
+    database_manager_config = DatabaseManagerConfig(
         url="http://host.docker.internal:8080",  # Weaviate server URL
-        class_name="AdvancedDocument",  # Collection/class name in Weaviate
+        grpc_port=50051,  # gRPC port for Weaviate connection
         timeout=30,  # Request timeout in seconds
     )
-    print(f"🗄️  Vector Store: {vector_store_config.url}")
+    print(f"🗄️  Vector Store: {database_manager_config.url}")
 
     config = RAGConfig(
         chunk_config=chunk_config,
         embedding_config=embedding_config,
-        vector_store_config=vector_store_config,
+        database_manager_config=database_manager_config,
     )
 
     print("✅ RAG configuration created successfully")

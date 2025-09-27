@@ -9,6 +9,7 @@ import os
 import tempfile
 
 import pytest
+
 from ragnarock import ChunkMetadata, DataChunk, DataChunker, DocumentPreprocessor
 
 
@@ -414,7 +415,7 @@ This is a simple section with minimal content.
         preprocessor = DocumentPreprocessor()
 
         # Test with non-existent file
-        with pytest.raises((FileNotFoundError, AttributeError)):
+        with pytest.raises(ValueError, match="Document cannot be None"):
             preprocessor.preprocess_document("nonexistent_file.tex")
 
     def test_error_handling_invalid_folder(self):

@@ -6,6 +6,7 @@ main RAG system orchestrator.
 """
 
 from .data_chunker import ChunkMetadata, DataChunk, DataChunker
+from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .rag_system import RAGSystem
@@ -16,6 +17,7 @@ __all__ = [
     "DataChunk",
     "DataChunker",
     "ChunkMetadata",
+    "DatabaseManager",
     "DocumentPreprocessor",
     "EmbeddingEngine",
     "RAGSystem",

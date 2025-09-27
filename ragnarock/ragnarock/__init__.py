@@ -5,30 +5,43 @@ This package provides a complete RAG system for creating knowledge bases
 from LaTeX documents, with support for document processing, vector storage,
 retrieval operations, and answer generation.
 
-Main Components:
+Main Components (Three-Layer Architecture):
 - RAGSystem: Main orchestrator class
+- DatabaseManager: Infrastructure layer for Weaviate operations
+- VectorStore: Storage layer for document persistence
+- Retriever: Search layer using Weaviate APIs directly
 - DocumentPreprocessor: LaTeX document processing
 - DataChunker: Text chunking with overlap
 - EmbeddingEngine: Vector embeddings using Sentence Transformers
-- VectorStore: Weaviate database interface
-- Retriever: Hybrid search and retrieval
 
 Quick Start:
     from ragnarock import RAGSystem
 
-    # Initialize the system
-    rag = RAGSystem()
+    # Initialize the system with three-layer architecture
+    rag = RAGSystem(
+        weaviate_url="http://localhost:8080",
+        class_name="Document",
+        embedding_model="all-mpnet-base-v2"
+    )
 
-    # Process a document
-    chunk_ids = rag.process_document("document.tex")
+    # Process documents
+    chunk_ids = rag.process_documents(["document.tex"])
 
-    # Query the knowledge base
-    response = rag.query("What is the main topic?")
+    # Query the knowledge base with different search types
+    response = rag.query("What is the main topic?", search_type="similar")
+    hybrid_response = rag.query("machine learning", search_type="hybrid")
+    keyword_response = rag.query("neural networks", search_type="keyword")
 """
 
 # Configuration classes
-from .config.settings import ChunkConfig, EmbeddingConfig, RAGConfig, VectorStoreConfig
+from .config.settings import (
+    ChunkConfig,
+    DatabaseManagerConfig,
+    EmbeddingConfig,
+    RAGConfig,
+)
 from .core.data_chunker import ChunkMetadata, DataChunk, DataChunker
+from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
 from .core.embedding_engine import EmbeddingEngine
 from .core.rag_system import RAGSystem
@@ -47,6 +60,7 @@ __all__ = [
     "DataChunk",
     "DataChunker",
     "ChunkMetadata",
+    "DatabaseManager",
     "DocumentPreprocessor",
     "EmbeddingEngine",
     "Retriever",
@@ -55,7 +69,7 @@ __all__ = [
     "RAGConfig",
     "ChunkConfig",
     "EmbeddingConfig",
-    "VectorStoreConfig",
+    "DatabaseManagerConfig",
     # Version
     "__version__",
 ]

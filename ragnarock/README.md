@@ -6,23 +6,35 @@ This project implements a Retrieval-Augmented Generation (RAG) system specifical
 
 ## 🏗️ System Architecture
 
-### Core Components
+### Core Components 
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Document       │    │   Embedding     │    │   Vector        │
-│  Processor      │───▶│   Engine        │───▶│   Database      │
-│  (LaTeX)        │    │  (Sentence      │    │  (Weaviate)     │
-└─────────────────┘    │   Transformers) │    └─────────────────┘
-                       └─────────────────┘              │
+│  Document       │    │   Embedding     │    │   Database      │
+│  Processor      │───▶│   Engine        │───▶│   Manager       │
+│  (LaTeX)        │    │  (Sentence      │    │  (Infrastructure│
+└─────────────────┘    │   Transformers) │    │   Layer)        │
+                       └─────────────────┘    └─────────────────┘
+                                                        │
                                                         │
 ┌─────────────────┐    ┌─────────────────┐              │
-│  Generation     │    │   Retrieval     │◀─────────────┘
-│  System         │◀───│   System        │
-│  (Ollama +      │    │  (Hybrid        │
-│   Mistral 7B)   │    │   Search)       │
-└─────────────────┘    └─────────────────┘
+│  Generation     │    │   Retriever     │              │
+│  System         │◀───│   (Search       │◀─────────────│
+│  (Ollama +      │    │    Layer)       │              │
+│   Mistral 7B)   │    └─────────────────┘              │
+└─────────────────┘             │                       │
+                                │                       │
+                       ┌─────────────────┐              │
+                       │   Vector Store  │◀─────────────┘
+                       │   (Storage      │
+                       │    Layer)       │
+                       └─────────────────┘
 ```
+
+**Three-Layer Architecture Design:**
+1. **DatabaseManager** (Infrastructure Layer) - Low-level Weaviate operations
+2. **VectorStore** (Storage Layer) - Document storage and retrieval operations  
+3. **Retriever** (Search Layer) - Search logic using Weaviate APIs directly
 
 ## 📁 Project Structure
 
@@ -33,8 +45,9 @@ ragnarock/
 │   ├── document_preprocessor.py    # LaTeX parsing and preprocessing
 │   ├── data_chunker.py            # Format-agnostic chunking
 │   ├── embedding_engine.py        # Vector embeddings
-│   ├── vector_store.py            # Weaviate database interface
-│   ├── retriever.py               # Hybrid search and retrieval
+│   ├── database_manager.py        # Infrastructure layer for Weaviate
+│   ├── vector_store.py            # Storage layer for documents
+│   ├── retriever.py               # Search layer using Weaviate APIs
 │   └── generator.py               # Answer generation with Ollama
 ├── utils/
 │   ├── __init__.py
@@ -50,13 +63,16 @@ ragnarock/
 │   ├── sample_queries.py          # Example usage
 │   └── latex_samples/             # Sample LaTeX files for testing
 ├── tests/
-│   ├── __init__.py
-│   ├── test_document_processor.py
-│   ├── test_data_chunker.py
-│   ├── test_embedding_engine.py
-│   ├── test_vector_store.py
-│   ├── test_retriever.py
-│   └── test_generator.py
+│   ├── unit/
+│   │   ├── test_database_manager.py
+│   │   ├── test_vector_store.py
+│   │   ├── test_retriever.py
+│   │   ├── test_document_processor.py
+│   │   ├── test_data_chunker.py
+│   │   ├── test_embedding_engine.py
+│   │   └── test_generator.py
+│   └── integration/
+│       └── test_dbmng_retriever_vector_store.py
 ├── docs/
 │   ├── design_decisions.md        # This file
 │   ├── api_reference.md           # API documentation
@@ -68,7 +84,33 @@ ragnarock/
 
 ## 🎯 Design Decisions
 
-### A. Document Processing Strategy
+### A. Three-Layer Architecture Design
+
+#### Clean Separation of Concerns
+The system implements a three-layer architecture that cleanly separates responsibilities:
+
+1. **DatabaseManager (Infrastructure Layer)**
+   - **Purpose**: Low-level Weaviate client operations and connection management
+   - **Responsibilities**: Connection handling, collection management, raw query execution
+   - **Benefits**: Centralized database access, connection pooling, error handling
+
+2. **VectorStore (Storage Layer)**
+   - **Purpose**: Document storage and retrieval operations
+   - **Responsibilities**: Storing chunks, CRUD operations, schema management
+   - **Benefits**: Focused on data persistence, clean storage interface
+
+3. **Retriever (Search Layer)**
+   - **Purpose**: Search logic and query orchestration
+   - **Responsibilities**: Vector search, hybrid search, keyword search, result processing
+   - **Benefits**: Uses Weaviate APIs directly, implements search algorithms
+
+#### Architecture Benefits
+- **Maintainability**: Each layer has a single, clear responsibility
+- **Testability**: Components can be tested independently with clear mocking boundaries
+- **Flexibility**: Easy to swap database backends by changing DatabaseManager
+- **Performance**: Direct Weaviate API usage without unnecessary abstractions
+
+### B. Document Processing Strategy
 
 #### LaTeX Handling
 - **Equation Preservation**: Keep mathematical equations intact while removing other LaTeX commands
@@ -95,7 +137,7 @@ ragnarock/
 }
 ```
 
-### B. Embedding & Storage
+### C. Embedding & Storage
 
 #### Embedding Model
 - **Technology**: Sentence Transformers (local, free)
@@ -122,7 +164,7 @@ ragnarock/
 }
 ```
 
-### C. Retrieval Strategy
+### D. Retrieval Strategy
 
 #### Hybrid Search
 - **Vector Search**: Dense embeddings for semantic similarity
@@ -135,7 +177,7 @@ ragnarock/
 - **Citation Queries**: Special handling for author/year queries
 - **Equation Queries**: Support for mathematical concept searches
 
-### D. Generation System
+### E. Generation System
 
 #### LLM Configuration
 - **Technology**: Ollama + Mistral 7B
@@ -212,20 +254,52 @@ ollama pull mistral:7b
 ```
 
 ### Quick Start
-```python
-from ragnarock.core import RAGSystem
-from ragnarock.config import ChunkConfig
 
-# Initialize the system
-config = ChunkConfig(chunk_size=768, overlap=100)
-rag = RAGSystem(config)
+#### Option 1: High-Level RAG System (Recommended)
+```python
+from ragnarock import RAGSystem
+
+# Initialize the RAG system (automatically sets up three-layer architecture)
+rag = RAGSystem(
+    weaviate_url="http://localhost:8080",
+    class_name="Document",
+    embedding_model="all-mpnet-base-v2",
+    chunk_size=768,
+    chunk_overlap=100
+)
 
 # Process a LaTeX document
-rag.process_document("path/to/document.tex")
+chunk_ids = rag.process_documents(["path/to/document.tex"])
 
 # Query the knowledge base
-response = rag.query("What is the main equation in chapter 2?")
-print(response)
+response = rag.query("What is the main equation in chapter 2?", search_type="similar")
+print(f"Found {response['num_chunks']} relevant chunks")
+
+# Try different search types
+hybrid_response = rag.query("machine learning algorithms", search_type="hybrid", top_k=5)
+keyword_response = rag.query("neural networks", search_type="keyword", top_k=3)
+
+# Get system statistics
+stats = rag.get_system_stats()
+print(f"Database contains {stats['vector_store']['total_objects']} chunks")
+```
+
+#### Option 2: Direct Component Usage (Advanced)
+```python
+from ragnarock import DatabaseManager, VectorStore, Retriever
+
+# Initialize the three-layer architecture manually
+db_manager = DatabaseManager(url="http://localhost:8080")
+vector_store = VectorStore(db_manager=db_manager, class_name="Document")
+retriever = Retriever(db_manager=db_manager, class_name="Document")
+
+# Use components directly
+results = retriever.search_similar("machine learning algorithms", top_k=5)
+hybrid_results = retriever.search_hybrid("deep learning", alpha=0.7, top_k=5)
+keyword_results = retriever.search_keyword("neural networks", top_k=5)
+
+for result in results:
+    print(f"Score: {result['similarity_score']:.3f} - {result['content'][:100]}...")
 ```
 
 ## 📊 Performance Considerations

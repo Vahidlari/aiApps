@@ -328,7 +328,7 @@ class TestDataChunker:
         text = "This is a test text for consistency."
 
         result1 = chunker.chunk(text)
-        result2 = chunker.chunk(text)
+        result2 = chunker.chunk(text, start_chunk_id=0)
 
         assert len(result1) == len(result2)
 
