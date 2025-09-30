@@ -1,3 +1,1 @@
-"""
-Unit tests for RAG system components.
-"""
+"""Unit tests for ragnarock."""

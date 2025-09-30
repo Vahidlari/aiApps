@@ -53,7 +53,14 @@ ragnarock/
 │   ├── __init__.py
 │   ├── latex_parser.py            # LaTeX-specific utilities
 │   ├── text_processing.py         # Text cleaning and preprocessing
-│   └── config_validator.py        # Configuration validation
+│   ├── config_validator.py        # Configuration validation
+│   ├── email_provider_factory.py  # Email provider factory (main entry point)
+│   └── email_utils/               # Email utilities implementation
+│       ├── __init__.py
+│       ├── models.py              # Email data models
+│       ├── base.py                # Abstract EmailProvider interface
+│       ├── imap_provider.py       # IMAP/SMTP implementation
+│       └── graph_provider.py      # Microsoft Graph API implementation
 ├── config/
 │   ├── __init__.py
 │   ├── settings.py                # Configuration management
@@ -61,6 +68,7 @@ ragnarock/
 ├── examples/
 │   ├── __init__.py
 │   ├── sample_queries.py          # Example usage
+│   ├── email_usage_examples.py    # Email utilities examples
 │   └── latex_samples/             # Sample LaTeX files for testing
 ├── tests/
 │   ├── unit/
@@ -70,7 +78,8 @@ ragnarock/
 │   │   ├── test_document_processor.py
 │   │   ├── test_data_chunker.py
 │   │   ├── test_embedding_engine.py
-│   │   └── test_generator.py
+│   │   ├── test_generator.py
+│   │   └── test_email_utils.py       # Email utilities tests
 │   └── integration/
 │       └── test_dbmng_retriever_vector_store.py
 ├── docs/
