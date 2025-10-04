@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Basic usage example for the RAG system package.
+"""Basic usage example for the knowledge base manager package.
 
-This example demonstrates the simplest way to use the RAG system:
-1. Import the RAGSystem class
+This example demonstrates the simplest way to use the knowledge base manager:
+1. Import the KnowledgeBaseManager class
 2. Initialize with default settings
 3. Process a document
 4. Query the knowledge base
@@ -14,7 +14,7 @@ Prerequisites:
 
 import logging
 
-from ragnarock import RAGSystem
+from ragnarock import KnowledgeBaseManager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -24,17 +24,17 @@ logger = logging.getLogger(__name__)
 def main():
     """Basic usage example."""
     try:
-        # Initialize the RAG system with default settings
-        logger.info("🚀 Initializing RAG system...")
-        rag = RAGSystem()
+        # Initialize the knowledge base manager with default settings
+        logger.info("🚀 Initializing knowledge base manager...")
+        kbm = KnowledgeBaseManager()
 
         # Create schema
         logger.info("📊 Creating vector store schema...")
-        rag.vector_store.create_schema(force_recreate=True)
+        kbm.vector_store.create_schema(force_recreate=True)
 
         # Example: Process a document (uncomment if you have a LaTeX file)
         # logger.info("📄 Processing LaTeX document...")
-        # chunk_ids = rag.process_document("path/to/your/document.tex")
+        # chunk_ids = kbm.process_document("path/to/your/document.tex")
         # logger.info(f"✅ Processed document, stored {len(chunk_ids)} chunks")
 
         # Example: Add some sample data for demonstration
@@ -63,12 +63,12 @@ def main():
         ]
 
         # Store chunks
-        stored_uuids = rag.vector_store.store_chunks(sample_chunks)
+        stored_uuids = kbm.vector_store.store_chunks(sample_chunks)
         logger.info(f"✅ Stored {len(stored_uuids)} sample chunks")
 
         # Query the knowledge base
         logger.info("🔍 Querying the knowledge base...")
-        response = rag.query(
+        response = kbm.query(
             "What is the relationship between mass and energy?",
             search_type="hybrid",
             top_k=3,
@@ -84,7 +84,7 @@ def main():
 
         # Get system statistics
         logger.info("📊 System Statistics:")
-        stats = rag.get_system_stats()
+        stats = kbm.get_system_stats()
         logger.info(f"   Total objects: {stats['vector_store']['total_objects']}")
         logger.info(f"   Embedding model: {stats['embedding_engine']['model_name']}")
 
@@ -95,8 +95,8 @@ def main():
         raise
     finally:
         # Clean up
-        if "rag" in locals():
-            rag.close()
+        if "kbm" in locals():
+            kbm.close()
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ ragnarock/
 │   ├── database_manager.py        # Infrastructure layer for Weaviate
 │   ├── vector_store.py            # Storage layer for documents
 │   ├── retriever.py               # Search layer using Weaviate APIs
-│   └── generator.py               # Answer generation with Ollama
+│   └── knowledge_base_manager.py  # Main knowledge base manager
 ├── utils/
 │   ├── __init__.py
 │   ├── latex_parser.py            # LaTeX-specific utilities
@@ -264,12 +264,12 @@ ollama pull mistral:7b
 
 ### Quick Start
 
-#### Option 1: High-Level RAG System (Recommended)
+#### Option 1: High-Level Knowledge Base Manager (Recommended)
 ```python
-from ragnarock import RAGSystem
+from ragnarock import KnowledgeBaseManager
 
-# Initialize the RAG system (automatically sets up three-layer architecture)
-rag = RAGSystem(
+# Initialize the knowledge base manager (automatically sets up three-layer architecture)
+kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
     class_name="Document",
     embedding_model="all-mpnet-base-v2",
@@ -278,18 +278,18 @@ rag = RAGSystem(
 )
 
 # Process a LaTeX document
-chunk_ids = rag.process_documents(["path/to/document.tex"])
+chunk_ids = kbm.process_documents(["path/to/document.tex"])
 
 # Query the knowledge base
-response = rag.query("What is the main equation in chapter 2?", search_type="similar")
+response = kbm.query("What is the main equation in chapter 2?", search_type="similar")
 print(f"Found {response['num_chunks']} relevant chunks")
 
 # Try different search types
-hybrid_response = rag.query("machine learning algorithms", search_type="hybrid", top_k=5)
-keyword_response = rag.query("neural networks", search_type="keyword", top_k=3)
+hybrid_response = kbm.query("machine learning algorithms", search_type="hybrid", top_k=5)
+keyword_response = kbm.query("neural networks", search_type="keyword", top_k=3)
 
 # Get system statistics
-stats = rag.get_system_stats()
+stats = kbm.get_system_stats()
 print(f"Database contains {stats['vector_store']['total_objects']} chunks")
 ```
 
