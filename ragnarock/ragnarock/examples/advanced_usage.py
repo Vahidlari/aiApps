@@ -20,7 +20,7 @@ from ragnarock import (
     DataChunk,
     EmbeddingConfig,
     KnowledgeBaseManager,
-    RAGConfig,
+    KnowledgeBaseManagerConfig,
 )
 
 # Set up logging
@@ -33,7 +33,7 @@ def main():
     try:
         # Create custom configuration
         logger.info("⚙️  Creating custom configuration...")
-        config = RAGConfig(
+        config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(
                 chunk_size=512, overlap=50, strategy="adaptive_fixed_size"
             ),

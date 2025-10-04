@@ -24,7 +24,7 @@ class EmbeddingConfig:
 
 @dataclass
 class DatabaseManagerConfig:
-    """Configuration for vector store."""
+    """Configuration for database manager."""
 
     url: str = "http://localhost:8080"
     grpc_port: int = 50051
@@ -33,15 +33,15 @@ class DatabaseManagerConfig:
 
 
 @dataclass
-class RAGConfig:
-    """Main configuration for RAG system."""
+class KnowledgeBaseManagerConfig:
+    """Main configuration for Knowledge Base Manager."""
 
     chunk_config: ChunkConfig
     embedding_config: EmbeddingConfig
     database_manager_config: DatabaseManagerConfig
 
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> "RAGConfig":
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "KnowledgeBaseManagerConfig":
         """Create config from dictionary."""
         return cls(
             chunk_config=ChunkConfig(**config_dict.get("chunk", {})),
@@ -52,7 +52,7 @@ class RAGConfig:
         )
 
     @classmethod
-    def default(cls) -> "RAGConfig":
+    def default(cls) -> "KnowledgeBaseManagerConfig":
         """Create default configuration."""
         return cls(
             chunk_config=ChunkConfig(),

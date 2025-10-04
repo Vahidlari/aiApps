@@ -76,15 +76,14 @@ aiApps/
 │   │   │   └── main.py              # CLI entry point
 │   │   ├── config/                  # Configuration management
 │   │   │   ├── __init__.py
-│   │   │   ├── default_config.yaml  # Default configuration
 │   │   │   └── settings.py          # Settings management
-│   │   ├── core/                    # Core RAG system components
+│   │   ├── core/                    # Core Knowledge-base components
 │   │   │   ├── __init__.py
 │   │   │   ├── data_chunker.py      # Document chunking logic
 │   │   │   ├── database_manager.py  # Weaviate database management
 │   │   │   ├── document_preprocessor.py # LaTeX document processing
 │   │   │   ├── embedding_engine.py  # Vector embedding generation
-│   │   │   ├── rag_system.py        # Main RAG system orchestrator
+│   │   │   ├── knowledge_base_manager.py # Main knowledge-base orchestrator
 │   │   │   ├── retriever.py         # Document retrieval logic
 │   │   │   └── vector_store.py      # Vector storage operations
 │   │   ├── examples/                # Usage examples

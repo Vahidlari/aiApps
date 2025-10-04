@@ -1,9 +1,14 @@
-"""Configuration management for the RAG system."""
+"""Configuration management for the Knowledge Base Manager."""
 
-from .settings import ChunkConfig, DatabaseManagerConfig, EmbeddingConfig, RAGConfig
+from .settings import (
+    ChunkConfig,
+    DatabaseManagerConfig,
+    EmbeddingConfig,
+    KnowledgeBaseManagerConfig,
+)
 
 __all__ = [
-    "RAGConfig",
+    "KnowledgeBaseManagerConfig",
     "ChunkConfig",
     "EmbeddingConfig",
     "DatabaseManagerConfig",

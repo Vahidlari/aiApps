@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 from ragnarock.utils.latex_parser import Citation, LatexDocument, LatexParser
 
 
@@ -236,15 +237,22 @@ def temp_complex_latex_file(complex_latex_content):
 def config_dict():
     """Sample configuration dictionary for testing."""
     return {
-        "document_processing": {
+        "chunk": {
             "chunk_size": 768,
             "overlap": 100,
-            "preserve_equations": True,
-            "remove_latex_commands": True,
-            "separate_citations": True,
+            "strategy": "adaptive_fixed_size",
         },
-        "embedding": {"model": "all-mpnet-base-v2", "batch_size": 32, "device": "cpu"},
-        "vector_database": {"type": "weaviate", "url": "http://localhost:8080"},
+        "embedding": {
+            "model_name": "all-mpnet-base-v2",
+            "max_length": 512,
+            "device": None,
+        },
+        "database_manager": {
+            "url": "http://localhost:8080",
+            "grpc_port": 50051,
+            "timeout": 30,
+            "retry_attempts": 3,
+        },
     }
 
 
