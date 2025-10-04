@@ -1,0 +1,357 @@
+name: Milestone-Driven Release
+
+on:
+  milestone:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      milestone_title:
+        description: 'Milestone title (if not from milestone event)'
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+
+jobs:
+  check-milestone:
+    runs-on: ubuntu-latest
+    outputs:
+      milestone_title: ${{ steps.get_milestone.outputs.title }}
+      milestone_number: ${{ steps.get_milestone.outputs.number }}
+      has_release_commits: ${{ steps.check_commits.outputs.has_release_commits }}
+      last_tag: ${{ steps.get_last_tag.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get milestone information
+        id: get_milestone
+        run: |
+          if [ "${{ github.event_name }}" = "milestone" ]; then
+            MILESTONE_TITLE="${{ github.event.milestone.title }}"
+            MILESTONE_NUMBER="${{ github.event.milestone.number }}"
+          else
+            # For workflow_dispatch, use input or get the latest closed milestone
+            MILESTONE_TITLE="${{ github.event.inputs.milestone_title }}"
+            if [ -z "$MILESTONE_TITLE" ]; then
+              MILESTONE_TITLE=$(gh api repos/${{ github.repository }}/milestones --jq '.[0].title' --paginate)
+              MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones --jq '.[0].number' --paginate)
+            else
+              MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones --jq '.[] | select(.title == "'$MILESTONE_TITLE'") | .number')
+            fi
+          fi
+          
+          echo "title=$MILESTONE_TITLE" >> $GITHUB_OUTPUT
+          echo "number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+          echo "Milestone: $MILESTONE_TITLE (#$MILESTONE_NUMBER)"
+
+      - name: Get last tag
+        id: get_last_tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "Last tag: $LAST_TAG"
+
+      - name: Check for release-worthy commits
+        id: check_commits
+        run: |
+          # Check if there are any commits since last tag that would trigger a release
+          COMMITS_SINCE_TAG=$(git log ${{ steps.get_last_tag.outputs.tag }}..HEAD --oneline)
+          
+          if [ -z "$COMMITS_SINCE_TAG" ]; then
+            echo "has_release_commits=false" >> $GITHUB_OUTPUT
+            echo "No commits since last tag"
+            exit 0
+          fi
+          
+          # Check for conventional commits that would trigger a release
+          RELEASE_COMMITS=$(echo "$COMMITS_SINCE_TAG" | grep -E "^(feat|fix|perf|refactor|style|docs|test|build|ci|chore)(\(.+\))?(!)?:|\bBREAKING CHANGE\b" || true)
+          
+          if [ -z "$RELEASE_COMMITS" ]; then
+            echo "has_release_commits=false" >> $GITHUB_OUTPUT
+            echo "No release-worthy commits found"
+          else
+            echo "has_release_commits=true" >> $GITHUB_OUTPUT
+            echo "Found release-worthy commits:"
+            echo "$RELEASE_COMMITS"
+          fi
+
+  release:
+    needs: check-milestone
+    if: needs.check-milestone.outputs.has_release_commits == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.semantic_release.outputs.new_release_version }}
+      published: ${{ steps.semantic_release.outputs.new_release_published }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
+
+      - name: Install Python dependencies
+        working-directory: ./ragnarock
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine setuptools_scm[toml]
+
+      - name: Build Python package
+        working-directory: ./ragnarock
+        run: |
+          python -m build
+
+      - name: Run semantic-release
+        id: semantic_release
+        run: |
+          npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Python artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-packages
+          path: ragnarock/dist/*
+
+      - name: Create database server archive
+        id: create_db_archive
+        run: |
+          if [ -d "tools/database_server" ]; then
+            VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+            ARCHIVE_NAME="database_server-${VERSION}.tar.gz"
+            
+            # Create archive excluding unnecessary files
+            tar --exclude='*.pyc' \
+                --exclude='__pycache__' \
+                --exclude='.git' \
+                --exclude='node_modules' \
+                --exclude='*.log' \
+                --exclude='*.tmp' \
+                -czf "$ARCHIVE_NAME" \
+                -C tools database_server
+            
+            echo "archive_name=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+            echo "Created archive: $ARCHIVE_NAME"
+            
+            # Upload as artifact for later attachment to release
+            echo "$ARCHIVE_NAME" > archive_name.txt
+          else
+            echo "Database server directory not found"
+            echo "archive_name=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload database server archive
+        if: steps.create_db_archive.outputs.archive_name != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-server-archive
+          path: ${{ steps.create_db_archive.outputs.archive_name }}
+
+  publish-github-registry:
+    needs: [check-milestone, release]
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Download Python artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-packages
+          path: ./dist
+
+      - name: Publish to GitHub Package Registry
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://pypi.org/simple/
+          skip-existing: true
+
+  attach-milestone-summary:
+    needs: [check-milestone, release]
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download database server archive
+        uses: actions/download-artifact@v4
+        with:
+          name: database-server-archive
+          path: ./
+
+      - name: Get milestone issues and PRs
+        id: get_milestone_items
+        run: |
+          MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
+          VERSION="${{ needs.release.outputs.version }}"
+          
+          # Get issues
+          ISSUES=$(gh api repos/${{ github.repository }}/issues \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | 
+            "- #" + (.number | tostring) + " " + .title' \
+            --paginate || echo "")
+          
+          # Get pull requests
+          PRS=$(gh api repos/${{ github.repository }}/pulls \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | 
+            "- #" + (.number | tostring) + " " + .title' \
+            --paginate || echo "")
+          
+          # Combine and format
+          MILESTONE_SUMMARY=""
+          if [ -n "$ISSUES" ] || [ -n "$PRS" ]; then
+            MILESTONE_SUMMARY="## Milestone Summary
+
+### Issues Closed
+$ISSUES
+
+### Pull Requests Merged
+$PRS
+
+*Milestone: ${{ needs.check-milestone.outputs.milestone_title }}*"
+          fi
+          
+          # Save to file for later use
+          echo "$MILESTONE_SUMMARY" > milestone_summary.md
+          
+          # Create JSON for GitHub API
+          MILESTONE_ITEMS="{\"issues\": [$(echo "$ISSUES" | sed 's/^- #\([0-9]*\) .*/\1/' | tr '\n' ',' | sed 's/,$//' | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')], \"prs\": [$(echo "$PRS" | sed 's/^- #\([0-9]*\) .*/\1/' | tr '\n' ',' | sed 's/,$//' | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')]}"
+          echo "milestone_items=$MILESTONE_ITEMS" >> $GITHUB_OUTPUT
+
+      - name: Update release with milestone summary and installation instructions
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/v$VERSION --jq '.id')
+          
+          # Get current release body
+          CURRENT_BODY=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID --jq '.body')
+          
+          # Create installation instructions
+          INSTALLATION_INSTRUCTIONS="## 📦 Installation
+
+### From GitHub Package Registry (Recommended)
+\`\`\`bash
+# Install specific version
+pip install ragnarock==$VERSION --index-url https://pypi.org/simple/
+
+# Or using extra-index-url (recommended)
+pip install ragnarock==$VERSION --extra-index-url https://pypi.org/simple/
+
+# Configure permanently in pip.conf
+echo '[global]
+extra-index-url = https://pypi.org/simple/' >> ~/.pip/pip.conf
+pip install ragnarock==$VERSION
+\`\`\`
+
+### From GitHub Releases (Alternative)
+\`\`\`bash
+# Install wheel directly
+pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragnarock-$VERSION-py3-none-any.whl
+
+# Or install from source
+pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragnarock-$VERSION.tar.gz
+\`\`\`"
+          
+          # Append milestone summary and installation instructions
+          MILESTONE_SUMMARY=$(cat milestone_summary.md)
+          NEW_BODY="$CURRENT_BODY
+
+$INSTALLATION_INSTRUCTIONS
+
+$MILESTONE_SUMMARY"
+          
+          # Update release
+          gh api repos/${{ github.repository }}/releases/$RELEASE_ID \
+            --method PATCH \
+            --field body="$NEW_BODY"
+
+      - name: Attach database server archive to release
+        if: steps.create_db_archive.outputs.archive_name != ''
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          ARCHIVE_NAME="${{ steps.create_db_archive.outputs.archive_name }}"
+          
+          if [ -f "$ARCHIVE_NAME" ]; then
+            # Get release ID
+            RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/v$VERSION --jq '.id')
+            
+            # Upload asset
+            gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets \
+              --method POST \
+              --field name="$ARCHIVE_NAME" \
+              --field label="Database Server v$VERSION" \
+              --data-binary @"$ARCHIVE_NAME" \
+              --header "Content-Type: application/gzip"
+            
+            echo "✅ Database server archive attached to release"
+          else
+            echo "❌ Database server archive not found"
+          fi
+
+  no-release-needed:
+    needs: check-milestone
+    if: needs.check-milestone.outputs.has_release_commits == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Comment on milestone
+        run: |
+          MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
+          
+          # Create a comment on the milestone
+          gh api repos/${{ github.repository }}/issues \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER') | .number' \
+            --paginate | head -1 | while read ISSUE_NUMBER; do
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh api repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments \
+                --method POST \
+                --field body="🚫 **No Release Needed**
+
+This milestone was closed, but no version bump was required because there were no release-worthy commits since the last tag (${{ needs.check-milestone.outputs.last_tag }}).
+
+**Milestone:** ${{ needs.check-milestone.outputs.milestone_title }}
+
+To trigger a release, ensure your commits follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+- \`feat:\` for new features (minor version bump)
+- \`fix:\` for bug fixes (patch version bump)  
+- \`BREAKING CHANGE:\` for breaking changes (major version bump)"
+              break
+            fi
+          done
+

@@ -1,34 +1,32 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ragnarock"
-version = "0.1.0"
-description = "A RAG system for creating knowledge bases from LaTeX documents"
+dynamic = ["version"]
+description = "A RAG system for creating knowledge bases from different document formats"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Vahid Lari", email = "vahid.lari@gmail.com"},
 ]
 maintainers = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Vahid Lari", email = "vahid.lari@gmail.com"},
 ]
 keywords = [
-    "rag", "retrieval-augmented-generation", "latex", "nlp", 
+    "rag", "retrieval-augmented-generation", "nlp", 
     "machine-learning", "vector-database", "weaviate", "embeddings"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Text Processing :: Markup :: LaTeX",
     "Topic :: Database",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -90,7 +88,6 @@ ragnarock = [
     "config/*.yaml",
     "config/*.yml",
     "examples/*.py", 
-    "examples/latex_samples/*.tex",
 ]
 
 [tool.black]
@@ -150,3 +147,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
 ]
+
+[tool.setuptools_scm]
+write_to = "ragnarock/_version.py"
+write_to_template = '"""Version information for the ragnarock package."""\n\n__version__ = "{version}"\n__version_info__ = tuple(map(int, __version__.split(".")))\n'
