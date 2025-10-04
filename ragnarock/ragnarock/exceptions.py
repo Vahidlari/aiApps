@@ -1,37 +1,37 @@
-"""Custom exceptions for the RAG system."""
+"""Custom exceptions for the knowledge base manager system."""
 
 
-class RAGSystemError(Exception):
-    """Base exception for RAG system errors."""
+class KnowledgeBaseManagerError(Exception):
+    """Base exception for knowledge base manager errors."""
 
     pass
 
 
-class ConfigurationError(RAGSystemError):
+class ConfigurationError(KnowledgeBaseManagerError):
     """Raised when there's a configuration error."""
 
     pass
 
 
-class DocumentProcessingError(RAGSystemError):
+class DocumentProcessingError(KnowledgeBaseManagerError):
     """Raised when document processing fails."""
 
     pass
 
 
-class VectorStoreError(RAGSystemError):
+class VectorStoreError(KnowledgeBaseManagerError):
     """Raised when vector store operations fail."""
 
     pass
 
 
-class RetrievalError(RAGSystemError):
+class RetrievalError(KnowledgeBaseManagerError):
     """Raised when retrieval operations fail."""
 
     pass
 
 
-class EmbeddingError(RAGSystemError):
+class EmbeddingError(KnowledgeBaseManagerError):
     """Raised when embedding operations fail."""
 
     pass

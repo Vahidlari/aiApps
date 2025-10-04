@@ -1,4 +1,4 @@
-"""Command-line interface for the RAG system."""
+"""Command-line interface for the knowledge base manager system."""
 
 import argparse
 import logging
@@ -6,9 +6,14 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from ..config.settings import ChunkConfig, EmbeddingConfig, RAGConfig, VectorStoreConfig
-from ..core.rag_system import RAGSystem
-from ..exceptions import RAGSystemError
+from ..config.settings import (
+    ChunkConfig,
+    DatabaseManagerConfig,
+    EmbeddingConfig,
+    RAGConfig,
+)
+from ..core.knowledge_base_manager import KnowledgeBaseManager
+from ..exceptions import KnowledgeBaseManagerError
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -25,13 +30,11 @@ def process_document_command(args) -> None:
         config = RAGConfig(
             chunk_config=ChunkConfig(chunk_size=args.chunk_size, overlap=args.overlap),
             embedding_config=EmbeddingConfig(model_name=args.embedding_model),
-            vector_store_config=VectorStoreConfig(
-                url=args.weaviate_url, class_name=args.class_name
-            ),
+            database_manager_config=DatabaseManagerConfig(url=args.weaviate_url),
         )
 
-        rag = RAGSystem(config=config)
-        chunk_ids = rag.process_document(args.document)
+        kbm = KnowledgeBaseManager(config=config)
+        chunk_ids = kbm.process_document(args.document)
         print(f"✅ Processed document: {args.document}")
         print(f"📄 Stored {len(chunk_ids)} chunks")
 
@@ -46,13 +49,11 @@ def query_command(args) -> None:
         config = RAGConfig(
             chunk_config=ChunkConfig(),
             embedding_config=EmbeddingConfig(model_name=args.embedding_model),
-            vector_store_config=VectorStoreConfig(
-                url=args.weaviate_url, class_name=args.class_name
-            ),
+            database_manager_config=DatabaseManagerConfig(url=args.weaviate_url),
         )
 
-        rag = RAGSystem(config=config)
-        response = rag.query(
+        kbm = KnowledgeBaseManager(config=config)
+        response = kbm.query(
             args.question, search_type=args.search_type, top_k=args.top_k
         )
 
@@ -76,10 +77,10 @@ def status_command(args) -> None:
     """Check system status."""
     try:
         config = RAGConfig.default()
-        rag = RAGSystem(config=config)
-        stats = rag.get_system_stats()
+        kbm = KnowledgeBaseManager(config=config)
+        stats = kbm.get_system_stats()
 
-        print("🔍 RAG System Status:")
+        print("🔍 Knowledge Base Manager Status:")
         print(f"✅ Initialized: {stats['system_initialized']}")
         print(f"📊 Total objects: {stats['vector_store']['total_objects']}")
         print(f"🤖 Embedding model: {stats['embedding_engine']['model_name']}")
@@ -93,18 +94,18 @@ def status_command(args) -> None:
 def create_parser() -> argparse.ArgumentParser:
     """Create command-line argument parser."""
     parser = argparse.ArgumentParser(
-        description="RAG System CLI - LaTeX Document Knowledge Base",
+        description="Knowledge Base Manager CLI - LaTeX Document Knowledge Base",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Process a LaTeX document
-  rag-system process document.tex
+  kbm process document.tex
   
   # Query the knowledge base
-  rag-system query "What is the main equation in chapter 2?"
+  kbm query "What is the main equation in chapter 2?"
   
   # Check system status
-  rag-system status
+  kbm status
         """,
     )
 
@@ -178,8 +179,8 @@ def main() -> None:
 
     try:
         args.func(args)
-    except RAGSystemError as e:
-        print(f"❌ RAG System Error: {e}", file=sys.stderr)
+    except KnowledgeBaseManagerError as e:
+        print(f"❌ Knowledge Base Manager Error: {e}", file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n⏹️  Operation cancelled by user", file=sys.stderr)

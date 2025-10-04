@@ -16,11 +16,11 @@ import logging
 
 from ragnarock import (
     ChunkConfig,
+    DatabaseManagerConfig,
     DataChunk,
     EmbeddingConfig,
     KnowledgeBaseManager,
     RAGConfig,
-    VectorStoreConfig,
 )
 
 # Set up logging
@@ -40,9 +40,7 @@ def main():
             embedding_config=EmbeddingConfig(
                 model_name="all-mpnet-base-v2", max_length=512
             ),
-            vector_store_config=VectorStoreConfig(
-                url="http://localhost:8080", class_name="AdvancedDocument", timeout=30
-            ),
+            database_manager_config=DatabaseManagerConfig(url="http://localhost:8080"),
         )
 
         # Initialize knowledge base manager with custom config

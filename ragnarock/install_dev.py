@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Development installation script for the RAG system package.
+"""Development installation script for the knowledge base manager package.
 
 This script installs the package in development mode (-e) which is perfect
 for development containers and local development.
@@ -29,7 +29,7 @@ def run_command(cmd, description):
 
 def main():
     """Main installation process."""
-    print("🚀 Installing RAG System Package in Development Mode")
+    print("🚀 Installing Knowledge Base Manager Package in Development Mode")
     print("=" * 60)
 
     # Check if we're in the right directory
@@ -63,10 +63,10 @@ def main():
         "   1. Start Weaviate: docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate:1.22.4"
     )
     print(
-        "   2. Test the installation: python -c 'from ragnarock import RAGSystem; print(\"✅ Package imported successfully\")'"
+        "   2. Test the installation: python -c 'from ragnarock import KnowledgeBaseManager; print(\"✅ Package imported successfully\")'"
     )
     print("   3. Run examples: python ragnarock/examples/basic_usage.py")
-    print("   4. Use CLI: rag-system status")
+    print("   4. Use CLI: kbm status")
     print("\n🎯 Package is now installed in editable mode!")
     print("   Any changes to the source code will be immediately available.")
 

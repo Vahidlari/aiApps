@@ -9,7 +9,7 @@ from .data_chunker import ChunkMetadata, DataChunk, DataChunker
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .rag_system import RAGSystem
+from .knowledge_base_manager import KnowledgeBaseManager
 from .retriever import Retriever
 from .vector_store import VectorStore
 
@@ -20,7 +20,7 @@ __all__ = [
     "DatabaseManager",
     "DocumentPreprocessor",
     "EmbeddingEngine",
-    "RAGSystem",
+    "KnowledgeBaseManager",
     "Retriever",
     "VectorStore",
 ]
