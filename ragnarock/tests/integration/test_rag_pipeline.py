@@ -195,7 +195,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "uuid3",
         ]
 
-        # Create RAG system
+        # Create knowledge base manager system
         kbm = KnowledgeBaseManager()
 
         # Create temporary LaTeX file
@@ -265,7 +265,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         ]
         mock_retriever.return_value.search_hybrid.return_value = mock_search_results
 
-        # Create RAG system
+        # Create knowledge base manager system
         kbm = KnowledgeBaseManager()
 
         # Test query processing
@@ -373,7 +373,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "Search failed"
         )
 
-        # Create RAG system
+        # Create knowledge base manager system
         kbm = KnowledgeBaseManager()
 
         # Test error handling
@@ -470,16 +470,16 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor.return_value = Mock()
         mock_data_chunker.return_value = Mock()
 
-        # Create RAG system
+        # Create knowledge base manager system
         kbm = KnowledgeBaseManager()
 
         # Test that system is ready for operations
         assert kbm.is_initialized is True
-        assert hasattr(rag, "vector_store")
-        assert hasattr(rag, "retriever")
-        assert hasattr(rag, "embedding_engine")
-        assert hasattr(rag, "document_preprocessor")
-        assert hasattr(rag, "data_chunker")
+        assert hasattr(kbm, "vector_store")
+        assert hasattr(kbm, "retriever")
+        assert hasattr(kbm, "embedding_engine")
+        assert hasattr(kbm, "document_preprocessor")
+        assert hasattr(kbm, "data_chunker")
 
     @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
     @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")

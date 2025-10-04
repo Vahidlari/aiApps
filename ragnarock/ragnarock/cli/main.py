@@ -10,7 +10,7 @@ from ..config.settings import (
     ChunkConfig,
     DatabaseManagerConfig,
     EmbeddingConfig,
-    RAGConfig,
+    KnowledgeBaseManagerConfig,
 )
 from ..core.knowledge_base_manager import KnowledgeBaseManager
 from ..exceptions import KnowledgeBaseManagerError
@@ -27,7 +27,7 @@ def setup_logging(verbose: bool = False) -> None:
 def process_document_command(args) -> None:
     """Process a LaTeX document."""
     try:
-        config = RAGConfig(
+        config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(chunk_size=args.chunk_size, overlap=args.overlap),
             embedding_config=EmbeddingConfig(model_name=args.embedding_model),
             database_manager_config=DatabaseManagerConfig(url=args.weaviate_url),
@@ -46,7 +46,7 @@ def process_document_command(args) -> None:
 def query_command(args) -> None:
     """Query the RAG system."""
     try:
-        config = RAGConfig(
+        config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(),
             embedding_config=EmbeddingConfig(model_name=args.embedding_model),
             database_manager_config=DatabaseManagerConfig(url=args.weaviate_url),
@@ -76,7 +76,7 @@ def query_command(args) -> None:
 def status_command(args) -> None:
     """Check system status."""
     try:
-        config = RAGConfig.default()
+        config = KnowledgeBaseManagerConfig.default()
         kbm = KnowledgeBaseManager(config=config)
         stats = kbm.get_system_stats()
 
@@ -94,7 +94,7 @@ def status_command(args) -> None:
 def create_parser() -> argparse.ArgumentParser:
     """Create command-line argument parser."""
     parser = argparse.ArgumentParser(
-        description="Knowledge Base Manager CLI - LaTeX Document Knowledge Base",
+        description="Knowledge Base Manager CLI - LaTeX Document Knowledge Base Manager",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

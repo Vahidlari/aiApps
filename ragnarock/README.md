@@ -63,8 +63,7 @@ ragnarock/
 │       └── graph_provider.py      # Microsoft Graph API implementation
 ├── config/
 │   ├── __init__.py
-│   ├── settings.py                # Configuration management
-│   └── default_config.yaml        # Default configuration
+│   └── ettings.py                 # Configuration management
 ├── examples/
 │   ├── __init__.py
 │   ├── sample_queries.py          # Example usage

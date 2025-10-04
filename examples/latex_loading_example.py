@@ -33,7 +33,7 @@ from ragnarock import (
     DatabaseManagerConfig,
     EmbeddingConfig,
     KnowledgeBaseManager,
-    RAGConfig,
+    KnowledgeBaseManagerConfig,
 )
 
 # Configure logging with more detailed formatting
@@ -78,7 +78,7 @@ def check_prerequisites() -> bool:
     return True
 
 
-def create_rag_config() -> RAGConfig:
+def create_knowledge_base_manager_config() -> KnowledgeBaseManagerConfig:
     """Create and return the RAG configuration."""
     print_step(1, "Creating RAG Configuration")
 
@@ -108,13 +108,13 @@ def create_rag_config() -> RAGConfig:
     )
     print(f"🗄️  Vector Store: {database_manager_config.url}")
 
-    config = RAGConfig(
+    config = KnowledgeBaseManagerConfig(
         chunk_config=chunk_config,
         embedding_config=embedding_config,
         database_manager_config=database_manager_config,
     )
 
-    print("✅ RAG configuration created successfully")
+    print("✅ Knowledge Base Manager configuration created successfully")
     return config
 
 
@@ -244,7 +244,9 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
                     print("      results are expected.")
 
         except AttributeError:
-            print("   ⚠️  Similarity search not available in this RAG system")
+            print(
+                "   ⚠️  Similarity search not available in this Knowledge Base Manager system"
+            )
             break
         except Exception as e:
             print(f"   ❌ Error in similarity search: {e}")
@@ -252,8 +254,11 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
 
 def main():
     """Main function that orchestrates the LaTeX document processing example."""
-    print_section_header("🚀 LaTeX Document RAG System Demo")
-    print("This example demonstrates loading and querying LaTeX documents " "using RAG")
+    print_section_header("🚀 LaTeX Document Knowledge Base Manager System Demo")
+    print(
+        "This example demonstrates loading and querying LaTeX documents "
+        "using Knowledge Base Manager"
+    )
     print("(Retrieval-Augmented Generation) technology with Weaviate vector " "store.")
 
     # Check prerequisites
@@ -264,8 +269,8 @@ def main():
         sys.exit(1)
 
     try:
-        # Step 1: Create RAG configuration
-        config = create_rag_config()
+        # Step 1: Create Knowledge Base Manager configuration
+        config = create_knowledge_base_manager_config()
 
         # Step 2: Initialize knowledge base manager
         print_step(2, "Initializing Knowledge Base Manager")

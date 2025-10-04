@@ -38,7 +38,7 @@ from .config.settings import (
     ChunkConfig,
     DatabaseManagerConfig,
     EmbeddingConfig,
-    RAGConfig,
+    KnowledgeBaseManagerConfig,
 )
 from .core.data_chunker import ChunkMetadata, DataChunk, DataChunker
 from .core.database_manager import DatabaseManager
@@ -74,7 +74,7 @@ __all__ = [
     "Retriever",
     "VectorStore",
     # Configuration
-    "RAGConfig",
+    "KnowledgeBaseManagerConfig",
     "ChunkConfig",
     "EmbeddingConfig",
     "DatabaseManagerConfig",
