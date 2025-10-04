@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Advanced usage example for the RAG system package.
+"""Advanced usage example for the knowledge base manager package.
 
 This example demonstrates advanced usage with custom configuration:
 1. Custom configuration setup
@@ -18,8 +18,8 @@ from ragnarock import (
     ChunkConfig,
     DataChunk,
     EmbeddingConfig,
+    KnowledgeBaseManager,
     RAGConfig,
-    RAGSystem,
     VectorStoreConfig,
 )
 
@@ -45,13 +45,15 @@ def main():
             ),
         )
 
-        # Initialize RAG system with custom config
-        logger.info("🚀 Initializing RAG system with custom configuration...")
-        rag = RAGSystem(config=config)
+        # Initialize knowledge base manager with custom config
+        logger.info(
+            "🚀 Initializing knowledge base manager with custom configuration..."
+        )
+        kbm = KnowledgeBaseManager(config=config)
 
         # Create schema
         logger.info("📊 Creating vector store schema...")
-        rag.vector_store.create_schema(force_recreate=True)
+        kbm.vector_store.create_schema(force_recreate=True)
 
         # Add comprehensive sample data
         logger.info("📝 Adding comprehensive sample data...")
@@ -104,7 +106,7 @@ def main():
         ]
 
         # Store all chunks
-        stored_uuids = rag.vector_store.store_chunks(sample_chunks)
+        stored_uuids = kbm.vector_store.store_chunks(sample_chunks)
         logger.info(f"✅ Stored {len(stored_uuids)} chunks")
 
         # Demonstrate different search types
@@ -112,14 +114,14 @@ def main():
 
         # 1. Vector similarity search
         logger.info("\n1️⃣ Vector Similarity Search:")
-        similar_results = rag.search_similar("Einstein relativity equations", top_k=3)
+        similar_results = kbm.search_similar("Einstein relativity equations", top_k=3)
         for i, result in enumerate(similar_results, 1):
             logger.info(f"   {i}. Score: {result.get('similarity_score', 'N/A'):.3f}")
             logger.info(f"      Content: {result['content'][:60]}...")
 
         # 2. Hybrid search
         logger.info("\n2️⃣ Hybrid Search:")
-        hybrid_results = rag.search_hybrid(
+        hybrid_results = kbm.search_hybrid(
             "quantum mechanics equations", alpha=0.7, top_k=3
         )
         for i, result in enumerate(hybrid_results, 1):
@@ -138,14 +140,14 @@ def main():
             logger.info(f"\n   Question: {question}")
             logger.info(f"   Search type: {search_type}")
 
-            response = rag.query(question, search_type=search_type, top_k=2)
+            response = kbm.query(question, search_type=search_type, top_k=2)
 
             for i, chunk in enumerate(response["retrieved_chunks"], 1):
                 logger.info(f"   {i}. {chunk['content'][:50]}...")
 
         # System statistics and monitoring
         logger.info("\n📊 System Statistics:")
-        stats = rag.get_system_stats()
+        stats = kbm.get_system_stats()
 
         logger.info(f"   System initialized: {stats['system_initialized']}")
         logger.info(f"   Total objects: {stats['vector_store']['total_objects']}")
@@ -157,17 +159,17 @@ def main():
         logger.info("\n🔧 Component Access:")
 
         # Direct access to specific chunk
-        chunk_data = rag.get_chunk("relativity_002")
+        chunk_data = kbm.get_chunk("relativity_002")
         if chunk_data:
             logger.info(f"   Retrieved specific chunk: {chunk_data['content']}")
 
         # Test chunk deletion
-        deleted = rag.delete_chunk("quantum_003")
+        deleted = kbm.delete_chunk("quantum_003")
         if deleted:
             logger.info("   Successfully deleted chunk quantum_003")
 
         # Updated statistics
-        updated_stats = rag.get_system_stats()
+        updated_stats = kbm.get_system_stats()
         logger.info(
             f"   Updated total objects: {updated_stats['vector_store']['total_objects']}"
         )
@@ -185,8 +187,8 @@ def main():
         raise
     finally:
         # Clean up
-        if "rag" in locals():
-            rag.close()
+        if "kbm" in locals():
+            kbm.close()
 
 
 if __name__ == "__main__":

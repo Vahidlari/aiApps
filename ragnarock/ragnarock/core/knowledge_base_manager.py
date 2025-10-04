@@ -1,25 +1,24 @@
-"""Main RAG system orchestrator.
+"""Knowledge base manager for document processing and retrieval.
 
-This module provides the RAGSystem class that orchestrates all components
-of the RAG (Retrieval-Augmented Generation) system, providing a unified interface
-for document processing, storage, retrieval, and generation.
+This module provides the KnowledgeBaseManager class that orchestrates all components
+of the knowledge base system, providing a unified interface for document processing,
+storage, and retrieval operations.
 
 Key responsibilities:
 - Orchestrate document preprocessing and chunking
 - Manage vector store operations
 - Handle retrieval and search operations
-- Coordinate with generation system
 - Provide unified query interface
 - Manage system configuration and state
 
-The RAG system follows the layered architecture pattern with clear separation
+The knowledge base manager follows the layered architecture pattern with clear separation
 of concerns between storage, retrieval, and generation layers.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from .data_chunker import DataChunk, DataChunker
+from .data_chunker import DataChunker
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
@@ -27,13 +26,12 @@ from .retriever import Retriever
 from .vector_store import VectorStore
 
 
-class RAGSystem:
-    """Main RAG system orchestrator.
+class KnowledgeBaseManager:
+    """Knowledge base manager for document processing and retrieval.
 
-    This class provides a unified interface for the complete RAG pipeline,
-    orchestrating document processing, storage, retrieval, and generation
-    operations. It follows the layered architecture pattern with clear
-    separation of concerns.
+    This class provides a unified interface for the complete knowledge base pipeline,
+    orchestrating document processing, storage, and retrieval operations. It follows
+    the layered architecture pattern with clear separation of concerns.
 
     Attributes:
         db_manager: DatabaseManager instance for database operations
@@ -55,7 +53,7 @@ class RAGSystem:
         chunk_size: int = 768,
         chunk_overlap: int = 100,
     ):
-        """Initialize the RAG system.
+        """Initialize the knowledge base manager.
 
         Args:
             config: RAGConfig object with system configuration (optional)
@@ -91,7 +89,7 @@ class RAGSystem:
             self.db_manager = DatabaseManager(url=weaviate_url)
 
             # Initialize vector store (storage layer)
-            self.logger.info(f"Initializing database manager")
+            self.logger.info("Initializing vector store")
             self.vector_store = VectorStore(
                 db_manager=self.db_manager,
                 embedding_engine=self.embedding_engine,
@@ -118,10 +116,10 @@ class RAGSystem:
             )
 
             self.is_initialized = True
-            self.logger.info("RAG system initialized successfully")
+            self.logger.info("Knowledge base manager initialized successfully")
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize RAG system: {str(e)}")
+            self.logger.error(f"Failed to initialize knowledge base manager: {str(e)}")
             raise
 
     def process_documents(
@@ -139,7 +137,7 @@ class RAGSystem:
             List[str]: List of chunk IDs that were stored
         """
         if not self.is_initialized:
-            raise RuntimeError("RAG system not initialized")
+            raise RuntimeError("Knowledge base manager not initialized")
 
         try:
             self.logger.info(f"Processing {len(document_paths)} documents")
@@ -174,7 +172,7 @@ class RAGSystem:
             ValueError: If document processing fails
         """
         if not self.is_initialized:
-            raise RuntimeError("RAG system not initialized")
+            raise RuntimeError("Knowledge base manager not initialized")
 
         try:
             self.logger.info(f"Processing document: {document_path}")
@@ -207,7 +205,7 @@ class RAGSystem:
         top_k: int = 5,
         class_name: str = "Document",
     ) -> Dict[str, Any]:
-        """Query the RAG system with a question.
+        """Query the knowledge base with a question.
 
         Args:
             question: The question to ask
@@ -222,7 +220,7 @@ class RAGSystem:
             ValueError: If invalid search type or empty question
         """
         if not self.is_initialized:
-            raise RuntimeError("RAG system not initialized")
+            raise RuntimeError("Knowledge base manager not initialized")
 
         if not question or not question.strip():
             raise ValueError("Question cannot be empty")
@@ -413,7 +411,7 @@ class RAGSystem:
             RuntimeError: If system not initialized
         """
         if not self.is_initialized:
-            raise RuntimeError("RAG system not initialized")
+            raise RuntimeError("Knowledge base manager not initialized")
 
         try:
             self.logger.warning("Clearing all data from vector database")
@@ -429,9 +427,9 @@ class RAGSystem:
             if hasattr(self, "vector_store"):
                 self.vector_store.close()
             self.is_initialized = False
-            self.logger.info("RAG system closed successfully")
+            self.logger.info("Knowledge base manager closed successfully")
         except Exception as e:
-            self.logger.error(f"Error closing RAG system: {str(e)}")
+            self.logger.error(f"Error closing knowledge base manager: {str(e)}")
 
     def __enter__(self):
         """Context manager entry."""

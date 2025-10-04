@@ -1,8 +1,8 @@
-"""LaTeX Document Processing Example with RAG System
+"""LaTeX Document Processing Example with Knowledge Base Manager
 
-This module demonstrates how to load and process LaTeX documents using the RAG
-(Retrieval-Augmented Generation) system. It shows the complete workflow from
-document ingestion to querying and retrieval.
+This module demonstrates how to load and process LaTeX documents using the knowledge
+base manager system. It shows the complete workflow from document ingestion to
+querying and retrieval.
 
 Features demonstrated:
 - LaTeX document processing and chunking
@@ -32,8 +32,8 @@ from ragnarock import (
     ChunkConfig,
     DatabaseManagerConfig,
     EmbeddingConfig,
+    KnowledgeBaseManager,
     RAGConfig,
-    RAGSystem,
 )
 
 # Configure logging with more detailed formatting
@@ -119,7 +119,7 @@ def create_rag_config() -> RAGConfig:
 
 
 def demonstrate_document_processing(
-    rag: RAGSystem, file_path: str, bibliography_path: str
+    kbm: KnowledgeBaseManager, file_path: str, bibliography_path: str
 ) -> None:
     """Demonstrate document processing and ingestion."""
     print_step(2, "Processing LaTeX Document")
@@ -128,7 +128,7 @@ def demonstrate_document_processing(
 
     try:
         # Process the LaTeX document
-        result = rag.process_documents([file_path, bibliography_path])
+        result = kbm.process_documents([file_path, bibliography_path])
         print("✅ Document processed successfully!")
         print(f"📊 Processing result: {result}")
 
@@ -137,7 +137,7 @@ def demonstrate_document_processing(
         raise
 
 
-def demonstrate_queries(rag: RAGSystem) -> None:
+def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
     """Demonstrate various types of queries."""
     print_step(3, "Demonstrating Query Capabilities")
 
@@ -173,7 +173,7 @@ def demonstrate_queries(rag: RAGSystem) -> None:
 
         try:
             # Execute the query
-            response = rag.query(query_info["query"])
+            response = kbm.query(query_info["query"])
 
             # Format the response nicely
             print("   📝 Answer:")
@@ -205,7 +205,7 @@ def demonstrate_queries(rag: RAGSystem) -> None:
         print()
 
 
-def demonstrate_similarity_search(rag: RAGSystem) -> None:
+def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
     """Demonstrate similarity search capabilities."""
     print_step(4, "Demonstrating Similarity Search")
 
@@ -222,7 +222,7 @@ def demonstrate_similarity_search(rag: RAGSystem) -> None:
         print(f'\n🔎 Searching for: "{term}"')
         try:
             # Use the correct method name: search_similar
-            results = rag.search_similar(term, top_k=3)
+            results = kbm.search_similar(term, top_k=3)
 
             if results:
                 print(f"   Found {len(results)} similar documents:")
@@ -267,21 +267,21 @@ def main():
         # Step 1: Create RAG configuration
         config = create_rag_config()
 
-        # Step 2: Initialize RAG system
-        print_step(2, "Initializing RAG System")
-        rag = RAGSystem(config=config)
-        print("✅ RAG system initialized successfully")
+        # Step 2: Initialize knowledge base manager
+        print_step(2, "Initializing Knowledge Base Manager")
+        kbm = KnowledgeBaseManager(config=config)
+        print("✅ Knowledge base manager initialized successfully")
 
         # Step 3: Process document
         sample_file = "examples/latex_samples/sample_chapter.tex"
         bibliography_file = "examples/latex_samples/references.bib"
-        demonstrate_document_processing(rag, sample_file, bibliography_file)
+        demonstrate_document_processing(kbm, sample_file, bibliography_file)
 
         # Step 4: Demonstrate queries
-        demonstrate_queries(rag)
+        demonstrate_queries(kbm)
 
         # Step 5: Demonstrate similarity search (if available)
-        demonstrate_similarity_search(rag)
+        demonstrate_similarity_search(kbm)
 
         # Final summary
         print_section_header("🎉 Demo Completed Successfully")

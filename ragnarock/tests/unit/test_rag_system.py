@@ -1,6 +1,6 @@
-"""Unit tests for the RAGSystem module.
+"""Unit tests for the KnowledgeBaseManager module.
 
-This module contains comprehensive unit tests for the RAGSystem class,
+This module contains comprehensive unit tests for the KnowledgeBaseManager class,
 testing the orchestration of all components and the unified interface.
 
 Test coverage includes:
@@ -25,14 +25,14 @@ from ragnarock import (
     DataChunker,
     DocumentPreprocessor,
     EmbeddingEngine,
-    RAGSystem,
+    KnowledgeBaseManager,
     Retriever,
     VectorStore,
 )
 
 
-class TestRAGSystem:
-    """Test suite for RAGSystem class."""
+class TestKnowledgeBaseManager:
+    """Test suite for KnowledgeBaseManager class."""
 
     @pytest.fixture
     def mock_components(self):
@@ -115,13 +115,13 @@ class TestRAGSystem:
             },
         ]
 
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
-    def test_rag_system_initialization_success(
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
+    def test_knowledge_base_manager_initialization_success(
         self,
         mock_data_chunker,
         mock_document_preprocessor,
@@ -130,7 +130,7 @@ class TestRAGSystem:
         mock_db_manager,
         mock_embedding_engine,
     ):
-        """Test successful RAGSystem initialization."""
+        """Test successful KnowledgeBaseManager initialization."""
         # Setup mocks
         mock_embedding_engine.return_value = Mock()
         mock_db_manager.return_value = Mock()
@@ -140,7 +140,7 @@ class TestRAGSystem:
         mock_data_chunker.return_value = Mock()
 
         # Test
-        rag = RAGSystem(
+        kbm = KnowledgeBaseManager(
             weaviate_url="http://localhost:8080",
             class_name="TestDocument",
             embedding_model="all-mpnet-base-v2",
@@ -149,7 +149,7 @@ class TestRAGSystem:
         )
 
         # Assertions
-        assert rag.is_initialized is True
+        assert kbm.is_initialized is True
         mock_embedding_engine.assert_called_once_with(model_name="all-mpnet-base-v2")
         mock_db_manager.assert_called_once_with(url="http://localhost:8080")
         mock_vector_store.assert_called_once()
@@ -157,13 +157,13 @@ class TestRAGSystem:
         mock_document_preprocessor.assert_called_once()
         mock_data_chunker.assert_called_once_with(chunk_size=512, overlap_size=50)
 
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    def test_rag_system_initialization_failure(self, mock_embedding_engine):
-        """Test RAGSystem initialization failure."""
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    def test_knowledge_base_manager_initialization_failure(self, mock_embedding_engine):
+        """Test KnowledgeBaseManager initialization failure."""
         mock_embedding_engine.side_effect = Exception("Embedding engine failed")
 
         with pytest.raises(Exception, match="Embedding engine failed"):
-            RAGSystem()
+            KnowledgeBaseManager()
 
     def test_process_document_success(self, mock_components, sample_chunks):
         """Test successful document processing."""
@@ -173,12 +173,12 @@ class TestRAGSystem:
         )
         mock_components["vector_store"].store_chunks.return_value = ["uuid1", "uuid2"]
 
-        # Create RAG system with mocked components
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.document_preprocessor = mock_components["document_preprocessor"]
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        # Create knowledge base manager with mocked components
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.document_preprocessor = mock_components["document_preprocessor"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         # Test
         with tempfile.NamedTemporaryFile(mode="w", suffix=".tex", delete=False) as f:
@@ -188,7 +188,7 @@ class TestRAGSystem:
             temp_path = f.name
 
         try:
-            result = rag.process_document(temp_path)
+            result = kbm.process_document(temp_path)
 
             # Assertions
             assert result == ["uuid1", "uuid2"]
@@ -203,11 +203,13 @@ class TestRAGSystem:
 
     def test_process_document_not_initialized(self):
         """Test document processing when system not initialized."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = False
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = False
 
-        with pytest.raises(RuntimeError, match="RAG system not initialized"):
-            rag.process_document("test.tex")
+        with pytest.raises(
+            RuntimeError, match="Knowledge base manager not initialized"
+        ):
+            kbm.process_document("test.tex")
 
     def test_process_document_file_not_found(self, mock_components):
         """Test document processing with non-existent file."""
@@ -215,27 +217,27 @@ class TestRAGSystem:
             FileNotFoundError("File not found")
         )
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.document_preprocessor = mock_components["document_preprocessor"]
-        rag.data_chunker = mock_components["data_chunker"]
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.document_preprocessor = mock_components["document_preprocessor"]
+        kbm.data_chunker = mock_components["data_chunker"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         with pytest.raises(FileNotFoundError, match="File not found"):
-            rag.process_document("nonexistent.tex")
+            kbm.process_document("nonexistent.tex")
 
     def test_query_similar_success(self, mock_components, sample_search_results):
         """Test successful query with similar search."""
         mock_components["retriever"].search_similar.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         # Test
-        result = rag.query("What is the test content?", search_type="similar", top_k=5)
+        result = kbm.query("What is the test content?", search_type="similar", top_k=5)
 
         # Assertions
         assert result["question"] == "What is the test content?"
@@ -256,13 +258,13 @@ class TestRAGSystem:
         """Test successful query with hybrid search."""
         mock_components["retriever"].search_hybrid.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         # Test
-        result = rag.query("What is the test content?", search_type="hybrid", top_k=3)
+        result = kbm.query("What is the test content?", search_type="hybrid", top_k=3)
 
         # Assertions
         assert result["search_type"] == "hybrid"
@@ -274,13 +276,13 @@ class TestRAGSystem:
         """Test successful query with keyword search."""
         mock_components["retriever"].search_keyword.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         # Test
-        result = rag.query(
+        result = kbm.query(
             "machine learning algorithms", search_type="keyword", top_k=3
         )
 
@@ -292,42 +294,44 @@ class TestRAGSystem:
 
     def test_query_invalid_search_type(self, mock_components):
         """Test query with invalid search type."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         with pytest.raises(ValueError, match="Invalid search type: invalid"):
-            rag.query("test", search_type="invalid")
+            kbm.query("test", search_type="invalid")
 
     def test_query_empty_question(self, mock_components):
         """Test query with empty question."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         with pytest.raises(ValueError, match="Question cannot be empty"):
-            rag.query("")
+            kbm.query("")
 
     def test_query_not_initialized(self):
         """Test query when system not initialized."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = False
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = False
 
-        with pytest.raises(RuntimeError, match="RAG system not initialized"):
-            rag.query("test question")
+        with pytest.raises(
+            RuntimeError, match="Knowledge base manager not initialized"
+        ):
+            kbm.query("test question")
 
     def test_search_similar_delegation(self, mock_components, sample_search_results):
         """Test that search_similar delegates to retriever."""
         mock_components["retriever"].search_similar.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
 
         # Test
-        result = rag.search_similar("test query", top_k=5)
+        result = kbm.search_similar("test query", top_k=5)
 
         # Assertions
         assert result == sample_search_results
@@ -339,12 +343,12 @@ class TestRAGSystem:
         """Test that search_hybrid delegates to retriever."""
         mock_components["retriever"].search_hybrid.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
 
         # Test
-        result = rag.search_hybrid("test query", alpha=0.7, top_k=3)
+        result = kbm.search_hybrid("test query", alpha=0.7, top_k=3)
 
         # Assertions
         assert result == sample_search_results
@@ -356,12 +360,12 @@ class TestRAGSystem:
         """Test that search_keyword delegates to retriever."""
         mock_components["retriever"].search_keyword.return_value = sample_search_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
 
         # Test
-        result = rag.search_keyword("machine learning", top_k=3)
+        result = kbm.search_keyword("machine learning", top_k=3)
 
         # Assertions
         assert result == sample_search_results
@@ -374,12 +378,12 @@ class TestRAGSystem:
         mock_chunk_data = {"chunk_id": "test_001", "content": "test content"}
         mock_components["vector_store"].get_chunk_by_id.return_value = mock_chunk_data
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
 
         # Test
-        result = rag.get_chunk("test_001")
+        result = kbm.get_chunk("test_001")
 
         # Assertions
         assert result == mock_chunk_data
@@ -391,12 +395,12 @@ class TestRAGSystem:
         """Test that delete_chunk delegates to vector_store."""
         mock_components["vector_store"].delete_chunk.return_value = True
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
 
         # Test
-        result = rag.delete_chunk("test_001")
+        result = kbm.delete_chunk("test_001")
 
         # Assertions
         assert result is True
@@ -425,19 +429,19 @@ class TestRAGSystem:
         mock_components["db_manager"].is_connected = True
         mock_components["db_manager"].list_collections.return_value = ["Document"]
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.db_manager = mock_components["db_manager"]
-        rag.vector_store = mock_components["vector_store"]
-        rag.retriever = mock_components["retriever"]
-        rag.embedding_engine = mock_components["embedding_engine"]
-        rag.data_chunker = mock_components["data_chunker"]
-        rag.data_chunker.chunk_size = 768
-        rag.data_chunker.overlap = 100
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.db_manager = mock_components["db_manager"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.retriever = mock_components["retriever"]
+        kbm.embedding_engine = mock_components["embedding_engine"]
+        kbm.data_chunker = mock_components["data_chunker"]
+        kbm.data_chunker.chunk_size = 768
+        kbm.data_chunker.overlap = 100
+        kbm.logger = Mock()
 
         # Test
-        stats = rag.get_system_stats()
+        stats = kbm.get_system_stats()
 
         # Assertions
         assert stats["system_initialized"] is True
@@ -461,101 +465,103 @@ class TestRAGSystem:
             "Stats failed"
         )
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.db_manager = mock_components["db_manager"]
-        rag.vector_store = mock_components["vector_store"]
-        rag.retriever = mock_components["retriever"]
-        rag.embedding_engine = mock_components["embedding_engine"]
-        rag.data_chunker = mock_components["data_chunker"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.db_manager = mock_components["db_manager"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.retriever = mock_components["retriever"]
+        kbm.embedding_engine = mock_components["embedding_engine"]
+        kbm.data_chunker = mock_components["data_chunker"]
+        kbm.logger = Mock()
 
         with pytest.raises(Exception, match="Stats failed"):
-            rag.get_system_stats()
+            kbm.get_system_stats()
 
     def test_clear_database_success(self, mock_components):
         """Test successful database clearing."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         # Test
-        rag.clear_database()
+        kbm.clear_database()
 
         # Assertions
         mock_components["vector_store"].clear_all.assert_called_once()
 
     def test_clear_database_not_initialized(self):
         """Test database clearing when system not initialized."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = False
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = False
 
-        with pytest.raises(RuntimeError, match="RAG system not initialized"):
-            rag.clear_database()
+        with pytest.raises(
+            RuntimeError, match="Knowledge base manager not initialized"
+        ):
+            kbm.clear_database()
 
     def test_close_success(self, mock_components):
         """Test successful system closure."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         # Test
-        rag.close()
+        kbm.close()
 
         # Assertions
-        assert rag.is_initialized is False
+        assert kbm.is_initialized is False
         mock_components["vector_store"].close.assert_called_once()
 
     def test_close_without_vector_store(self):
         """Test system closure without vector store."""
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.logger = Mock()
 
         # Test (should not raise exception)
-        rag.close()
+        kbm.close()
 
         # Assertions
-        assert rag.is_initialized is False
+        assert kbm.is_initialized is False
 
     def test_context_manager_success(self, mock_components):
-        """Test RAGSystem as context manager."""
+        """Test KnowledgeBaseManager as context manager."""
         mock_components["vector_store"].close.return_value = None
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         # Test
-        with rag as system:
+        with kbm as system:
             assert system.is_initialized is True
 
         # Assertions
-        assert rag.is_initialized is False
+        assert kbm.is_initialized is False
         mock_components["vector_store"].close.assert_called_once()
 
     def test_context_manager_with_exception(self, mock_components):
-        """Test RAGSystem context manager with exception."""
+        """Test KnowledgeBaseManager context manager with exception."""
         mock_components["vector_store"].close.return_value = None
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.vector_store = mock_components["vector_store"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
 
         # Test
         try:
-            with rag as system:
+            with kbm as system:
                 assert system.is_initialized is True
                 raise Exception("Test exception")
         except Exception:
             pass
 
         # Assertions
-        assert rag.is_initialized is False
+        assert kbm.is_initialized is False
         mock_components["vector_store"].close.assert_called_once()
 
     def test_query_with_no_similarity_scores(self, mock_components):
@@ -568,13 +574,13 @@ class TestRAGSystem:
             results_without_scores
         )
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         # Test
-        result = rag.query("test question")
+        result = kbm.query("test question")
 
         # Assertions
         assert "avg_similarity" not in result
@@ -589,13 +595,13 @@ class TestRAGSystem:
         ]
         mock_components["retriever"].search_similar.return_value = mixed_results
 
-        rag = RAGSystem.__new__(RAGSystem)
-        rag.is_initialized = True
-        rag.retriever = mock_components["retriever"]
-        rag.logger = Mock()
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
 
         # Test
-        result = rag.query("test question")
+        result = kbm.query("test question")
 
         # Assertions
         assert result["avg_similarity"] == 0.4  # (0.8 + 0) / 2
