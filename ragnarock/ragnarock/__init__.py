@@ -6,7 +6,7 @@ from LaTeX documents, with support for document processing, vector storage,
 retrieval operations, and answer generation.
 
 Main Components (Three-Layer Architecture):
-- RAGSystem: Main orchestrator class
+- KnowledgeBaseManager: Main orchestrator class
 - DatabaseManager: Infrastructure layer for Weaviate operations
 - VectorStore: Storage layer for document persistence
 - Retriever: Search layer using Weaviate APIs directly
@@ -15,22 +15,22 @@ Main Components (Three-Layer Architecture):
 - EmbeddingEngine: Vector embeddings using Sentence Transformers
 
 Quick Start:
-    from ragnarock import RAGSystem
+    from ragnarock import KnowledgeBaseManager
 
     # Initialize the system with three-layer architecture
-    rag = RAGSystem(
+    kbm = KnowledgeBaseManager(
         weaviate_url="http://localhost:8080",
         class_name="Document",
         embedding_model="all-mpnet-base-v2"
     )
 
     # Process documents
-    chunk_ids = rag.process_documents(["document.tex"])
+    chunk_ids = kbm.process_documents(["document.tex"])
 
     # Query the knowledge base with different search types
-    response = rag.query("What is the main topic?", search_type="similar")
-    hybrid_response = rag.query("machine learning", search_type="hybrid")
-    keyword_response = rag.query("neural networks", search_type="keyword")
+    response = kbm.query("What is the main topic?", search_type="similar")
+    hybrid_response = kbm.query("machine learning", search_type="hybrid")
+    keyword_response = kbm.query("neural networks", search_type="keyword")
 """
 
 # Configuration classes
@@ -44,9 +44,17 @@ from .core.data_chunker import ChunkMetadata, DataChunk, DataChunker
 from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
 from .core.embedding_engine import EmbeddingEngine
-from .core.rag_system import RAGSystem
+from .core.knowledge_base_manager import KnowledgeBaseManager
 from .core.retriever import Retriever
 from .core.vector_store import VectorStore
+from .exceptions import (
+    ConfigurationError,
+    DocumentProcessingError,
+    EmbeddingError,
+    KnowledgeBaseManagerError,
+    RetrievalError,
+    VectorStoreError,
+)
 
 # Version information
 from .version import __version__
@@ -55,7 +63,7 @@ __version__ = __version__
 
 __all__ = [
     # Main system
-    "RAGSystem",
+    "KnowledgeBaseManager",
     # Core components
     "DataChunk",
     "DataChunker",
@@ -70,6 +78,13 @@ __all__ = [
     "ChunkConfig",
     "EmbeddingConfig",
     "DatabaseManagerConfig",
+    # Exceptions
+    "KnowledgeBaseManagerError",
+    "ConfigurationError",
+    "DocumentProcessingError",
+    "VectorStoreError",
+    "RetrievalError",
+    "EmbeddingError",
     # Version
     "__version__",
 ]
@@ -77,5 +92,5 @@ __all__ = [
 # Package metadata
 __author__ = "Vahid Lari"
 __email__ = "vahidlari@gmail.com"
-__description__ = "A RAG system for creating knowledge bases from LaTeX documents"
+__description__ = "A knowledge base manager for LaTeX documents"
 __url__ = "https://github.com/vahidlari/aiapps"

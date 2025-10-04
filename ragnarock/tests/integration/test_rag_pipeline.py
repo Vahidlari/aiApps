@@ -1,12 +1,12 @@
-"""Integration tests for the complete RAG pipeline.
+"""Integration tests for the complete knowledge base manager pipeline.
 
 This module contains comprehensive integration tests that test the complete
-RAG system workflow, including document processing, storage, retrieval,
+knowledge base manager workflow, including document processing, storage, retrieval,
 and querying operations.
 
 Test coverage includes:
 - End-to-end document processing pipeline
-- Complete RAG system workflow
+- Complete knowledge base manager workflow
 - Component integration and communication
 - Real-world usage scenarios
 - Performance and reliability testing
@@ -19,11 +19,11 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from ragnarock import ChunkMetadata, DataChunk, RAGSystem
+from ragnarock import ChunkMetadata, DataChunk, KnowledgeBaseManager
 
 
-class TestRAGPipeline:
-    """Integration test suite for the complete RAG pipeline."""
+class TestKnowledgeBaseManagerPipeline:
+    """Integration test suite for the complete knowledge base manager pipeline."""
 
     @pytest.fixture
     def sample_latex_document(self):
@@ -117,13 +117,13 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             ),
         ]
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
-    def test_complete_rag_system_initialization(
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
+    def test_complete_knowledge_base_manager_initialization(
         self,
         mock_data_chunker,
         mock_document_preprocessor,
@@ -132,7 +132,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_embedding_engine,
         mock_db_manager,
     ):
-        """Test complete RAG system initialization."""
+        """Test complete knowledge base manager initialization."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
         mock_embedding_engine.return_value = Mock()
@@ -142,7 +142,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Test
-        rag = RAGSystem(
+        kbm = KnowledgeBaseManager(
             weaviate_url="http://localhost:8080",
             class_name="TestDocument",
             embedding_model="all-mpnet-base-v2",
@@ -151,19 +151,19 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         )
 
         # Assertions
-        assert rag.is_initialized is True
-        assert rag.vector_store is not None
-        assert rag.retriever is not None
-        assert rag.embedding_engine is not None
-        assert rag.document_preprocessor is not None
-        assert rag.data_chunker is not None
+        assert kbm.is_initialized is True
+        assert kbm.vector_store is not None
+        assert kbm.retriever is not None
+        assert kbm.embedding_engine is not None
+        assert kbm.document_preprocessor is not None
+        assert kbm.data_chunker is not None
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_document_processing_pipeline(
         self,
         mock_data_chunker,
@@ -196,7 +196,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         ]
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Create temporary LaTeX file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".tex", delete=False) as f:
@@ -205,7 +205,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         try:
             # Test document processing
-            result = rag.process_document(temp_path)
+            result = kbm.process_document(temp_path)
 
             # Assertions
             assert result == ["uuid1", "uuid2", "uuid3"]
@@ -219,12 +219,12 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         finally:
             os.unlink(temp_path)
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_query_processing_pipeline(
         self,
         mock_data_chunker,
@@ -266,10 +266,10 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_retriever.return_value.search_hybrid.return_value = mock_search_results
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Test query processing
-        result = rag.query(
+        result = kbm.query(
             "What is Einstein's famous equation?",
             search_type="hybrid",
             top_k=5,
@@ -291,12 +291,12 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "What is Einstein's famous equation?", class_name="Document", top_k=5
         )
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_system_statistics_integration(
         self,
         mock_data_chunker,
@@ -332,10 +332,10 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         }
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Test system statistics
-        stats = rag.get_system_stats()
+        stats = kbm.get_system_stats()
 
         # Assertions
         assert stats["system_initialized"] is True
@@ -344,12 +344,12 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert "components" in stats
         assert "retrieval" in stats
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_error_handling_integration(
         self,
         mock_data_chunker,
@@ -374,18 +374,18 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         )
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Test error handling
         with pytest.raises(Exception, match="Search failed"):
-            rag.search_similar("test query")
+            kbm.search_similar("test query")
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_context_manager_integration(
         self,
         mock_data_chunker,
@@ -405,20 +405,20 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Test context manager
-        with RAGSystem() as rag:
-            assert rag.is_initialized is True
-            assert rag.vector_store is not None
-            assert rag.retriever is not None
+        with KnowledgeBaseManager() as kbm:
+            assert kbm.is_initialized is True
+            assert kbm.vector_store is not None
+            assert kbm.retriever is not None
 
         # Verify cleanup
-        assert rag.is_initialized is False
+        assert kbm.is_initialized is False
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_component_communication(
         self,
         mock_data_chunker,
@@ -438,20 +438,20 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Test that components are properly connected
-        assert hasattr(rag.retriever, "vector_store")
-        assert hasattr(rag.retriever, "embedding_engine")
-        assert hasattr(rag.vector_store, "embedding_engine")
-        assert rag.is_initialized is True
+        assert hasattr(kbm.retriever, "vector_store")
+        assert hasattr(kbm.retriever, "embedding_engine")
+        assert hasattr(kbm.vector_store, "embedding_engine")
+        assert kbm.is_initialized is True
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_performance_characteristics(
         self,
         mock_data_chunker,
@@ -471,22 +471,22 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Create RAG system
-        rag = RAGSystem()
+        kbm = KnowledgeBaseManager()
 
         # Test that system is ready for operations
-        assert rag.is_initialized is True
+        assert kbm.is_initialized is True
         assert hasattr(rag, "vector_store")
         assert hasattr(rag, "retriever")
         assert hasattr(rag, "embedding_engine")
         assert hasattr(rag, "document_preprocessor")
         assert hasattr(rag, "data_chunker")
 
-    @patch("ragnarock.ragnarock.core.rag_system.DatabaseManager")
-    @patch("ragnarock.ragnarock.core.rag_system.EmbeddingEngine")
-    @patch("ragnarock.ragnarock.core.rag_system.VectorStore")
-    @patch("ragnarock.ragnarock.core.rag_system.Retriever")
-    @patch("ragnarock.ragnarock.core.rag_system.DocumentPreprocessor")
-    @patch("ragnarock.ragnarock.core.rag_system.DataChunker")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.EmbeddingEngine")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.VectorStore")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.Retriever")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DocumentPreprocessor")
+    @patch("ragnarock.ragnarock.core.knowledge_base_manager.DataChunker")
     def test_configuration_validation(
         self,
         mock_data_chunker,
@@ -506,7 +506,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_data_chunker.return_value = Mock()
 
         # Test with custom configuration
-        rag = RAGSystem(
+        kbm = KnowledgeBaseManager(
             weaviate_url="http://custom:8080",
             class_name="CustomDocument",
             embedding_model="custom-model",
@@ -515,9 +515,9 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         )
 
         # Assertions
-        assert rag.is_initialized is True
-        assert rag.vector_store is not None
-        assert rag.retriever is not None
-        assert rag.embedding_engine is not None
-        assert rag.document_preprocessor is not None
-        assert rag.data_chunker is not None
+        assert kbm.is_initialized is True
+        assert kbm.vector_store is not None
+        assert kbm.retriever is not None
+        assert kbm.embedding_engine is not None
+        assert kbm.document_preprocessor is not None
+        assert kbm.data_chunker is not None
