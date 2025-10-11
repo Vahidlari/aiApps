@@ -136,7 +136,7 @@ class TestIMAPProvider:
         assert not imap_provider.is_connected
 
     @patch("ragora.utils.email_utils.imap_provider.imaplib.IMAP4_SSL")
-    @patch("ragora.utils.email_utils.imap_provider.smtplib.SMTP")
+    @patch("ragora.utils.email_utils.imap_provider.smtplib.SMTP_SSL")
     def test_imap_connect(self, mock_smtp, mock_imap, imap_provider):
         """Test IMAP provider connection."""
         mock_imap_instance = Mock()
