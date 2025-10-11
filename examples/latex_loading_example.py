@@ -28,7 +28,7 @@ import logging
 import sys
 from pathlib import Path
 
-from ragnarock import (
+from ragora import (
     ChunkConfig,
     DatabaseManagerConfig,
     EmbeddingConfig,

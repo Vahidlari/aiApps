@@ -61,7 +61,7 @@ aiApps/
 │   │   ├── references.bib           # Bibliography file
 │   │   └── sample_chapter.tex       # Sample LaTeX chapter
 │   └── README.md                     # Examples documentation
-├── ragnarock/                        # Main RAG system package
+├── ragora/                           # Main RAG system package
 │   ├── __init__.py
 │   ├── install_dev.py               # Development installation script
 │   ├── pyproject.toml               # Package configuration
@@ -69,7 +69,7 @@ aiApps/
 │   ├── requirements.txt             # Production dependencies
 │   ├── requirements-dev.txt         # Development dependencies
 │   ├── setup.py                     # Package setup
-│   ├── ragnarock/                   # Core package modules
+│   ├── ragora/                      # Core package modules
 │   │   ├── __init__.py
 │   │   ├── cli/                     # Command-line interface
 │   │   │   ├── __init__.py
@@ -163,7 +163,7 @@ aiApps/
 - **`.github/workflows/`** - Automated CI/CD pipelines for Docker image builds and dependency updates
 - **`.vscode/`** - VS Code workspace configuration for debugging and development settings
 - **`examples/`** - LaTeX document processing examples and sample documents for testing RAG systems
-- **`ragnarock/`** - Complete RAG (Retrieval-Augmented Generation) system package with LaTeX support, featuring:
+- **`ragora/`** - Complete RAG (Retrieval-Augmented Generation) system package with LaTeX support, featuring:
   - Three-layer architecture (DatabaseManager, VectorStore, Retriever)
   - Weaviate integration for vector storage
   - Sentence Transformers for embeddings
@@ -235,8 +235,8 @@ Welcome to the AI Apps team! This guide will help you get up and running quickly
    # Check Python environment
    python --version  # Should show Python 3.11
    
-   # Check if RAGnaROCK package is installed
-   python -c "import ragnarock; print('✅ RAGnaROCK installed successfully')"
+   # Check if Ragora package is installed
+   python -c "import ragora; print('✅ Ragora installed successfully')"
    ```
 
 ### 🔐 Authentication Setup
@@ -296,8 +296,8 @@ outside of the devcontainer.
 
 #### Run Test Suites
 ```bash
-# Navigate to RAGnaROCK directory
-cd ragnarock
+# Navigate to Ragora directory
+cd ragora
 
 # Run all tests
 python -m pytest
@@ -319,7 +319,7 @@ python -m pytest tests/unit/test_rag_system.py
 pip install pytest-cov
 
 # Run tests with coverage
-python -m pytest --cov=ragnarock --cov-report=html
+python -m pytest --cov=ragora --cov-report=html
 
 # View coverage report
 open htmlcov/index.html  # macOS
@@ -369,8 +369,8 @@ git push origin feature/your-feature-name
 
 #### Adding Dependencies
 ```bash
-# For RAGnaROCK package dependencies
-cd ragnarock
+# For Ragora package dependencies
+cd ragora
 pip install your-new-package
 pip freeze > requirements.txt
 
@@ -408,7 +408,7 @@ echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-
 python tools/scripts/verify_test_setup.py
 
 # Check if all dependencies are installed
-cd ragnarock
+cd ragora
 pip install -e .
 ```
 
@@ -424,8 +424,8 @@ cd tools/database_server
 
 **Import errors:**
 ```bash
-# Ensure RAGnaROCK is installed in development mode
-cd ragnarock
+# Ensure Ragora is installed in development mode
+cd ragora
 pip install -e .
 ```
 
@@ -433,8 +433,8 @@ pip install -e .
 
 #### Understanding the Codebase
 1. **Start with Examples:** Run the examples in `examples/` directory
-2. **Read RAGnaROCK Docs:** Check `ragnarock/README.md` for detailed system architecture
-3. **Explore Tests:** Look at `ragnarock/tests/` to understand expected behavior
+2. **Read Ragora Docs:** Check `ragora/README.md` for detailed system architecture
+3. **Explore Tests:** Look at `ragora/tests/` to understand expected behavior
 
 #### Key Concepts
 - **RAG System:** Retrieval-Augmented Generation for LaTeX documents
@@ -453,7 +453,7 @@ pip install -e .
 
 - [ ] DevContainer opens successfully
 - [ ] Python 3.11 environment is active
-- [ ] RAGnaROCK package imports without errors
+- [ ] Ragora package imports without errors
 - [ ] Examples run successfully
 - [ ] Tests pass (at least the basic ones)
 - [ ] Git is configured with your name and email

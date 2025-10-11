@@ -2,7 +2,7 @@
 
 import logging
 
-from ragnarock import KnowledgeBaseManager
+from ragora import KnowledgeBaseManager
 
 # Configure logging with more detailed formatting
 logging.basicConfig(

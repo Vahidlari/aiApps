@@ -141,16 +141,16 @@ After a release, users can install your package:
 ### From GitHub Package Registry
 ```bash
 # Install specific version
-pip install ragnarock==1.2.3 --index-url https://pypi.org/simple/
+pip install ragora==1.2.3 --index-url https://pypi.org/simple/
 
 # Or using extra-index-url (recommended)
-pip install ragnarock==1.2.3 --extra-index-url https://pypi.org/simple/
+pip install ragora==1.2.3 --extra-index-url https://pypi.org/simple/
 ```
 
 ### From GitHub Releases
 ```bash
 # Install wheel directly
-pip install https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragnarock-1.2.3-py3-none-any.whl
+pip install https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragora-1.2.3-py3-none-any.whl
 ```
 
 ## 🔧 Troubleshooting

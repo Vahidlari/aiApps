@@ -91,8 +91,8 @@
             {
                 "assets": [
                     "CHANGELOG.md",
-                    "ragnarock/pyproject.toml",
-                    "ragnarock/ragnarock/_version.py"
+                    "ragora/pyproject.toml",
+                    "ragora/ragora/_version.py"
                 ],
                 "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
             }
@@ -102,11 +102,11 @@
             {
                 "assets": [
                     {
-                        "path": "ragnarock/dist/*.whl",
+                        "path": "ragora/dist/*.whl",
                         "label": "Python Wheel"
                     },
                     {
-                        "path": "ragnarock/dist/*.tar.gz",
+                        "path": "ragora/dist/*.tar.gz",
                         "label": "Python Source Distribution"
                     },
                     {

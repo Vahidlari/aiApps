@@ -7,7 +7,7 @@ echo "🧪 Testing Milestone-Driven Release System"
 echo "=========================================="
 
 # Check if we're in the right directory
-if [ ! -f "ragnarock/pyproject.toml" ]; then
+if [ ! -f "ragora/pyproject.toml" ]; then
     echo "❌ Error: Must be run from the project root directory"
     exit 1
 fi
@@ -47,7 +47,7 @@ fi
 echo "✅ Database server directory found"
 
 # Check Python package configuration
-cd ragnarock
+cd ragora
 
 if ! grep -q "dynamic = \[\"version\"\]" pyproject.toml; then
     echo "❌ Error: pyproject.toml not configured for dynamic versioning"
@@ -131,7 +131,7 @@ echo ""
 echo "5. Or manually trigger via GitHub Actions → Milestone-Driven Release"
 echo ""
 echo "📦 Users can install your package with:"
-echo "   pip install ragnarock==<version> --index-url https://pypi.org/simple/"
+echo "   pip install ragora==<version> --index-url https://pypi.org/simple/"
 echo ""
 echo "📚 See RELEASE_AUTOMATION.md for detailed documentation"
 
