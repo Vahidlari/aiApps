@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "ragnarock"
+        "ragora"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true
