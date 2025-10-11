@@ -115,13 +115,13 @@ jobs:
           npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
 
       - name: Install Python dependencies
-        working-directory: ./ragnarock
+        working-directory: ./ragora
         run: |
           python -m pip install --upgrade pip
           pip install build twine setuptools_scm[toml]
 
       - name: Build Python package
-        working-directory: ./ragnarock
+        working-directory: ./ragora
         run: |
           python -m build
 
@@ -136,7 +136,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-packages
-          path: ragnarock/dist/*
+          path: ragora/dist/*
 
       - name: Create database server archive
         id: create_db_archive
@@ -267,24 +267,24 @@ $PRS
 ### From GitHub Package Registry (Recommended)
 \`\`\`bash
 # Install specific version
-pip install ragnarock==$VERSION --index-url https://pypi.org/simple/
+pip install ragora==$VERSION --index-url https://pypi.org/simple/
 
 # Or using extra-index-url (recommended)
-pip install ragnarock==$VERSION --extra-index-url https://pypi.org/simple/
+pip install ragora==$VERSION --extra-index-url https://pypi.org/simple/
 
 # Configure permanently in pip.conf
 echo '[global]
 extra-index-url = https://pypi.org/simple/' >> ~/.pip/pip.conf
-pip install ragnarock==$VERSION
+pip install ragora==$VERSION
 \`\`\`
 
 ### From GitHub Releases (Alternative)
 \`\`\`bash
 # Install wheel directly
-pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragnarock-$VERSION-py3-none-any.whl
+pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragora-$VERSION-py3-none-any.whl
 
 # Or install from source
-pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragnarock-$VERSION.tar.gz
+pip install https://github.com/${{ github.repository }}/releases/download/v$VERSION/ragora-$VERSION.tar.gz
 \`\`\`"
           
           # Append milestone summary and installation instructions

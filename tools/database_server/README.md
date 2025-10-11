@@ -297,7 +297,7 @@ The portable solution uses a **containerized management approach**:
 
 ## 📝 License
 
-This project is part of the Ragnarock AI system. See the main project for license information.
+This project is part of the Ragora AI system. See the main project for license information.
 
 ## 🆘 Support
 
