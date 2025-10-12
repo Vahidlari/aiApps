@@ -1,486 +1,229 @@
-# AI Models Practice Repository
+# Ragora Development Repository
 
-This repository is designed for practicing AI models and implementing RAG (Retrieval-Augmented Generation) systems. It includes a complete development container setup for a consistent development environment.
+This repository hosts the development of **Ragora**, an open-source RAG (Retrieval-Augmented Generation) library for Python, along with examples and use cases demonstrating its capabilities.
 
-## 🚀 Quick Start with DevContainer
+## 🎯 What is Ragora?
 
-The easiest way to get started is using the development container:
+Ragora is a framework for building RAG systems that connect language models to real, reliable knowledge. It provides clean, composable interfaces for managing knowledge bases, document retrieval, and grounding pipelines. The name blends "RAG" with the ancient Greek "Agora" — the public square where ideas were exchanged and refined.
 
-1. **Prerequisites:**
-   - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-   - Install [VS Code](https://code.visualstudio.com/)
-   - Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for VS Code
+**Key Features:**
+- 📄 Specialized LaTeX document processing with equation preservation
+- 🏗️ Clean three-layer architecture for flexibility
+- 🔍 Multiple search modes: vector, keyword, and hybrid
+- 🧩 Composable components for custom pipelines
+- ⚡ Performance-optimized with batch processing and GPU support
 
-2. **Open in DevContainer:**
-   - Clone this repository
-   - Open the repository in VS Code
-   - When prompted, click "Reopen in Container" or use `Ctrl+Shift+P` → "Dev Containers: Reopen in Container"
+## 🚀 Quick Start
 
-## 🐳 Docker Image Management
+### For Users
 
-The development environment uses a custom Docker image hosted on GitHub Container Registry. The image includes:
-
-- **Python 3.11** with all necessary development tools
-- **Common AI/ML libraries** (numpy, pandas, scikit-learn, etc.)
-- **RAG-specific packages** (langchain, chromadb, sentence-transformers)
-- **Development tools** (black, flake8, isort, pytest)
-- **Jupyter notebooks** support
-
-### Building the Docker Image locally
-
-To update the Docker image:
+Install Ragora from PyPI:
 
 ```bash
-cd tools/docker
-./build-docker.sh -u
+pip install ragora
 ```
-Note: The devContainer fetches the image from a github registery, therefore, a local image build is normally not needed.
-In order to update the image, create a PR with changes in dockerfile or Pipfile. A github action is envoked to update the image. 
-Once the image is updated, update the image tag in .devcontainer/devcontainer.json
 
-For detailed instructions, see [tools/docker/README.md](tools/docker/README.md).
+See the [Ragora README](ragora/README.md) for installation and usage guide.
 
-## 📁 Project Structure
+### For Contributors
+
+Set up the development environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/vahidlari/aiapps.git
+cd aiapps
+
+# Open in DevContainer (recommended)
+code .
+# Click "Reopen in Container" when prompted
+```
+
+See [docs/onboarding.md](docs/onboarding.md) for detailed setup instructions.
+
+## 📁 Repository Structure
 
 ```
 aiApps/
-├── .devcontainer/                    # DevContainer configuration
-│   └── devcontainer.json            # Container setup with Python 3.11 and AI/ML tools
-├── .github/                          # GitHub automation and CI/CD
-│   └── workflows/
-│       ├── docker-build.yml         # Automated Docker image builds
-│       └── update-dependencies.yml   # Dependency update automation
-├── .vscode/                          # VS Code development configuration
-│   ├── launch.json                   # Debug configurations
-│   └── settings.json                 # Workspace settings
-├── examples/                         # AI model examples and demonstrations
-│   ├── __init__.py
-│   ├── latex_loading_example.py     # LaTeX document loading example
-│   ├── latex_retriever_example.py   # LaTeX RAG retrieval example
-│   ├── latex_samples/               # Sample LaTeX documents for testing
-│   │   ├── references.bib           # Bibliography file
-│   │   └── sample_chapter.tex       # Sample LaTeX chapter
-│   └── README.md                     # Examples documentation
-├── ragora/                           # Main RAG system package
-│   ├── __init__.py
-│   ├── install_dev.py               # Development installation script
-│   ├── pyproject.toml               # Package configuration
-│   ├── pytest.ini                  # Test configuration
-│   ├── requirements.txt             # Production dependencies
-│   ├── requirements-dev.txt         # Development dependencies
-│   ├── setup.py                     # Package setup
-│   ├── ragora/                      # Core package modules
-│   │   ├── __init__.py
-│   │   ├── cli/                     # Command-line interface
-│   │   │   ├── __init__.py
-│   │   │   └── main.py              # CLI entry point
-│   │   ├── config/                  # Configuration management
-│   │   │   ├── __init__.py
-│   │   │   └── settings.py          # Settings management
-│   │   ├── core/                    # Core Knowledge-base components
-│   │   │   ├── __init__.py
-│   │   │   ├── data_chunker.py      # Document chunking logic
-│   │   │   ├── database_manager.py  # Weaviate database management
-│   │   │   ├── document_preprocessor.py # LaTeX document processing
-│   │   │   ├── embedding_engine.py  # Vector embedding generation
-│   │   │   ├── knowledge_base_manager.py # Main knowledge-base orchestrator
-│   │   │   ├── retriever.py         # Document retrieval logic
-│   │   │   └── vector_store.py      # Vector storage operations
-│   │   ├── examples/                # Usage examples
-│   │   │   ├── __init__.py
-│   │   │   ├── advanced_usage.py    # Advanced RAG usage examples
-│   │   │   └── basic_usage.py       # Basic RAG usage examples
-│   │   ├── utils/                   # Utility functions
-│   │   │   ├── __init__.py
-│   │   │   ├── device_utils.py      # Device detection utilities
-│   │   │   └── latex_parser.py      # LaTeX parsing utilities
-│   │   ├── exceptions.py            # Custom exceptions
-│   │   └── version.py               # Version information
-│   ├── tests/                       # Comprehensive test suite
-│   │   ├── __init__.py
-│   │   ├── conftest.py              # Pytest configuration
-│   │   ├── fixtures/                # Test fixtures and sample data
-│   │   │   ├── __init__.py
-│   │   │   ├── expected_outputs/   # Expected test outputs
-│   │   │   ├── sample_bibliography.bib # Sample bibliography
-│   │   │   └── sample_latex.tex     # Sample LaTeX document
-│   │   ├── integration/             # Integration tests
-│   │   │   ├── __init__.py
-│   │   │   ├── test_dbmng_retriever_vector_store.py
-│   │   │   ├── test_document_parsing.py
-│   │   │   ├── test_document_preprocessor.py
-│   │   │   └── test_rag_pipeline.py
-│   │   ├── unit/                    # Unit tests
-│   │   │   ├── __init__.py
-│   │   │   ├── test_config.py
-│   │   │   ├── test_data_chunker.py
-│   │   │   ├── test_database_manager.py
-│   │   │   ├── test_document_preprocessor.py
-│   │   │   ├── test_embedding_engine.py
-│   │   │   ├── test_latex_parser.py
-│   │   │   ├── test_rag_system.py
-│   │   │   ├── test_retriever.py
-│   │   │   └── test_vector_store.py
-│   │   ├── utils/                   # Test utilities
-│   │   │   ├── __init__.py
-│   │   │   └── test_helpers.py      # Test helper functions
-│   │   ├── run_tests.py             # Test runner script
-│   │   └── README.md                # Testing documentation
-│   └── README.md                    # RAG system documentation
-├── tools/                           # Development and deployment tools
-│   ├── docker/                      # Docker image management
-│   │   ├── build-docker.sh          # Docker image build script
-│   │   ├── Dockerfile               # Development environment Dockerfile
-│   │   ├── env.template             # Environment variables template
-│   │   ├── generate-lock.sh         # Dependency lock generation
-│   │   ├── Pipfile                  # Python dependencies (Pipenv)
-│   │   ├── Pipfile.lock             # Locked dependencies
-│   │   └── README.md                # Docker management documentation
-│   ├── database_server/             # Weaviate database server management
-│   │   ├── config.yaml              # Database configuration
-│   │   ├── database-manager.sh      # Database management script
-│   │   ├── examples/                # Configuration examples
-│   │   │   ├── config-development.yaml
-│   │   │   ├── config-production.yaml
-│   │   │   ├── config-testing.yaml
-│   │   │   └── README.md
-│   │   ├── scripts/                 # Helper scripts
-│   │   │   ├── config-loader.sh
-│   │   │   └── test-portable.sh
-│   │   └── config/                  # Configuration templates
-│   │       ├── config.yaml.template
-│   │       ├── docker-compose.yml
-│   │       ├── Dockerfile.management
-│   │       └── user-config.yaml
-│   └── scripts/                     # Utility scripts
-│       ├── verify_test_setup.py     # Test environment verification
-│       └── README.md                # Scripts documentation
-└── README.md                        # This file
+├── ragora/                    # Main Ragora package
+│   ├── ragora/               # Source code
+│   ├── tests/                # Test suite
+│   ├── docs/                 # Package documentation
+│   └── README.md             # Package overview (PyPI)
+├── examples/                  # Usage examples
+│   ├── latex_loading_example.py
+│   ├── latex_retriever_example.py
+│   └── README.md             # Examples guide
+├── tools/                     # Development tools
+│   ├── docker/               # Docker image management
+│   ├── database_server/      # Weaviate server setup
+│   └── scripts/              # Utility scripts
+├── docs/                      # Repository documentation
+│   ├── onboarding.md         # Team onboarding guide
+│   ├── devcontainer.md       # DevContainer setup
+│   ├── development.md        # Development workflow
+│   └── release.md            # Release process
+└── README.md                  # This file
 ```
 
-### 🎯 Key Components
+## 🐳 Development Environment
 
-- **`.github/workflows/`** - Automated CI/CD pipelines for Docker image builds and dependency updates
-- **`.vscode/`** - VS Code workspace configuration for debugging and development settings
-- **`examples/`** - LaTeX document processing examples and sample documents for testing RAG systems
-- **`ragora/`** - Complete RAG (Retrieval-Augmented Generation) system package with LaTeX support, featuring:
-  - Three-layer architecture (DatabaseManager, VectorStore, Retriever)
-  - Weaviate integration for vector storage
-  - Sentence Transformers for embeddings
-  - Comprehensive test suite with unit and integration tests
-- **`tools/docker/`** - Docker image management with automated builds and GitHub Container Registry integration
-- **`tools/database_server/`** - Portable Weaviate database server management with zero external dependencies
-- **`tools/scripts/`** - Utility scripts for test environment verification and development automation
+### Using DevContainer (Recommended)
 
-## 🔧 Development Environment Features
+The easiest way to get started:
 
-The devcontainer includes:
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+2. Install [VS Code](https://code.visualstudio.com/) with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+3. Open the repository in VS Code
+4. Click "Reopen in Container"
 
-- **Python 3.11** as the default interpreter
-- **VS Code extensions** for Python development, Jupyter notebooks, and Docker
-- **Code formatting** with Black and import sorting with isort
-- **Linting** with flake8
-- **Git integration** with GitHub CLI
-- **Jupyter Lab** for interactive development
+The DevContainer includes:
+- Python 3.11 with all development tools
+- AI/ML libraries (PyTorch, Transformers, Sentence Transformers)
+- Code quality tools (Black, Flake8, isort, pytest)
+- Jupyter Lab for interactive development
 
-## 📦 Python Dependencies
+See [docs/devcontainer.md](docs/devcontainer.md) for details.
 
-The environment comes pre-installed with:
+### Docker Images
 
-- **Core ML libraries:** numpy, pandas, matplotlib, seaborn, scikit-learn
-- **Deep Learning:** PyTorch, Transformers, Datasets
-- **RAG systems:** LangChain, ChromaDB, FAISS, Sentence Transformers
-- **AI APIs:** OpenAI, Anthropic
-- **Development tools:** Black, flake8, isort, pytest
+Pre-built Docker images are available from GitHub Container Registry. See [tools/docker/README.md](tools/docker/README.md) for building and managing images.
 
-## 🚀 Getting Started
+### Database Setup
 
-1. **Open the repository in VS Code with DevContainer**
-2. **Install additional dependencies** (if needed):
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Start coding!** The environment is ready for AI model development
+Ragora uses Weaviate as its vector database. For users, download the pre-configured database server from releases:
 
-## 👥 Team Onboarding Guide
-
-Welcome to the AI Apps team! This guide will help you get up and running quickly with our development environment.
-
-### 🎯 Quick Start (5 minutes)
-
-1. **Prerequisites Check:**
-   - [ ] Docker Desktop installed and running
-   - [ ] VS Code installed
-   - [ ] Dev Containers extension installed in VS Code
-   - [ ] GitHub account with repository access
-
-2. **Authentication Setup (if needed):**
-   - [ ] GitHub account added as collaborator to the repository
-   - [ ] If Docker image is private, you may need a Personal Access Token (see below)
-
-2. **Clone and Open:**
-   ```bash
-   git clone https://github.com/vahidlari/aiapps.git
-   cd aiapps
-   code .
-   ```
-
-3. **Open in DevContainer:**
-   - When prompted, click "Reopen in Container"
-   - Or use `Ctrl+Shift+P` → "Dev Containers: Reopen in Container"
-   - Wait for the container to build (first time takes 5-10 minutes)
-
-4. **Verify Setup:**
-   ```bash
-   # Check Python environment
-   python --version  # Should show Python 3.11
-   
-   # Check if Ragora package is installed
-   python -c "import ragora; print('✅ Ragora installed successfully')"
-   ```
-
-### 🔐 Authentication Setup
-
-#### Repository Access
-- **Repository**: The repository should be accessible to you as a collaborator
-- **No additional setup needed** for public repositories
-- **For private repositories**: Ensure you're added as a collaborator with appropriate permissions
-
-#### Docker Image Access
-The DevContainer uses a Docker image from GitHub Container Registry. You may need authentication if the image is private:
-
-1. **Create a Personal Access Token:**
-   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Click "Generate new token (classic)"
-   - Select scopes: `read:packages`
-   - Copy the token (you won't see it again!)
-
-2. **Authenticate Docker with GitHub:**
-   ```bash
-   # Login to GitHub Container Registry
-   echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-   ```
-
-3. **Alternative: Configure VS Code to use GitHub token:**
-   - In VS Code, go to Settings → Extensions → Dev Containers
-   - Add your GitHub token to the settings
-   - Or set environment variable: `GITHUB_TOKEN=your_token_here`
-
-**Troubleshooting Authentication:**
 ```bash
-# Test if you can pull the image manually
-docker pull ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578
-
-# If this fails with authentication error, you need the PAT setup above
+# Download from GitHub releases
+wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+tar -xzf ragora-database-server.tar.gz
+cd ragora-database-server
+./database-manager.sh start
 ```
 
-### 🧪 Running Examples
-
-#### LaTeX Document Processing and vectorization on a RAG  
+**For contributors:** Use the database server from this repository:
 ```bash
-# Navigate to examples directory
+cd tools/database_server
+./database-manager.sh start
+```
+
+See [tools/database_server/README.md](tools/database_server/README.md) for details.
+
+## 🧪 Running Examples
+
+```bash
+# Navigate to examples
 cd examples
 
-# Run LaTeX loading example
+# Run LaTeX document loading
 python latex_loading_example.py
 
-# Run LaTeX retrieval example
+# Run document retrieval
 python latex_retriever_example.py
 ```
 
-Note: You may need to update the url for the Weaviate server, based on your own setup. 
-The current implementation assumes that you are running the code in a devcontainer and a server is running 
-outside of the devcontainer. 
+**Note:** Examples assume Weaviate is running at `http://localhost:8080`. If running in DevContainer with Weaviate on the host, update the URL to `http://host.docker.internal:8080`.
 
-### 🧪 Running Tests
+See [examples/README.md](examples/README.md) for detailed examples documentation.
 
-#### Run Test Suites
+## 🧪 Running Tests
+
 ```bash
-# Navigate to Ragora directory
+# Navigate to Ragora package
 cd ragora
 
 # Run all tests
 python -m pytest
 
-# Run specific test categories
-python -m pytest tests/unit/          # Unit tests only
-python -m pytest tests/integration/  # Integration tests only
-
-# Run with verbose output
-python -m pytest -v
-
-# Run specific test file
-python -m pytest tests/unit/test_rag_system.py
-```
-
-#### Test Coverage
-```bash
-# Install coverage tools (if not already installed)
-pip install pytest-cov
-
-# Run tests with coverage
+# Run with coverage
 python -m pytest --cov=ragora --cov-report=html
 
-# View coverage report
-open htmlcov/index.html  # macOS
-xdg-open htmlcov/index.html  # Linux
+# Run specific test types
+python -m pytest tests/unit/          # Unit tests
+python -m pytest tests/integration/  # Integration tests
 ```
 
-### 🗄️ Database Setup (Optional)
+See [ragora/docs/testing.md](ragora/docs/testing.md) for testing guidelines.
 
-If you want to work with the full RAG system:
+## 📚 Documentation
 
-```bash
-# Navigate to database tools
-cd tools/database_server
+### Repository Documentation
 
-# Start Weaviate database server
-./database-manager.sh start
+- **[onboarding.md](docs/onboarding.md)** - Getting started for new team members
+- **[devcontainer.md](docs/devcontainer.md)** - DevContainer setup and Docker image management
+- **[development.md](docs/development.md)** - Development workflow and best practices
+- **[release.md](docs/release.md)** - Release process and versioning
 
-# Check if it's running
-./database-manager.sh status
+### Ragora Package Documentation
 
-# Stop when done
-./database-manager.sh stop
-```
+- **[Getting Started](ragora/docs/getting_started.md)** - Installation and setup
+- **[Architecture](ragora/docs/architecture.md)** - System design and components
+- **[Design Decisions](ragora/docs/design_decisions.md)** - Design rationale
+- **[API Reference](ragora/docs/api_reference.md)** - Complete API documentation
+- **[Deployment](ragora/docs/deployment.md)** - Production deployment guide
+- **[Testing](ragora/docs/testing.md)** - Testing strategy and guidelines
+- **[Contributing](ragora/docs/contributing.md)** - How to contribute
 
-### 🔧 Development Workflow
+### Tools Documentation
 
-#### Code Quality Tools
-The environment comes pre-configured with:
-- **Black** for code formatting (auto-runs on save)
-- **Flake8** for linting
-- **isort** for import sorting
-
-#### Git Workflow
-```bash
-# Create a new branch for your work
-git checkout -b feature/your-feature-name
-
-# Make your changes, commit them
-git add .
-git commit -m "feat: add your feature description"
-
-# Push to GitHub
-git push origin feature/your-feature-name
-
-# Create a Pull Request on GitHub
-```
-
-#### Adding Dependencies
-```bash
-# For Ragora package dependencies
-cd ragora
-pip install your-new-package
-pip freeze > requirements.txt
-
-# For development environment dependencies
-cd tools/docker
-# Edit Pipfile to add new packages
-# The GitHub Actions will automatically update the Docker image
-```
-
-### 🐛 Troubleshooting
-
-#### Common Issues
-
-**DevContainer won't start:**
-```bash
-# Check Docker is running
-docker info
-
-# Rebuild the container
-Ctrl+Shift+P → "Dev Containers: Rebuild Container"
-```
-
-**Authentication errors when opening DevContainer:**
-```bash
-# Test Docker image access
-docker pull ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578
-
-# If authentication fails, set up Personal Access Token (see Authentication Setup section)
-echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-```
-
-**Tests failing:**
-```bash
-# Verify test setup
-python tools/scripts/verify_test_setup.py
-
-# Check if all dependencies are installed
-cd ragora
-pip install -e .
-```
-
-**Database connection issues:**
-```bash
-# Check if Weaviate is running
-cd tools/database_server
-./database-manager.sh status
-
-# Restart if needed
-./database-manager.sh restart
-```
-
-**Import errors:**
-```bash
-# Ensure Ragora is installed in development mode
-cd ragora
-pip install -e .
-```
-
-### 📚 Learning Resources
-
-#### Understanding the Codebase
-1. **Start with Examples:** Run the examples in `examples/` directory
-2. **Read Ragora Docs:** Check `ragora/README.md` for detailed system architecture
-3. **Explore Tests:** Look at `ragora/tests/` to understand expected behavior
-
-#### Key Concepts
-- **RAG System:** Retrieval-Augmented Generation for LaTeX documents
-- **Three-Layer Architecture:** DatabaseManager → VectorStore → Retriever
-- **Weaviate Integration:** Vector database for document storage
-- **LaTeX Processing:** Specialized document preprocessing for academic papers
-
-### 🆘 Getting Help
-
-- **Documentation:** Check the README files in each directory
-- **Issues:** Create GitHub issues for bugs or questions
-- **Code Review:** All changes go through Pull Request review process
-- **Team Chat:** Use your team's communication channels for quick questions
-
-### ✅ Onboarding Checklist
-
-- [ ] DevContainer opens successfully
-- [ ] Python 3.11 environment is active
-- [ ] Ragora package imports without errors
-- [ ] Examples run successfully
-- [ ] Tests pass (at least the basic ones)
-- [ ] Git is configured with your name and email
-- [ ] You can create and push branches
-- [ ] You understand the project structure
-
-**🎉 Welcome to the team! You're ready to start contributing to the AI Apps project.**
-
-## 🔄 Automatic Docker Builds
-
-The repository includes GitHub Actions that automatically build and push the Docker image when changes are made to the Dockerfile. This ensures the devcontainer always uses the latest environment.
-
-## 📝 Next Steps
-
-- Create your AI model implementations in the repository
-- Add RAG system examples
-- Use Jupyter notebooks for experimentation
-- Leverage the pre-configured development tools for code quality
+- **[Docker Tools](tools/docker/README.md)** - Building and managing Docker images
+- **[Database Server](tools/database_server/README.md)** - Weaviate setup and management
+- **[Scripts](tools/scripts/README.md)** - Utility scripts
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure code quality with the pre-configured tools
-5. Submit a pull request
+We welcome contributions! Please see:
+
+1. **[onboarding.md](docs/onboarding.md)** - Set up your development environment
+2. **[development.md](docs/development.md)** - Learn the development workflow
+3. **[ragora/docs/contributing.md](ragora/docs/contributing.md)** - Contribution guidelines
+4. **[release.md](docs/release.md)** - Understanding releases
+
+### Quick Contribution Guide
+
+```bash
+# Create a feature branch
+git checkout -b feature/your-feature
+
+# Make your changes following coding standards
+# Run tests and ensure they pass
+python -m pytest
+
+# Commit using conventional commit format
+git commit -m "feat: add your feature description"
+
+# Push and create a pull request
+git push origin feature/your-feature
+```
+
+## 🔄 Release Process
+
+Ragora uses milestone-driven releases with automatic versioning based on conventional commits. See [docs/release.md](docs/release.md) for details.
+
+## 📦 Publishing
+
+The Ragora package is published to:
+- **PyPI**: `pip install ragora`
+- **GitHub Packages**: Available through GitHub Package Registry
 
 ## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the MIT License - see the [LICENSE](ragora/LICENSE) file for details.
+
+## 🔗 Links
+
+- **PyPI Package**: [pypi.org/project/ragora](https://pypi.org/project/ragora) (coming soon)
+- **GitHub Repository**: [github.com/vahidlari/aiapps](https://github.com/vahidlari/aiapps)
+- **Issues**: [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/aiapps/discussions)
+
+## 🆘 Getting Help
+
+- **Documentation**: Browse the docs in this repository
+- **Issues**: Report bugs or request features
+- **Discussions**: Ask questions and share ideas
+- **Examples**: Check the examples directory for practical usage
+
+---
+
+**Build smarter, grounded, and transparent AI with Ragora.**
