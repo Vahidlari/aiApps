@@ -78,7 +78,8 @@ jobs:
                   fi
 
                   # Check for conventional commits that would trigger a release
-                  RELEASE_COMMITS=$(echo "$COMMITS_SINCE_TAG" | grep -E "^(feat|fix|perf|refactor|style|docs|test|build|ci|chore)(\(.+\))?(!)?:|\bBREAKING CHANGE\b" || true)
+                  # Match: <hash> <type>[(scope)][!]: <description> OR BREAKING CHANGE anywhere
+                  RELEASE_COMMITS=$(echo "$COMMITS_SINCE_TAG" | grep -E "^[0-9a-f]{7,40} (feat|fix|perf|refactor|style|docs|test|build|ci|chore)(\(.+\))?(!)?:|\bBREAKING CHANGE\b" || true)
 
                   if [ -z "$RELEASE_COMMITS" ]; then
                     echo "has_release_commits=false" >> $GITHUB_OUTPUT
