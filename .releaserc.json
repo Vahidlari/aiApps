@@ -111,7 +111,11 @@
                     },
                     {
                         "path": "database_server-*.tar.gz",
-                        "label": "Database Server"
+                        "label": "Database Server (tar.gz)"
+                    },
+                    {
+                        "path": "database_server-*.zip",
+                        "label": "Database Server (zip)"
                     }
                 ],
                 "successComment": "🎉 This PR is included in version ${nextRelease.version} of the package.",
