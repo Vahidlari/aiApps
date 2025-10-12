@@ -113,19 +113,24 @@ For testing the release workflow without actually publishing to PyPI:
 5. Click **Run workflow**
 
 **What happens in dry run mode:**
-- ✅ Creates a GitHub release with all assets
+- ✅ Analyzes commits and determines the next version
 - ✅ Builds Python packages (wheel + source distribution)
 - ✅ Creates database server archives (tar.gz and zip)
-- ✅ Attaches all files to the GitHub release
-- ❌ **SKIPS** publishing to PyPI (safe for testing!)
+- ✅ Uploads artifacts to GitHub Actions (downloadable for 90 days)
+- ✅ Shows in logs what release notes would be generated
+- ❌ **DOES NOT** create git tags
+- ❌ **DOES NOT** create GitHub releases
+- ❌ **DOES NOT** publish to PyPI
+- ❌ **DOES NOT** update CHANGELOG.md in the repository
 
-**Use dry run when:**
-- Testing changes to the release workflow
+**Perfect for:**
+- Testing the workflow without making any permanent changes
 - Verifying package builds correctly
-- Checking release notes formatting
+- Previewing what version would be released
+- Checking release notes generation
 - Training team members on the release process
 
-> **Note:** Dry run mode creates a real GitHub release. If you want to test without creating any release, use a test repository instead.
+> **Note:** Dry run mode does NOT create any releases or tags. All artifacts are uploaded to GitHub Actions and can be downloaded for inspection.
 
 ## 🔍 What Happens During a Release
 
@@ -280,8 +285,9 @@ git commit -m "perf: optimize database queries"
 5. Verify package on PyPI
 
 **Testing the release workflow:**
-- Use **dry run mode** to test without publishing to PyPI
-- All assets are created, but PyPI publishing is skipped
+- Use **dry run mode** to test without creating releases or publishing
+- Artifacts are built and uploaded to GitHub Actions for inspection
+- No tags, releases, or repository changes are made
 
 ## 🆘 Getting Help
 
