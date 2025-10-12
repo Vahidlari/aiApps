@@ -102,6 +102,31 @@ more work
 3. Optionally specify a milestone title
 4. Click **Run workflow**
 
+### Method 3: Dry Run (Testing Mode)
+
+For testing the release workflow without actually publishing to PyPI:
+
+1. Go to **Actions** → **Milestone-Driven Release**
+2. Click **Run workflow**
+3. **Check the "Dry run mode" checkbox**
+4. Optionally specify a milestone title
+5. Click **Run workflow**
+
+**What happens in dry run mode:**
+- ✅ Creates a GitHub release with all assets
+- ✅ Builds Python packages (wheel + source distribution)
+- ✅ Creates database server archives (tar.gz and zip)
+- ✅ Attaches all files to the GitHub release
+- ❌ **SKIPS** publishing to PyPI (safe for testing!)
+
+**Use dry run when:**
+- Testing changes to the release workflow
+- Verifying package builds correctly
+- Checking release notes formatting
+- Training team members on the release process
+
+> **Note:** Dry run mode creates a real GitHub release. If you want to test without creating any release, use a test repository instead.
+
 ## 🔍 What Happens During a Release
 
 ### Step 1: Commit Analysis
@@ -253,6 +278,10 @@ git commit -m "perf: optimize database queries"
 3. Close milestone → Automatic release
 4. Check GitHub Releases for new version
 5. Verify package on PyPI
+
+**Testing the release workflow:**
+- Use **dry run mode** to test without publishing to PyPI
+- All assets are created, but PyPI publishing is skipped
 
 ## 🆘 Getting Help
 
