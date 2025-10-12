@@ -300,6 +300,66 @@ create_config() {
 }
 
 # Function to show help
+show_version() {
+    local METADATA_FILE="$SCRIPT_DIR/config/release-info.json"
+    local VERSION_FILE="$SCRIPT_DIR/config/VERSION"
+    
+    echo -e "${PURPLE}╔══════════════════════════════════════════════════╗${NC}"
+    echo -e "${PURPLE}║    Ragora Database Server - Version Info        ║${NC}"
+    echo -e "${PURPLE}╚══════════════════════════════════════════════════╝${NC}"
+    echo
+    
+    # Check if metadata file exists
+    if [ -f "$METADATA_FILE" ]; then
+        # Try to parse JSON using grep and sed (portable, no jq needed)
+        echo -e "${GREEN}Release Metadata:${NC}"
+        echo "─────────────────────────────────────────────────────"
+        
+        # Extract fields from JSON (portable, no jq required)
+        VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        RELEASE_DATE=$(grep -o '"release_date"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        GIT_TAG=$(grep -o '"git_tag"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        GIT_COMMIT=$(grep -o '"git_commit"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        GIT_BRANCH=$(grep -o '"git_branch"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        RELEASE_URL=$(grep -o '"release_url"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        REPOSITORY=$(grep -o '"repository"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        
+        echo -e "  ${BLUE}Version:${NC}       $VERSION"
+        echo -e "  ${BLUE}Release Date:${NC}  $RELEASE_DATE"
+        echo -e "  ${BLUE}Git Tag:${NC}       $GIT_TAG"
+        echo -e "  ${BLUE}Git Commit:${NC}    ${GIT_COMMIT:0:8}"
+        echo -e "  ${BLUE}Git Branch:${NC}    $GIT_BRANCH"
+        echo -e "  ${BLUE}Repository:${NC}    $REPOSITORY"
+        echo
+        echo -e "  ${BLUE}Release URL:${NC}"
+        echo -e "  $RELEASE_URL"
+        echo
+        
+        # Show file location
+        echo -e "${GREEN}Metadata File:${NC} $METADATA_FILE"
+        
+    elif [ -f "$VERSION_FILE" ]; then
+        # Fallback to simple VERSION file
+        echo -e "${GREEN}Version:${NC} $(cat $VERSION_FILE)"
+        echo
+        echo -e "${YELLOW}Note:${NC} Detailed metadata not available"
+        echo -e "      Only version file found: $VERSION_FILE"
+        
+    else
+        # No version information available
+        echo -e "${YELLOW}⚠ Version information not found${NC}"
+        echo
+        echo "This database server package does not contain version metadata."
+        echo
+        echo "Expected files:"
+        echo "  - $METADATA_FILE"
+        echo "  - $VERSION_FILE"
+        echo
+        echo "This is normal if you're running from a development environment."
+    fi
+    echo
+}
+
 show_help() {
     echo "Ultra-Portable Database Server Manager"
     echo
@@ -313,6 +373,7 @@ show_help() {
     echo "  status    Show the current status"
     echo "  logs      Show the server logs"
     echo "  config    Create or show configuration file"
+    echo "  version   Show version and release information"
     echo "  help      Show this help message"
     echo
     echo "Examples:"
@@ -320,6 +381,7 @@ show_help() {
     echo "  $0 status"
     echo "  $0 logs"
     echo "  $0 config"
+    echo "  $0 version"
     echo
     echo "Features:"
     echo "  ✅ Only requires Docker - no other dependencies"
@@ -345,8 +407,16 @@ show_system_info() {
 
 # Main script logic
 main() {
-    # Check Docker is running
-    check_docker
+    # Skip Docker check for commands that don't need it
+    case "${1:-help}" in
+        version|--version|-v|help|--help|-h)
+            # These commands don't need Docker
+            ;;
+        *)
+            # Check Docker is running for all other commands
+            check_docker
+            ;;
+    esac
     
     case "${1:-help}" in
         start)
@@ -375,6 +445,10 @@ main() {
             ;;
         info)
             show_system_info
+            ;;
+        version|--version|-v)
+            show_version
+            exit 0
             ;;
         help|--help|-h)
             show_help

@@ -183,6 +183,21 @@ jobs:
                     TAR_ARCHIVE="database_server-${VERSION}.tar.gz"
                     ZIP_ARCHIVE="database_server-${VERSION}.zip"
                     
+                    # Create version metadata using helper script
+                    bash tools/release-scripts/create-version-metadata.sh \
+                      "$VERSION" \
+                      "${{ github.sha }}" \
+                      "${{ github.ref_name }}" \
+                      "${{ github.repository }}"
+                    
+                    # Update README with version info using helper script
+                    bash tools/release-scripts/update-readme-version.sh \
+                      "$VERSION" \
+                      "${{ github.repository }}"
+                    
+                    echo ""
+                    echo "📦 Creating archives..."
+                    
                     # Create tar.gz archive excluding unnecessary files
                     tar --exclude='*.pyc' \
                         --exclude='__pycache__' \
@@ -206,9 +221,9 @@ jobs:
                     
                     echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
                     echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
-                    echo "Created archives: $TAR_ARCHIVE, $ZIP_ARCHIVE"
+                    echo "✅ Created archives: $TAR_ARCHIVE, $ZIP_ARCHIVE"
                   else
-                    echo "Database server directory not found"
+                    echo "❌ Database server directory not found"
                     echo "tar_archive=" >> $GITHUB_OUTPUT
                     echo "zip_archive=" >> $GITHUB_OUTPUT
                   fi
