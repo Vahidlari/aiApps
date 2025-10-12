@@ -1,29 +1,7 @@
 # API Reference
 
-This document provides an overview of the Ragora API. Detailed API documentation is generated from code docstrings using Sphinx.
+This document provides an overview of the Ragora API. Detailed API documentation will be generated automatically from code docstrings using Sphinx by the next release of the package.
 
-## 📚 Documentation Generation
-
-The complete API reference is automatically generated from Python docstrings using Sphinx. This ensures the documentation is always up-to-date with the code.
-
-### Generating Documentation
-
-To generate the full API documentation:
-
-```bash
-# Install Sphinx and dependencies
-pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints
-
-# Navigate to docs directory (to be created)
-cd ragora/docs
-
-# Generate documentation
-sphinx-build -b html source build
-
-# View the documentation
-open build/index.html  # macOS
-xdg-open build/index.html  # Linux
-```
 
 ## 🎯 Quick API Overview
 
@@ -31,7 +9,7 @@ xdg-open build/index.html  # Linux
 
 #### `ragora.KnowledgeBaseManager`
 
-Main entry point for RAG operations.
+Main entry point for retrieval operations.
 
 ```python
 from ragora import KnowledgeBaseManager

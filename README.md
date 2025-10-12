@@ -4,14 +4,15 @@ This repository hosts the development of **Ragora**, an open-source RAG (Retriev
 
 ## 🎯 What is Ragora?
 
-Ragora is a framework for building RAG systems that connect language models to real, reliable knowledge. It provides clean, composable interfaces for managing knowledge bases, document retrieval, and grounding pipelines. The name blends "RAG" with the ancient Greek "Agora" — the public square where ideas were exchanged and refined.
+Ragora is a framework for building RAG systems that connect language models to real, reliable knowledge. It provides clean, composable interfaces for managing knowledge bases, document retrieval, and grounding pipelines. The name blends "RAG" with the ancient Greek "Agora", the public square where ideas were exchanged and refined.
 
 **Key Features:**
-- 📄 Specialized LaTeX document processing with equation preservation
 - 🏗️ Clean three-layer architecture for flexibility
 - 🔍 Multiple search modes: vector, keyword, and hybrid
 - 🧩 Composable components for custom pipelines
 - ⚡ Performance-optimized with batch processing and GPU support
+- 📄 Utilities to process different types of documents
+
 
 ## 🚀 Quick Start
 
@@ -122,7 +123,7 @@ python latex_loading_example.py
 python latex_retriever_example.py
 ```
 
-**Note:** Examples assume Weaviate is running at `http://localhost:8080`. If running in DevContainer with Weaviate on the host, update the URL to `http://host.docker.internal:8080`.
+**Note:** Examples assume Weaviate is running running in DevContainer with Weaviate on the host, update the URL to `http://host.docker.internal:8080`. Alternatively, you may run it natively on your host machine, at `http://localhost:8080`.
 
 See [examples/README.md](examples/README.md) for detailed examples documentation.
 
