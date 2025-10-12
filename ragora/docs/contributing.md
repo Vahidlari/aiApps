@@ -34,8 +34,6 @@ cd tools/database_server
 ./database-manager.sh start
 ```
 
-See [onboarding.md](../../docs/onboarding.md) for detailed setup instructions.
-
 ### 2. Create a Branch
 
 ```bash
@@ -300,7 +298,7 @@ git commit -m "feat!: redesign API interface
 BREAKING CHANGE: All search methods now return different format"
 ```
 
-For more details, see [release.md](../../docs/release.md).
+For more details, see the release documentation in the root folder of the development repository.
 
 ## 🔍 Pull Request Process
 
@@ -453,10 +451,9 @@ Contributors are recognized in:
 
 ## 🔗 Related Documentation
 
-- [Development Guide](../../docs/development.md) - Development workflow
+- [Development Guide](development.md) - Development workflow
 - [Testing Guide](testing.md) - Testing standards
 - [Architecture](architecture.md) - System architecture
-- [Release Process](../../docs/release.md) - How releases work
 
 ## 🙏 Thank You
 

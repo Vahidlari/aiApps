@@ -30,7 +30,7 @@ cd ../ragora
 pip install -e ".[dev]"
 ```
 
-See [devcontainer.md](../../docs/devcontainer.md) for detailed setup.
+See devcontainer documentation in the root folder of the development repository.
 
 #### Local Installation
 
