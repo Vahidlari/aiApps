@@ -532,7 +532,7 @@ pre-commit run --all-files
 ## 🔗 Related Documentation
 
 - [Contributing Guide](contributing.md) - How to contribute
-- [Development Guide](../../docs/development.md) - Development workflow
+- [Development Guide](development.md) - Development workflow
 - [Architecture](architecture.md) - System architecture
 
 ## 🆘 Getting Help

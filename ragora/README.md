@@ -8,7 +8,7 @@ The name Ragora blends RAG with the ancient Greek Agora, the public square where
 
 ## ✨ Key Features
 
-- **📄 Specialized Document Processing**: Native support for LaTeX documents with equation preservation and citation tracking
+- **📄 Specialized Document Processing**: Native support for processing different document formats through different utility modules. The current release supports LaTeX parsing, as well as EMail handling. Further document formats are planned to be added incrementally. 
 - **🏗️ Clean Architecture**: Three-layer design (DatabaseManager → VectorStore → Retriever) for maintainability and flexibility
 - **🔍 Flexible Search**: Vector, keyword, and hybrid search modes for optimal retrieval
 - **🧩 Composable Components**: Use high-level APIs or build custom pipelines with low-level components
