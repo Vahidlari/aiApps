@@ -1,371 +1,286 @@
-# Ragora - LaTeX RAG System - Design Documentation
+# Ragora
 
-## 🎯 Project Overview
+**Build smarter, grounded, and transparent AI with Ragora.**
 
-This project implements a Retrieval-Augmented Generation (RAG) system specifically designed for creating knowledge bases from LaTeX documents. The system is built with modularity and reusability in mind, using modern AI/ML technologies and best practices.
+Ragora is an open-source framework for building Retrieval-Augmented Generation (RAG) systems that connect your language models to real, reliable knowledge. It provides a clean, composable interface for managing knowledge bases, document retrieval, and grounding pipelines, so your AI can reason with context instead of guesswork.
 
-## 🏗️ System Architecture
+The name Ragora blends RAG with the ancient Greek Agora, the public square where ideas were exchanged, debated, and refined. In the same spirit, Ragora is the meeting place of data and dialogue, where your information and your AI come together to think.
 
-### Core Components 
+## ✨ Key Features
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Document       │    │   Embedding     │    │   Database      │
-│  Processor      │───▶│   Engine        │───▶│   Manager       │
-│  (LaTeX)        │    │  (Sentence      │    │  (Infrastructure│
-└─────────────────┘    │   Transformers) │    │   Layer)        │
-                       └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        │
-┌─────────────────┐    ┌─────────────────┐              │
-│  Generation     │    │   Retriever     │              │
-│  System         │◀───│   (Search       │◀─────────────│
-│  (Ollama +      │    │    Layer)       │              │
-│   Mistral 7B)   │    └─────────────────┘              │
-└─────────────────┘             │                       │
-                                │                       │
-                       ┌─────────────────┐              │
-                       │   Vector Store  │◀─────────────┘
-                       │   (Storage      │
-                       │    Layer)       │
-                       └─────────────────┘
-```
+- **📄 Specialized Document Processing**: Native support for LaTeX documents with equation preservation and citation tracking
+- **🏗️ Clean Architecture**: Three-layer design (DatabaseManager → VectorStore → Retriever) for maintainability and flexibility
+- **🔍 Flexible Search**: Vector, keyword, and hybrid search modes for optimal retrieval
+- **🧩 Composable Components**: Use high-level APIs or build custom pipelines with low-level components
+- **⚡ Performance Optimized**: Batch processing, GPU acceleration, and efficient vector search with Weaviate
+- **🔒 Privacy-First**: Run completely local with sentence-transformers and Weaviate
+- **🧪 Well-Tested**: Comprehensive test suite with 80%+ coverage
 
-**Three-Layer Architecture Design:**
-1. **DatabaseManager** (Infrastructure Layer) - Low-level Weaviate operations
-2. **VectorStore** (Storage Layer) - Document storage and retrieval operations  
-3. **Retriever** (Search Layer) - Search logic using Weaviate APIs directly
-
-## 📁 Project Structure
-
-```
-ragora/
-├── core/
-│   ├── __init__.py
-│   ├── document_preprocessor.py    # LaTeX parsing and preprocessing
-│   ├── data_chunker.py            # Format-agnostic chunking
-│   ├── embedding_engine.py        # Vector embeddings
-│   ├── database_manager.py        # Infrastructure layer for Weaviate
-│   ├── vector_store.py            # Storage layer for documents
-│   ├── retriever.py               # Search layer using Weaviate APIs
-│   └── knowledge_base_manager.py  # Main knowledge base manager
-├── utils/
-│   ├── __init__.py
-│   ├── latex_parser.py            # LaTeX-specific utilities
-│   ├── text_processing.py         # Text cleaning and preprocessing
-│   ├── config_validator.py        # Configuration validation
-│   ├── email_provider_factory.py  # Email provider factory (main entry point)
-│   └── email_utils/               # Email utilities implementation
-│       ├── __init__.py
-│       ├── models.py              # Email data models
-│       ├── base.py                # Abstract EmailProvider interface
-│       ├── imap_provider.py       # IMAP/SMTP implementation
-│       └── graph_provider.py      # Microsoft Graph API implementation
-├── config/
-│   ├── __init__.py
-│   └── ettings.py                 # Configuration management
-├── examples/
-│   ├── __init__.py
-│   ├── sample_queries.py          # Example usage
-│   ├── email_usage_examples.py    # Email utilities examples
-│   └── latex_samples/             # Sample LaTeX files for testing
-├── tests/
-│   ├── unit/
-│   │   ├── test_database_manager.py
-│   │   ├── test_vector_store.py
-│   │   ├── test_retriever.py
-│   │   ├── test_document_processor.py
-│   │   ├── test_data_chunker.py
-│   │   ├── test_embedding_engine.py
-│   │   ├── test_generator.py
-│   │   └── test_email_utils.py       # Email utilities tests
-│   └── integration/
-│       └── test_dbmng_retriever_vector_store.py
-├── docs/
-│   ├── design_decisions.md        # This file
-│   ├── api_reference.md           # API documentation
-│   └── deployment_guide.md        # Deployment instructions
-├── requirements.txt               # Python dependencies
-├── setup.py                       # Package setup
-└── README.md                      # Main project README
-```
-
-## 🎯 Design Decisions
-
-### A. Three-Layer Architecture Design
-
-#### Clean Separation of Concerns
-The system implements a three-layer architecture that cleanly separates responsibilities:
-
-1. **DatabaseManager (Infrastructure Layer)**
-   - **Purpose**: Low-level Weaviate client operations and connection management
-   - **Responsibilities**: Connection handling, collection management, raw query execution
-   - **Benefits**: Centralized database access, connection pooling, error handling
-
-2. **VectorStore (Storage Layer)**
-   - **Purpose**: Document storage and retrieval operations
-   - **Responsibilities**: Storing chunks, CRUD operations, schema management
-   - **Benefits**: Focused on data persistence, clean storage interface
-
-3. **Retriever (Search Layer)**
-   - **Purpose**: Search logic and query orchestration
-   - **Responsibilities**: Vector search, hybrid search, keyword search, result processing
-   - **Benefits**: Uses Weaviate APIs directly, implements search algorithms
-
-#### Architecture Benefits
-- **Maintainability**: Each layer has a single, clear responsibility
-- **Testability**: Components can be tested independently with clear mocking boundaries
-- **Flexibility**: Easy to swap database backends by changing DatabaseManager
-- **Performance**: Direct Weaviate API usage without unnecessary abstractions
-
-### B. Document Processing Strategy
-
-#### LaTeX Handling
-- **Equation Preservation**: Keep mathematical equations intact while removing other LaTeX commands
-- **Citation Strategy**: Store citations as separate database entries with rich metadata
-- **Command Removal**: Strip LaTeX formatting commands (`\section{}`, `\textbf{}`, etc.) while preserving semantic content
-
-#### Chunking Strategy
-- **Adaptive Fixed-Size**: 768 tokens with line boundary respect
-- **Overlap**: 100-150 tokens between chunks for context preservation
-- **Object-Oriented Design**: Configurable `DataChunker` class for format-agnostic flexibility
-
-#### Citation Metadata Structure
-```python
-{
-    "type": "citation",
-    "author": "Einstein, A.",
-    "year": 1905,
-    "title": "On the Electrodynamics of Moving Bodies",
-    "doi": "10.1002/andp.19053221004",
-    "content": "The theory of relativity...",
-    "source_document": "chapter_1.tex",
-    "page_reference": 15,
-    "chunk_id": "chunk_001"
-}
-```
-
-### C. Embedding & Storage
-
-#### Embedding Model
-- **Technology**: Sentence Transformers (local, free)
-- **Model**: `all-mpnet-base-v2` (768 dimensions, good for technical content)
-- **Alternative**: `multi-qa-MiniLM-L6-v2` (optimized for Q&A)
-
-#### Vector Database
-- **Technology**: Weaviate
-- **Integration**: Built-in `text2vec-transformers` module
-- **Features**: Rich querying, filtering, and metadata support
-
-#### Configuration
-```python
-# Weaviate with Sentence Transformers
-{
-    "vectorizer": "text2vec-transformers",
-    "moduleConfig": {
-        "text2vec-transformers": {
-            "model": "all-mpnet-base-v2",
-            "poolingStrategy": "masked_mean",
-            "vectorizeClassName": False
-        }
-    }
-}
-```
-
-### D. Retrieval Strategy
-
-#### Hybrid Search
-- **Vector Search**: Dense embeddings for semantic similarity
-- **BM25 Search**: Sparse keyword matching for exact terms
-- **Configurable Weights**: Adjustable alpha parameter (0.0-1.0)
-- **Fusion Type**: Relative score combination
-
-#### Query Processing
-- **Technical Term Handling**: Preserve mathematical notation and technical terms
-- **Citation Queries**: Special handling for author/year queries
-- **Equation Queries**: Support for mathematical concept searches
-
-### E. Generation System
-
-#### LLM Configuration
-- **Technology**: Ollama + Mistral 7B
-- **Deployment**: Local, free
-- **Context Window**: 4096 tokens
-- **Specialization**: Good performance on technical/scientific content
-
-#### Prompt Engineering
-- **RAG-Specific**: Structured prompts for context-aware generation
-- **Citation Integration**: Include citation metadata in responses
-- **Equation Handling**: Preserve mathematical notation in outputs
-
-## 🔧 Implementation Plan
-
-### Phase 1: Core Infrastructure
-1. Project structure setup
-2. Configuration management
-3. Base classes and interfaces
-4. Unit testing framework
-
-### Phase 2: Document Processing
-1. LaTeX parser implementation
-2. Data chunker implementation
-3. Citation extraction
-4. Metadata handling
-
-### Phase 3: Embedding & Storage
-1. Weaviate integration
-2. Sentence Transformers setup
-3. Document indexing
-4. Vector storage optimization
-
-### Phase 4: Retrieval System
-1. Hybrid search implementation
-2. Query preprocessing
-3. Result ranking
-4. Performance optimization
-
-### Phase 5: Generation System
-1. Ollama integration
-2. Prompt engineering
-3. Response formatting
-4. Quality evaluation
-
-### Phase 6: Integration & Testing
-1. End-to-end testing
-2. Performance benchmarking
-3. Documentation completion
-4. Deployment preparation
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.11+
-- Docker (for Weaviate)
-- Ollama (for Mistral 7B)
-- Git
+## 🚀 Quick Start
 
 ### Installation
+
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd ragora
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start Weaviate
-docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate:1.22.4
-
-# Install Ollama and Mistral 7B
-curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull mistral:7b
+pip install ragora
 ```
 
-### Quick Start
+### Basic Usage
 
-#### Option 1: High-Level Knowledge Base Manager (Recommended)
 ```python
 from ragora import KnowledgeBaseManager
 
-# Initialize the knowledge base manager (automatically sets up three-layer architecture)
+# Initialize the knowledge base manager
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    class_name="Document",
-    embedding_model="all-mpnet-base-v2",
-    chunk_size=768,
-    chunk_overlap=100
+    class_name="Documents",
+    embedding_model="all-mpnet-base-v2"
 )
 
-# Process a LaTeX document
-chunk_ids = kbm.process_documents(["path/to/document.tex"])
+# Process documents
+document_paths = ["paper1.tex", "paper2.tex"]
+chunk_ids = kbm.process_documents(document_paths)
+print(f"Processed {len(chunk_ids)} chunks")
 
 # Query the knowledge base
-response = kbm.query("What is the main equation in chapter 2?", search_type="similar")
-print(f"Found {response['num_chunks']} relevant chunks")
+results = kbm.query(
+    "What is quantum entanglement?",
+    search_type="hybrid",
+    top_k=5
+)
 
-# Try different search types
-hybrid_response = kbm.query("machine learning algorithms", search_type="hybrid", top_k=5)
-keyword_response = kbm.query("neural networks", search_type="keyword", top_k=3)
-
-# Get system statistics
-stats = kbm.get_system_stats()
-print(f"Database contains {stats['vector_store']['total_objects']} chunks")
+# Display results
+for result in results['chunks']:
+    print(f"Score: {result['similarity_score']:.3f}")
+    print(f"Content: {result['content'][:200]}...\n")
 ```
 
-#### Option 2: Direct Component Usage (Advanced)
+### Prerequisites
+
+You need a Weaviate instance running. Download the pre-configured Ragora database server:
+
+```bash
+# Download from GitHub releases
+wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+
+# Extract and start
+tar -xzf ragora-database-server.tar.gz
+cd ragora-database-server
+./database-manager.sh start
+```
+
+The database server is a zero-dependency solution (only requires Docker) that works on Windows, macOS, and Linux.
+
+## 📚 Core Concepts
+
+### Three-Layer Architecture
+
+Ragora uses a clean three-layer architecture that separates concerns:
+
+1. **DatabaseManager** (Infrastructure Layer): Low-level Weaviate operations
+2. **VectorStore** (Storage Layer): Document storage and CRUD operations
+3. **Retriever** (Search Layer): Search algorithms and query processing
+
+This design provides flexibility, testability, and makes it easy to extend or swap components.
+
+### Search Modes
+
+Ragora supports three search strategies:
+
 ```python
-from ragora import DatabaseManager, VectorStore, Retriever
+# Semantic search (best for conceptual queries)
+results = kbm.query("explain machine learning", search_type="similar")
 
-# Initialize the three-layer architecture manually
-db_manager = DatabaseManager(url="http://localhost:8080")
-vector_store = VectorStore(db_manager=db_manager, class_name="Document")
-retriever = Retriever(db_manager=db_manager, class_name="Document")
+# Keyword search (best for exact terms)
+results = kbm.query("Schrödinger equation", search_type="keyword")
 
-# Use components directly
-results = retriever.search_similar("machine learning algorithms", top_k=5)
-hybrid_results = retriever.search_hybrid("deep learning", alpha=0.7, top_k=5)
-keyword_results = retriever.search_keyword("neural networks", top_k=5)
-
-for result in results:
-    print(f"Score: {result['similarity_score']:.3f} - {result['content'][:100]}...")
+# Hybrid search (recommended - combines both)
+results = kbm.query("neural networks", search_type="hybrid", alpha=0.7)
 ```
 
-## 📊 Performance Considerations
+### Document Processing
 
-### Chunk Size Optimization
-- **Default**: 768 tokens
-- **Testing Range**: 512-1024 tokens
-- **Optimization**: Empirical testing with domain-specific queries
+Process LaTeX documents with specialized handling:
 
-### Embedding Quality
-- **Model Selection**: Balance between speed and quality
-- **Fine-tuning**: Consider domain-specific fine-tuning for better performance
-- **Evaluation**: Use semantic similarity metrics for validation
+```python
+from ragora.core import DocumentPreprocessor, DataChunker
 
-### Retrieval Performance
-- **Hybrid Weights**: Optimize alpha parameter for your use case
-- **Caching**: Implement result caching for common queries
-- **Indexing**: Optimize Weaviate schema for your query patterns
+# Parse LaTeX with citations
+preprocessor = DocumentPreprocessor()
+document = preprocessor.parse_latex(
+    "paper.tex",
+    bibliography_path="references.bib"
+)
 
-## 🔍 Evaluation Metrics
+# Chunk with configurable size and overlap
+chunker = DataChunker(chunk_size=768, overlap=100)
+chunks = chunker.chunk_text(document.content)
+```
 
-### Retrieval Quality
-- **Precision@K**: Top-K retrieval accuracy
-- **Recall@K**: Coverage of relevant documents
-- **MRR**: Mean Reciprocal Rank for ranking quality
+## 🎯 Use Cases
 
-### Generation Quality
-- **ROUGE**: Text similarity metrics
-- **BLEU**: Translation quality metrics
-- **Human Evaluation**: Manual assessment of answer quality
+- **📖 Academic Research**: Build knowledge bases from scientific papers and LaTeX documents
+- **📝 Documentation Search**: Create searchable knowledge bases from technical documentation
+- **🤖 AI Assistants**: Ground LLM responses in your specific domain knowledge
+- **💬 Question Answering**: Build Q&A systems over your document collections
+- **🔬 Literature Review**: Efficiently search and synthesize information from research papers
 
-### System Performance
-- **Latency**: Query response time
-- **Throughput**: Queries per second
-- **Resource Usage**: Memory and CPU utilization
+## 📖 Documentation
+
+- **[Getting Started](docs/getting_started.md)**: Detailed installation and setup guide
+- **[Architecture](docs/architecture.md)**: System design and components
+- **[Design Decisions](docs/design_decisions.md)**: Rationale behind key choices
+- **[API Reference](docs/api_reference.md)**: Complete API documentation
+- **[Deployment](docs/deployment.md)**: Production deployment guide
+- **[Testing](docs/testing.md)**: Testing guidelines
+- **[Contributing](docs/contributing.md)**: How to contribute
+
+## 🔧 Advanced Usage
+
+### Custom Pipeline
+
+Build custom RAG pipelines with low-level components:
+
+```python
+from ragora.core import (
+    DatabaseManager,
+    VectorStore,
+    Retriever,
+    EmbeddingEngine
+)
+
+# Initialize components
+db_manager = DatabaseManager(url="http://localhost:8080")
+vector_store = VectorStore(db_manager, class_name="MyDocs")
+retriever = Retriever(db_manager, class_name="MyDocs")
+embedder = EmbeddingEngine(model_name="all-mpnet-base-v2")
+
+# Build custom workflow
+embeddings = embedder.embed_batch(texts)
+vector_store.store_chunks(chunks)
+results = retriever.search_hybrid(query, alpha=0.7, top_k=10)
+```
+
+### Multiple Search Strategies
+
+Compare different search approaches:
+
+```python
+# Semantic search for conceptual similarity
+semantic = retriever.search_similar(
+    "artificial intelligence applications",
+    top_k=5
+)
+
+# Keyword search for exact matches
+keyword = retriever.search_keyword(
+    "neural network architecture",
+    top_k=5
+)
+
+# Hybrid search with custom weighting
+hybrid = retriever.search_hybrid(
+    "deep learning models",
+    alpha=0.7,  # 70% vector, 30% keyword
+    top_k=5
+)
+
+# Search with metadata filters
+filtered = retriever.search_with_filter(
+    "quantum mechanics",
+    filters={"author": "Feynman", "year": 1965},
+    top_k=5
+)
+```
+
+## 💡 Examples
+
+Check out the [`examples/`](../examples/) directory for more detailed examples:
+
+- **`latex_loading_example.py`**: LaTeX document processing and loading
+- **`latex_retriever_example.py`**: Document retrieval and search
+- **`advanced_usage.py`**: Advanced features and custom pipelines
+- **`email_usage_examples.py`**: Email integration examples
+
+## 🏗️ Development
+
+### Setting Up Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/vahidlari/aiapps.git
+cd aiapps/ragora
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run tests
+python -m pytest
+
+# Run with coverage
+python -m pytest --cov=ragora --cov-report=html
+```
+
+### Running Tests
+
+```bash
+# All tests
+python -m pytest
+
+# Unit tests only
+python -m pytest tests/unit/
+
+# Integration tests only
+python -m pytest tests/integration/
+
+# With coverage
+python -m pytest --cov=ragora --cov-report=html
+```
+
+See [docs/testing.md](docs/testing.md) for comprehensive testing documentation.
 
 ## 🤝 Contributing
 
-### Development Guidelines
-1. Follow PEP 8 coding standards
-2. Write comprehensive unit tests
-3. Document all public APIs
-4. Use type hints throughout
-5. Implement proper error handling
+We welcome contributions! Please see [docs/contributing.md](docs/contributing.md) for guidelines on:
 
-### Testing Strategy
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Component interaction testing
-- **End-to-End Tests**: Complete workflow testing
-- **Performance Tests**: Load and stress testing
+- Setting up your development environment
+- Code style and standards
+- Writing tests
+- Submitting pull requests
+- Commit message conventions
 
-## 📝 License
+## 📊 Requirements
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- **Python**: 3.11 or higher
+- **Weaviate**: 1.22.0 or higher (for vector storage)
+- **Dependencies**: See `requirements.txt`
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Weaviate team for the excellent vector database
-- Sentence Transformers for the embedding models
-- Ollama team for the local LLM framework
-- The open-source AI/ML community for inspiration and tools
+Ragora builds on excellent open-source projects:
+
+- **[Weaviate](https://weaviate.io/)**: Vector database with powerful search capabilities
+- **[Sentence Transformers](https://www.sbert.net/)**: State-of-the-art text embeddings
+- **[PyTorch](https://pytorch.org/)**: Deep learning framework
+
+## 🔗 Links
+
+- **Repository**: [github.com/vahidlari/aiapps](https://github.com/vahidlari/aiapps)
+- **Documentation**: [docs/](docs/)
+- **Examples**: [examples/](../examples/)
+- **Issues**: [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/aiapps/discussions)
+
+## 📮 Contact
+
+For questions, feedback, or collaboration opportunities, please:
+- Open an issue on GitHub
+- Start a discussion in GitHub Discussions
+- Contact the maintainers directly
+
+---
+
+**Build smarter, grounded, and transparent AI with Ragora.**

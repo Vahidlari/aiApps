@@ -1,6 +1,6 @@
 # Release Process Guide
 
-This guide explains how to use the milestone-driven release system for the AI Apps project. The system automatically handles versioning, package publishing, and release management based on your commit messages.
+This guide explains how to use the milestone-driven release system for the Ragora project. The system automatically handles versioning, package publishing, and release management based on your commit messages.
 
 ## 🎯 Overview
 
@@ -8,7 +8,7 @@ The release system works by:
 1. **Analyzing your commits** using conventional commit format
 2. **Determining version bumps** automatically
 3. **Triggering releases** when you close a milestone
-4. **Publishing packages** to GitHub Package Registry
+4. **Publishing packages** to GitHub Package Registry and PyPI
 
 ## 📝 How to Write Commit Messages
 
@@ -123,35 +123,61 @@ The system automatically:
 - Builds Python packages (wheel + source)
 - Creates GitHub release with notes
 - Publishes to GitHub Package Registry
+- Publishes to PyPI (if configured)
 - Creates database server archive
 - Attaches milestone summary
 
 ### Step 4: What Gets Published
 
-- **Git tag**: `v1.2.3`
-- **GitHub Release**: With auto-generated notes
-- **Python packages**: Available on GitHub Package Registry
-- **Database server archive**: Attached to the release
-- **Installation instructions**: Added to release notes
+Each release publishes the following artifacts:
+
+1. **Git tag**: `v1.2.3`
+2. **GitHub Release**: With auto-generated notes and release assets
+3. **Python Package** (Ragora):
+   - Published to PyPI (`pip install ragora`)
+   - Attached to GitHub release as `.whl` and `.tar.gz` files
+4. **Database Server Package**:
+   - `ragora-database-server.tar.gz` - Complete database server setup
+   - `ragora-database-server.zip` - Windows-friendly format
+   - Users download this to deploy Weaviate locally
+5. **Installation instructions**: Added to release notes
 
 ## 📦 Installing Released Packages
 
-After a release, users can install your package:
+After a release, users can install Ragora and set up the database:
 
-### From GitHub Package Registry
+### 1. Install Ragora Package
+
+**From PyPI (Recommended):**
 ```bash
-# Install specific version
-pip install ragora==1.2.3 --index-url https://pypi.org/simple/
+# Install latest version
+pip install ragora
 
-# Or using extra-index-url (recommended)
-pip install ragora==1.2.3 --extra-index-url https://pypi.org/simple/
+# Install specific version
+pip install ragora==1.2.3
 ```
 
-### From GitHub Releases
+**From GitHub Releases:**
 ```bash
 # Install wheel directly
 pip install https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragora-1.2.3-py3-none-any.whl
 ```
+
+### 2. Download Database Server
+
+Download the pre-configured database server from the release:
+
+```bash
+# Download from GitHub releases
+wget https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragora-database-server.tar.gz
+
+# Extract and run
+tar -xzf ragora-database-server.tar.gz
+cd ragora-database-server
+./database-manager.sh start
+```
+
+**Windows users:** Download `ragora-database-server.zip` instead and extract using Windows tools.
 
 ## 🔧 Troubleshooting
 
@@ -179,6 +205,7 @@ Check these common issues:
 1. Check GitHub Actions logs for specific errors
 2. Verify you have push permissions to the repository
 3. Ensure no conflicting tags exist
+4. Check PyPI credentials are configured correctly
 
 ## 💡 Best Practices
 
@@ -225,6 +252,7 @@ git commit -m "perf: optimize database queries"
 2. Create and assign milestone
 3. Close milestone → Automatic release
 4. Check GitHub Releases for new version
+5. Verify package on PyPI
 
 ## 🆘 Getting Help
 
@@ -232,3 +260,4 @@ git commit -m "perf: optimize database queries"
 - **Conventional Commits**: [Official specification](https://www.conventionalcommits.org/)
 - **Semantic Versioning**: [SemVer guide](https://semver.org/)
 - **GitHub Issues**: Create an issue for bugs or questions
+
