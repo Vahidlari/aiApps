@@ -141,17 +141,33 @@ jobs:
                   python -m pip install --upgrade pip
                   pip install build twine setuptools_scm[toml]
 
-            - name: Build Python package
-              working-directory: ./ragora
-              run: |
-                  python -m build
-
             - name: Run semantic-release
               id: semantic_release
               run: |
-                  npx semantic-release
+                  if [ "${{ needs.check-milestone.outputs.dry_run }}" = "true" ]; then
+                    echo "🧪 Running semantic-release in DRY RUN mode"
+                    npx semantic-release --dry-run
+                  else
+                    echo "🚀 Running semantic-release in PRODUCTION mode"
+                    npx semantic-release
+                  fi
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build Python package
+              working-directory: ./ragora
+              run: |
+                  # In dry-run mode, semantic-release doesn't create tags
+                  # We need to temporarily create a local tag for setuptools_scm
+                  if [ "${{ needs.check-milestone.outputs.dry_run }}" = "true" ] && [ -n "${{ steps.semantic_release.outputs.new_release_version }}" ]; then
+                    echo "Creating temporary tag for version ${{ steps.semantic_release.outputs.new_release_version }}"
+                    git tag -f "v${{ steps.semantic_release.outputs.new_release_version }}"
+                  fi
+
+                  python -m build
+
+                  echo "📦 Built package version:"
+                  ls -lh dist/
 
             - name: Upload Python artifacts
               uses: actions/upload-artifact@v4
