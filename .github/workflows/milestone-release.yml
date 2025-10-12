@@ -37,6 +37,8 @@ jobs:
 
             - name: Get milestone information
               id: get_milestone
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   if [ "${{ github.event_name }}" = "milestone" ]; then
                     MILESTONE_TITLE="${{ github.event.milestone.title }}"
@@ -260,6 +262,8 @@ jobs:
 
             - name: Get milestone issues and PRs
               id: get_milestone_items
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
                   VERSION="${{ needs.release.outputs.version }}"
@@ -295,6 +299,8 @@ jobs:
                   echo "milestone_items=$MILESTONE_ITEMS" >> $GITHUB_OUTPUT
 
             - name: Update release with milestone summary and installation instructions
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ needs.release.outputs.version }}"
                   RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/v$VERSION --jq '.id')
@@ -330,6 +336,8 @@ jobs:
                     --field body="$NEW_BODY"
 
             - name: Attach database server archives to release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ needs.release.outputs.version }}"
 
@@ -372,6 +380,8 @@ jobs:
             issues: write
         steps:
             - name: Comment on milestone
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
 
