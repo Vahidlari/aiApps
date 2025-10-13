@@ -297,7 +297,6 @@ jobs:
         permissions:
             contents: read
             packages: write
-            id-token: write
         steps:
             - name: Download Python artifacts
               uses: actions/download-artifact@v4
@@ -309,6 +308,7 @@ jobs:
               uses: pypa/gh-action-pypi-publish@release/v1
               with:
                   skip-existing: true
+                  password: ${{ secrets.PYPI_TOKEN }}
 
             - name: Log success
               run: |
