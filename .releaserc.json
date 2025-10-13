@@ -8,6 +8,14 @@
         {
             "name": "alpha",
             "prerelease": true
+        },
+        {
+            "name": "release/*",
+            "prerelease": "rc"
+        },
+        {
+            "name": "feature/*",
+            "prerelease": "beta"
         }
     ],
     "plugins": [
@@ -122,7 +130,8 @@
                 "releasedLabels": [
                     "released on ${nextRelease.gitTag}"
                 ],
-                "addReleases": "bottom"
+                "addReleases": "bottom",
+                "draftRelease": false
             }
         ]
     ]

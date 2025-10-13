@@ -41,16 +41,14 @@ run_test "Script is executable" "[ -x '$SCRIPT' ]"
 
 # Test 2: Script fails with incorrect number of arguments
 run_test "Fails with no arguments" "! bash '$SCRIPT' > /dev/null 2>&1"
-run_test "Fails with too few arguments" "! bash '$SCRIPT' '1.0.0' 'abc' 'main' > /dev/null 2>&1"
+run_test "Fails with empty version" "! bash '$SCRIPT' '' > /dev/null 2>&1"
 
 # Create a temporary test environment
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 
-# Copy the helper scripts to temp location
+# Copy the script to temp location
 mkdir -p "$TEST_DIR/release-scripts"
-cp "$PARENT_DIR/create-version-metadata.sh" "$TEST_DIR/release-scripts/"
-cp "$PARENT_DIR/update-readme-version.sh" "$TEST_DIR/release-scripts/"
 cp "$SCRIPT" "$TEST_DIR/release-scripts/"
 
 # Create mock database_server structure
@@ -79,8 +77,8 @@ echo "log" > "$TEST_DIR/database_server/test.log"
 
 cd "$TEST_DIR/release-scripts"
 
-# Test 3: Run script with valid arguments
-run_test "Script runs with valid arguments" "bash './create-db-archives.sh' '1.0.0' 'abc123' 'main' 'Test/Repo' > /dev/null 2>&1"
+# Test 3: Run script with valid arguments (simplified - just needs version)
+run_test "Script runs with valid arguments" "bash './create-db-archives.sh' '1.0.0' > /dev/null 2>&1"
 
 # Test 4: Check tar.gz archive was created
 run_test "tar.gz archive created" "[ -f 'database_server-1.0.0.tar.gz' ]"
@@ -93,26 +91,22 @@ else
     TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
-# Test 6: Check VERSION file was created
-run_test "VERSION file created" "[ -f '../database_server/config/VERSION' ]"
+# Tests 6-7: Metadata files are no longer created by this script (handled separately in workflow)
+# These tests are removed as the script now only creates archives
 
-# Test 7: Check release-info.json was created
-run_test "release-info.json created" "[ -f '../database_server/config/release-info.json' ]"
-
-# Test 8: Verify tar.gz contents (extract and check)
+# Test 6: Verify tar.gz contents (extract and check)
 mkdir -p tar_extract
 tar -xzf database_server-1.0.0.tar.gz -C tar_extract
 run_test "tar.gz contains database_server directory" "[ -d 'tar_extract/database_server' ]"
 run_test "tar.gz contains README.md" "[ -f 'tar_extract/database_server/README.md' ]"
 run_test "tar.gz contains config directory" "[ -d 'tar_extract/database_server/config' ]"
-run_test "tar.gz contains VERSION file" "[ -f 'tar_extract/database_server/config/VERSION' ]"
 
-# Test 9: Verify excluded files are not in archive
+# Test 7: Verify excluded files are not in archive
 run_test "tar.gz excludes .pyc files" "! find tar_extract -name '*.pyc' | grep -q ."
 run_test "tar.gz excludes __pycache__" "! find tar_extract -name '__pycache__' | grep -q ."
 run_test "tar.gz excludes .log files" "! find tar_extract -name '*.log' | grep -q ."
 
-# Test 10: Verify zip contents (if zip is available)
+# Verify zip contents (if zip is available)
 if command -v zip &> /dev/null && command -v unzip &> /dev/null; then
     mkdir -p zip_extract
     unzip -q database_server-1.0.0.zip -d zip_extract
@@ -124,8 +118,8 @@ else
     TESTS_PASSED=$((TESTS_PASSED + 3))
 fi
 
-# Test 11: Test output format
-OUTPUT=$(bash "./create-db-archives.sh" "2.0.0" "def456" "develop" "Another/Repo" 2>&1)
+# Test 8: Test output format (simplified - just version needed now)
+OUTPUT=$(bash "./create-db-archives.sh" "2.0.0" 2>&1)
 run_test "Output contains tar.gz filename" "echo '$OUTPUT' | grep -q 'database_server-2.0.0.tar.gz'"
 if command -v zip &> /dev/null; then
     run_test "Output contains zip filename" "echo '$OUTPUT' | grep -q 'database_server-2.0.0.zip'"
@@ -134,9 +128,9 @@ else
     TESTS_PASSED=$((TESTS_PASSED + 1))
 fi
 
-# Test 12: Test with missing database_server directory
+# Test 9: Test with missing database_server directory
 rm -rf "$TEST_DIR/database_server"
-run_test "Fails gracefully with missing database_server" "! bash './create-db-archives.sh' '1.0.0' 'abc' 'main' 'Test/Repo' > /dev/null 2>&1"
+run_test "Fails gracefully with missing database_server" "! bash './create-db-archives.sh' '1.0.0' > /dev/null 2>&1"
 
 # Summary
 echo ""
