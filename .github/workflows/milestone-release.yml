@@ -68,26 +68,10 @@ jobs:
             - name: Check for release-worthy commits
               id: check_commits
               run: |
-                  # Check if there are any commits since last tag that would trigger a release
-                  COMMITS_SINCE_TAG=$(git log ${{ steps.get_last_tag.outputs.tag }}..HEAD --oneline)
-
-                  if [ -z "$COMMITS_SINCE_TAG" ]; then
-                    echo "has_release_commits=false" >> $GITHUB_OUTPUT
-                    echo "No commits since last tag"
-                    exit 0
-                  fi
-
-                  # Check for conventional commits that would trigger a release
-                  # Match: <hash> <type>[(scope)][!]: <description> OR BREAKING CHANGE anywhere
-                  RELEASE_COMMITS=$(echo "$COMMITS_SINCE_TAG" | grep -E "^[0-9a-f]{7,40} (feat|fix|perf|refactor|style|docs|test|build|ci|chore)(\(.+\))?(!)?:|\bBREAKING CHANGE\b" || true)
-
-                  if [ -z "$RELEASE_COMMITS" ]; then
-                    echo "has_release_commits=false" >> $GITHUB_OUTPUT
-                    echo "No release-worthy commits found"
-                  else
+                  if bash tools/release-scripts/check-release-commits.sh "${{ steps.get_last_tag.outputs.tag }}" "HEAD"; then
                     echo "has_release_commits=true" >> $GITHUB_OUTPUT
-                    echo "Found release-worthy commits:"
-                    echo "$RELEASE_COMMITS"
+                  else
+                    echo "has_release_commits=false" >> $GITHUB_OUTPUT
                   fi
 
     release:
@@ -157,17 +141,9 @@ jobs:
             - name: Build Python package
               working-directory: ./ragora
               run: |
-                  # In dry-run mode, semantic-release doesn't create tags
-                  # We need to temporarily create a local tag for setuptools_scm
-                  if [ "${{ needs.check-milestone.outputs.dry_run }}" = "true" ] && [ -n "${{ steps.semantic_release.outputs.new_release_version }}" ]; then
-                    echo "Creating temporary tag for version ${{ steps.semantic_release.outputs.new_release_version }}"
-                    git tag -f "v${{ steps.semantic_release.outputs.new_release_version }}"
-                  fi
-
-                  python -m build
-
-                  echo "📦 Built package version:"
-                  ls -lh dist/
+                  bash ../tools/release-scripts/build-python-package.sh \
+                    "${{ steps.semantic_release.outputs.new_release_version }}" \
+                    "${{ needs.check-milestone.outputs.dry_run }}"
 
             - name: Upload Python artifacts
               uses: actions/upload-artifact@v4
@@ -180,48 +156,20 @@ jobs:
               run: |
                   if [ -d "tools/database_server" ]; then
                     VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                    TAR_ARCHIVE="database_server-${VERSION}.tar.gz"
-                    ZIP_ARCHIVE="database_server-${VERSION}.zip"
                     
-                    # Create version metadata using helper script
-                    bash tools/release-scripts/create-version-metadata.sh \
+                    # Run archive creation script
+                    ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh \
                       "$VERSION" \
                       "${{ github.sha }}" \
                       "${{ github.ref_name }}" \
-                      "${{ github.repository }}"
+                      "${{ github.repository }}")
                     
-                    # Update README with version info using helper script
-                    bash tools/release-scripts/update-readme-version.sh \
-                      "$VERSION" \
-                      "${{ github.repository }}"
-                    
-                    echo ""
-                    echo "📦 Creating archives..."
-                    
-                    # Create tar.gz archive excluding unnecessary files
-                    tar --exclude='*.pyc' \
-                        --exclude='__pycache__' \
-                        --exclude='.git' \
-                        --exclude='node_modules' \
-                        --exclude='*.log' \
-                        --exclude='*.tmp' \
-                        -czf "$TAR_ARCHIVE" \
-                        -C tools database_server
-                    
-                    # Create zip archive with same exclusions
-                    cd tools
-                    zip -r "../$ZIP_ARCHIVE" database_server \
-                        -x "*.pyc" \
-                        -x "*__pycache__*" \
-                        -x "*.git*" \
-                        -x "*node_modules*" \
-                        -x "*.log" \
-                        -x "*.tmp"
-                    cd ..
+                    # Extract archive filenames from output
+                    TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
+                    ZIP_ARCHIVE=$(echo "$ARCHIVES" | grep "\.zip$" | tail -1)
                     
                     echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
                     echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
-                    echo "✅ Created archives: $TAR_ARCHIVE, $ZIP_ARCHIVE"
                   else
                     echo "❌ Database server directory not found"
                     echo "tar_archive=" >> $GITHUB_OUTPUT
@@ -340,27 +288,14 @@ jobs:
                   # Get current release body
                   CURRENT_BODY=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID --jq '.body')
 
-                  # Create installation instructions  
-                  REPO="${{ github.repository }}"
-                  INSTALLATION_INSTRUCTIONS=$(printf "%s\n\n%s\n%s\n%s\n%s\n%s\n\n%s\n%s\n%s\n%s\n\n%s\n%s\n%s" \
-                    "## 📦 Installation" \
-                    "### From PyPI" \
-                    "\`\`\`bash" \
-                    "# Install specific version" \
-                    "pip install ragora==${VERSION}" \
-                    "\`\`\`" \
-                    "### From GitHub Releases (Alternative)" \
-                    "\`\`\`bash" \
-                    "# Install wheel directly" \
-                    "pip install https://github.com/${REPO}/releases/download/v${VERSION}/ragora-${VERSION}-py3-none-any.whl" \
-                    "" \
-                    "# Or install from source" \
-                    "pip install https://github.com/${REPO}/releases/download/v${VERSION}/ragora-${VERSION}.tar.gz" \
-                    "\`\`\`")
+                  # Generate installation instructions and milestone summary
+                  ADDITIONAL_CONTENT=$(python tools/release-scripts/format-release-notes.py \
+                    "$VERSION" \
+                    "${{ github.repository }}" \
+                    milestone_summary.md)
 
-                  # Append milestone summary and installation instructions
-                  MILESTONE_SUMMARY=$(cat milestone_summary.md)
-                  NEW_BODY=$(printf "%s\n\n%s\n\n%s" "$CURRENT_BODY" "$INSTALLATION_INSTRUCTIONS" "$MILESTONE_SUMMARY")
+                  # Combine with current body
+                  NEW_BODY=$(printf "%s\n\n%s" "$CURRENT_BODY" "$ADDITIONAL_CONTENT")
 
                   # Update release
                   gh api repos/${{ github.repository }}/releases/$RELEASE_ID \
