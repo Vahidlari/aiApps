@@ -167,7 +167,32 @@ jobs:
                     fi
                   else
                     echo "🚀 Running semantic-release in PRODUCTION mode"
-                    npx semantic-release
+                    # Capture output to extract version
+                    npx semantic-release 2>&1 | tee semantic-release-output.txt
+                    
+                    # Extract the published version from output
+                    # Look for patterns like "Published release X.Y.Z" or "Created tag vX.Y.Z"
+                    NEXT_VERSION=$(grep -oP '(?:Published release|Created tag v?|The next release version is )\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt | head -1 || echo "")
+                    
+                    # Fallback: if version not found in output, check if a new tag was created
+                    if [ -z "$NEXT_VERSION" ]; then
+                      echo "Trying to detect version from git tags..."
+                      git fetch --tags
+                      LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+                      if [ -n "$LATEST_TAG" ]; then
+                        NEXT_VERSION="${LATEST_TAG#v}"
+                        echo "Found version from git tag: $NEXT_VERSION"
+                      fi
+                    fi
+                    
+                    if [ -n "$NEXT_VERSION" ]; then
+                      echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+                      echo "new_release_published=true" >> $GITHUB_OUTPUT
+                      echo "Published version: $NEXT_VERSION"
+                    else
+                      echo "No version published by semantic-release"
+                      echo "new_release_published=false" >> $GITHUB_OUTPUT
+                    fi
                   fi
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -339,6 +364,12 @@ jobs:
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Download Python packages
+              uses: actions/download-artifact@v4
+              with:
+                  name: python-packages
+                  path: ./python-dist
+
             - name: Download database server archives
               uses: actions/download-artifact@v4
               with:
@@ -407,7 +438,7 @@ jobs:
                     --method PATCH \
                     --field body="$NEW_BODY"
 
-            - name: Attach database server archives to release
+            - name: Attach Python packages to release
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
@@ -416,16 +447,37 @@ jobs:
                   # Get release ID
                   RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/v$VERSION --jq '.id')
 
+                  # Attach wheel file
+                  WHEEL_FILE=$(ls python-dist/*.whl 2>/dev/null | head -1 || echo "")
+                  if [ -n "$WHEEL_FILE" ] && [ -f "$WHEEL_FILE" ]; then
+                    WHEEL_NAME=$(basename "$WHEEL_FILE")
+                    gh release upload "v$VERSION" "$WHEEL_FILE" --clobber
+                    echo "✅ Python wheel attached to release: $WHEEL_NAME"
+                  else
+                    echo "⚠️ Python wheel not found"
+                  fi
+
+                  # Attach source distribution
+                  TAR_GZ_FILE=$(ls python-dist/*.tar.gz 2>/dev/null | head -1 || echo "")
+                  if [ -n "$TAR_GZ_FILE" ] && [ -f "$TAR_GZ_FILE" ]; then
+                    TAR_GZ_NAME=$(basename "$TAR_GZ_FILE")
+                    gh release upload "v$VERSION" "$TAR_GZ_FILE" --clobber
+                    echo "✅ Python source distribution attached to release: $TAR_GZ_NAME"
+                  else
+                    echo "⚠️ Python source distribution not found"
+                  fi
+
+            - name: Attach database server archives to release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ needs.release.outputs.version }}"
+
                   # Attach tar.gz archive
                   TAR_ARCHIVE=$(ls database_server-*.tar.gz 2>/dev/null || echo "")
                   if [ -n "$TAR_ARCHIVE" ] && [ -f "$TAR_ARCHIVE" ]; then
-                    gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets \
-                      --method POST \
-                      --field name="$TAR_ARCHIVE" \
-                      --field label="Database Server v$VERSION (tar.gz)" \
-                      --data-binary @"$TAR_ARCHIVE" \
-                      --header "Content-Type: application/gzip"
-                    echo "✅ Database server tar.gz attached to release"
+                    gh release upload "v$VERSION" "$TAR_ARCHIVE" --clobber
+                    echo "✅ Database server tar.gz attached to release: $TAR_ARCHIVE"
                   else
                     echo "⚠️ Database server tar.gz not found"
                   fi
@@ -433,13 +485,8 @@ jobs:
                   # Attach zip archive
                   ZIP_ARCHIVE=$(ls database_server-*.zip 2>/dev/null || echo "")
                   if [ -n "$ZIP_ARCHIVE" ] && [ -f "$ZIP_ARCHIVE" ]; then
-                    gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets \
-                      --method POST \
-                      --field name="$ZIP_ARCHIVE" \
-                      --field label="Database Server v$VERSION (zip)" \
-                      --data-binary @"$ZIP_ARCHIVE" \
-                      --header "Content-Type: application/zip"
-                    echo "✅ Database server zip attached to release"
+                    gh release upload "v$VERSION" "$ZIP_ARCHIVE" --clobber
+                    echo "✅ Database server zip attached to release: $ZIP_ARCHIVE"
                   else
                     echo "⚠️ Database server zip not found"
                   fi
