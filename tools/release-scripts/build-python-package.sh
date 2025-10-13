@@ -37,37 +37,38 @@ if [ -d "dist" ]; then
     rm -rf dist/
 fi
 
-# Track if we created a temporary tag
-TEMP_TAG_CREATED=false
-CLEANUP_TAG=""
-
-# Cleanup function
-cleanup() {
-    if [ "$TEMP_TAG_CREATED" = true ] && [ -n "$CLEANUP_TAG" ]; then
-        echo "🧹 Cleaning up temporary tag: $CLEANUP_TAG"
-        git tag -d "$CLEANUP_TAG" > /dev/null 2>&1 || true
-    fi
-}
-
-trap cleanup EXIT
-
-# In dry-run mode, semantic-release doesn't create tags
-# We need to temporarily create a local tag for setuptools_scm
-if [ "$DRY_RUN" = "true" ] && [ -n "$VERSION" ]; then
-    TAG_NAME="v${VERSION}"
-    echo "🧪 DRY RUN: Creating temporary tag for version $VERSION"
-    
-    # Create the tag (use -f to force, in case it exists)
-    git tag -f "$TAG_NAME" > /dev/null 2>&1 || {
-        echo "Warning: Could not create temporary tag, proceeding anyway" >&2
-    }
-    
-    TEMP_TAG_CREATED=true
-    CLEANUP_TAG="$TAG_NAME"
-fi
-
 # Build the package
 echo "📦 Building Python package..."
+if [ "$DRY_RUN" = "true" ]; then
+    echo "🧪 DRY RUN MODE: Building with version $VERSION"
+else
+    echo "🚀 PRODUCTION MODE: Building with version $VERSION"
+fi
+echo ""
+
+# Set version explicitly for setuptools_scm using SETUPTOOLS_SCM_PRETEND_VERSION
+# This is necessary for several reasons:
+#
+# 1. MONOREPO STRUCTURE: The Python package is in a subdirectory (ragora/),
+#    but .git is in the parent directory. The isolated build environment
+#    created by 'python -m build' cannot reliably access the parent .git
+#
+# 2. DRY-RUN MODE: semantic-release doesn't create a real tag in dry-run,
+#    so there's no tag for setuptools_scm to detect
+#
+# 3. ISOLATED BUILDS: 'python -m build' creates an isolated virtual environment
+#    that may not have full git access, causing setuptools_scm to fail
+#
+# 4. CI/CD BEST PRACTICE: Explicitly setting the version in CI/CD pipelines
+#    is the recommended approach per setuptools_scm documentation
+#
+# The version comes from semantic-release, ensuring consistency across:
+# - Git tags
+# - Python package version  
+# - PyPI published version
+# - GitHub releases
+export SETUPTOOLS_SCM_PRETEND_VERSION="$VERSION"
+echo "Setting SETUPTOOLS_SCM_PRETEND_VERSION=$VERSION"
 echo ""
 
 # Capture build exit code without disabling error handling
