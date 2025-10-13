@@ -1,12 +1,8 @@
 include README.md
 include LICENSE
-include CHANGELOG.md
-include requirements.txt
-include requirements-dev.txt
+include ../CHANGELOG.md
 recursive-include ragora/config *.yaml *.yml
 recursive-include ragora/examples *.py *.tex
-recursive-include tests *.py
-recursive-include docs *.rst *.md *.txt *.py
 global-exclude *.pyc
 global-exclude *.pyo
 global-exclude __pycache__
