@@ -87,7 +87,8 @@ include = ["ragora*"]
 ragora = [
     "config/*.yaml",
     "config/*.yml",
-    "examples/*.py", 
+    "examples/*.py",
+    "examples/latex_samples/*.tex",
 ]
 
 [tool.black]
