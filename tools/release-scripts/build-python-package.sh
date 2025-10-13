@@ -70,12 +70,10 @@ fi
 echo "📦 Building Python package..."
 echo ""
 
-# Temporarily disable exit-on-error for build command
+# Capture build exit code without disabling error handling
 # This allows us to check if artifacts were created even if there were warnings
-set +e
-python -m build
-BUILD_EXIT_CODE=$?
-set -e
+BUILD_EXIT_CODE=0
+python -m build || BUILD_EXIT_CODE=$?
 
 # Check if build produced artifacts (this is the real success indicator)
 echo ""

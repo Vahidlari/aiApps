@@ -41,6 +41,30 @@ print_header() {
     echo -e "${PURPLE}[WEAVIATE]${NC} $1"
 }
 
+# Function to extract JSON field value (portable, no jq required)
+# Usage: extract_json_field "field_name" "json_file"
+extract_json_field() {
+    local field="$1"
+    local file="$2"
+    
+    # Use awk for more robust parsing - handles whitespace and formatting variations
+    local value
+    value=$(awk -F'"' -v field="$field" '
+        $0 ~ "\"" field "\"" {
+            # Find the field name and extract its value
+            for (i=1; i<=NF; i++) {
+                if ($i ~ field && $(i+2) != "") {
+                    print $(i+2)
+                    exit
+                }
+            }
+        }
+    ' "$file" 2>/dev/null)
+    
+    # Return value or empty string if not found
+    echo "${value:-}"
+}
+
 # Function to check if Docker is running
 check_docker() {
     if ! docker info >/dev/null 2>&1; then
@@ -311,29 +335,44 @@ show_version() {
     
     # Check if metadata file exists
     if [ -f "$METADATA_FILE" ]; then
-        # Try to parse JSON using grep and sed (portable, no jq needed)
         echo -e "${GREEN}Release Metadata:${NC}"
         echo "─────────────────────────────────────────────────────"
         
-        # Extract fields from JSON (portable, no jq required)
-        VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        RELEASE_DATE=$(grep -o '"release_date"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        GIT_TAG=$(grep -o '"git_tag"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        GIT_COMMIT=$(grep -o '"git_commit"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        GIT_BRANCH=$(grep -o '"git_branch"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        RELEASE_URL=$(grep -o '"release_url"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
-        REPOSITORY=$(grep -o '"repository"[[:space:]]*:[[:space:]]*"[^"]*"' "$METADATA_FILE" | cut -d'"' -f4)
+        # Extract fields using robust JSON parser
+        VERSION=$(extract_json_field "version" "$METADATA_FILE")
+        RELEASE_DATE=$(extract_json_field "release_date" "$METADATA_FILE")
+        GIT_TAG=$(extract_json_field "git_tag" "$METADATA_FILE")
+        GIT_COMMIT=$(extract_json_field "git_commit" "$METADATA_FILE")
+        GIT_BRANCH=$(extract_json_field "git_branch" "$METADATA_FILE")
+        RELEASE_URL=$(extract_json_field "release_url" "$METADATA_FILE")
+        REPOSITORY=$(extract_json_field "repository" "$METADATA_FILE")
         
-        echo -e "  ${BLUE}Version:${NC}       $VERSION"
-        echo -e "  ${BLUE}Release Date:${NC}  $RELEASE_DATE"
-        echo -e "  ${BLUE}Git Tag:${NC}       $GIT_TAG"
+        # Validate that we got at least the version (most critical field)
+        if [ -z "$VERSION" ]; then
+            print_error "Failed to parse metadata file: $METADATA_FILE"
+            echo -e "${YELLOW}File may be corrupted or in an unexpected format${NC}"
+            echo
+            echo "File contents:"
+            cat "$METADATA_FILE"
+            echo
+            return 1
+        fi
+        
+        # Display metadata with fallback for missing fields
+        echo -e "  ${BLUE}Version:${NC}       ${VERSION:-Unknown}"
+        echo -e "  ${BLUE}Release Date:${NC}  ${RELEASE_DATE:-Unknown}"
+        echo -e "  ${BLUE}Git Tag:${NC}       ${GIT_TAG:-Unknown}"
         echo -e "  ${BLUE}Git Commit:${NC}    ${GIT_COMMIT:0:8}"
-        echo -e "  ${BLUE}Git Branch:${NC}    $GIT_BRANCH"
-        echo -e "  ${BLUE}Repository:${NC}    $REPOSITORY"
+        echo -e "  ${BLUE}Git Branch:${NC}    ${GIT_BRANCH:-Unknown}"
+        echo -e "  ${BLUE}Repository:${NC}    ${REPOSITORY:-Unknown}"
         echo
-        echo -e "  ${BLUE}Release URL:${NC}"
-        echo -e "  $RELEASE_URL"
-        echo
+        
+        # Only show release URL if it was successfully extracted
+        if [ -n "$RELEASE_URL" ]; then
+            echo -e "  ${BLUE}Release URL:${NC}"
+            echo -e "  $RELEASE_URL"
+            echo
+        fi
         
         # Show file location
         echo -e "${GREEN}Metadata File:${NC} $METADATA_FILE"
