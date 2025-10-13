@@ -29,9 +29,9 @@ fi
 echo "📝 Updating README with version $VERSION"
 
 # Update or add version to header
-if grep -q "^# Ragora Database Server" "$README_FILE"; then
-    # Header exists, update it with version
-    sed -i "s/^# Ragora Database Server.*/# Ragora Database Server - v$VERSION/" "$README_FILE"
+if grep -q "^# Ragora Database Server\s*\(-\s*v[0-9.a-z-]*\)\?$" "$README_FILE"; then
+    # Header exists, update it with version (match standalone or with existing version)
+    sed -i "s/^# Ragora Database Server\s*\(-\s*v[0-9.a-z-]*\)\?$/# Ragora Database Server - v$VERSION/" "$README_FILE"
     echo "✅ Updated existing header with version"
 else
     # No header found, add version header at beginning
