@@ -78,23 +78,21 @@ bash build-python-package.sh 1.2.0 true ./ragora
 
 ### `create-db-archives.sh`
 
-Creates database server archives with version metadata.
+Creates database server archives (tar.gz and optionally zip).
 
 **Usage:**
 ```bash
-create-db-archives.sh <version> <git_commit> <git_branch> <repository>
+create-db-archives.sh <version>
 ```
 
 **Example:**
 ```bash
-bash create-db-archives.sh 1.2.0 abc123def main Vahidlari/aiApps
+bash create-db-archives.sh 1.2.0
 ```
 
 **Creates:**
-- `database_server-{version}.tar.gz` - tar.gz archive
-- `database_server-{version}.zip` - zip archive (if zip command available)
-- Version metadata files (via helper scripts)
-- Updated README with version info
+- `database_server-{version}.tar.gz` - Always created
+- `database_server-{version}.zip` - Created if `zip` command is available
 
 **Excludes from archives:**
 - `*.pyc` files
@@ -103,7 +101,13 @@ bash create-db-archives.sh 1.2.0 abc123def main Vahidlari/aiApps
 - `node_modules`
 - `*.log` and `*.tmp` files
 
-**Prints:** Archive filenames to stdout for workflow capture
+**Behavior:**
+- Simple, single-purpose script - only creates archives
+- Validates version is not empty
+- Prints archive filenames to stdout for workflow capture
+- No side effects on repository files
+
+**Note:** This script does NOT create version metadata or modify README files. Those operations are handled separately in the workflow using `create-version-metadata.sh` and `update-readme-version.sh`.
 
 ---
 
@@ -301,14 +305,24 @@ These scripts are called by the `.github/workflows/milestone-release.yml` workfl
       "${{ steps.semantic_release.outputs.new_release_version }}" \
       "${{ needs.check-milestone.outputs.dry_run }}"
 
-# Create database server archives
-- name: Create database server archive
+# Create database server metadata (separate from archiving)
+- name: Create database server metadata
   run: |
-    bash tools/release-scripts/create-db-archives.sh \
+    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+    bash tools/release-scripts/create-version-metadata.sh \
       "$VERSION" \
       "${{ github.sha }}" \
       "${{ github.ref_name }}" \
       "${{ github.repository }}"
+    bash tools/release-scripts/update-readme-version.sh \
+      "$VERSION" \
+      "${{ github.repository }}"
+
+# Create database server archives (simplified - just version)
+- name: Create database server archive
+  run: |
+    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+    bash tools/release-scripts/create-db-archives.sh "$VERSION"
 
 # Format release notes
 - name: Generate installation instructions

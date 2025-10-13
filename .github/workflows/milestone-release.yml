@@ -5,8 +5,13 @@ on:
         types: [closed]
     workflow_dispatch:
         inputs:
+            branch:
+                description: "Branch to release from (default: main). Find branches in the repository branches page."
+                required: false
+                type: string
+                default: main
             milestone_title:
-                description: "Milestone title (if not from milestone event)"
+                description: "Milestone name (leave empty for latest closed). Find milestones at: Issues → Milestones"
                 required: false
                 type: string
             dry_run:
@@ -28,10 +33,23 @@ jobs:
             has_release_commits: ${{ steps.check_commits.outputs.has_release_commits }}
             last_tag: ${{ steps.get_last_tag.outputs.tag }}
             dry_run: ${{ github.event.inputs.dry_run == 'true' }}
+            release_branch: ${{ steps.determine_branch.outputs.branch }}
         steps:
+            - name: Determine release branch
+              id: determine_branch
+              run: |
+                  if [ "${{ github.event_name }}" = "milestone" ]; then
+                    BRANCH="${{ github.ref_name }}"
+                  else
+                    BRANCH="${{ github.event.inputs.branch || 'main' }}"
+                  fi
+                  echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+                  echo "Release branch: $BRANCH"
+
             - name: Checkout repository
               uses: actions/checkout@v4
               with:
+                  ref: ${{ steps.determine_branch.outputs.branch }}
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -61,14 +79,17 @@ jobs:
             - name: Get last tag
               id: get_last_tag
               run: |
-                  LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+                  BRANCH="${{ steps.determine_branch.outputs.branch }}"
+                  # Try to get the last tag from the current branch
+                  LAST_TAG=$(git describe --tags --abbrev=0 "$BRANCH" 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
                   echo "tag=$LAST_TAG" >> $GITHUB_OUTPUT
-                  echo "Last tag: $LAST_TAG"
+                  echo "Last tag: $LAST_TAG (from branch: $BRANCH)"
 
             - name: Check for release-worthy commits
               id: check_commits
               run: |
-                  if bash tools/release-scripts/check-release-commits.sh "${{ steps.get_last_tag.outputs.tag }}" "HEAD"; then
+                  BRANCH="${{ steps.determine_branch.outputs.branch }}"
+                  if bash tools/release-scripts/check-release-commits.sh "${{ steps.get_last_tag.outputs.tag }}" "$BRANCH"; then
                     echo "has_release_commits=true" >> $GITHUB_OUTPUT
                   else
                     echo "has_release_commits=false" >> $GITHUB_OUTPUT
@@ -84,24 +105,26 @@ jobs:
             issues: read
             pull-requests: read
         outputs:
-            version: ${{ steps.semantic_release.outputs.new_release_version }}
-            published: ${{ steps.semantic_release.outputs.new_release_published }}
+            version: ${{ steps.determine_version.outputs.version }}
+            published: ${{ steps.determine_version.outputs.version != '' }}
         steps:
             - name: Log dry run mode
               if: needs.check-milestone.outputs.dry_run == 'true'
               run: |
                   echo "🧪 **DRY RUN MODE ENABLED**"
                   echo "This workflow will:"
-                  echo "  ✅ Create a GitHub release"
+                  echo "  ✅ Create a draft GitHub release"
                   echo "  ✅ Build Python packages"
                   echo "  ✅ Create database server archives"
                   echo "  ❌ SKIP PyPI publishing"
+                  echo "  ❌ SKIP git tags and commits"
                   echo ""
                   echo "This allows you to test the release workflow without publishing to PyPI."
 
             - name: Checkout repository
               uses: actions/checkout@v4
               with:
+                  ref: ${{ needs.check-milestone.outputs.release_branch }}
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -130,7 +153,19 @@ jobs:
               run: |
                   if [ "${{ needs.check-milestone.outputs.dry_run }}" = "true" ]; then
                     echo "🧪 Running semantic-release in DRY RUN mode"
-                    npx semantic-release --dry-run
+                    # Capture dry-run output to extract version
+                    npx semantic-release --dry-run 2>&1 | tee semantic-release-output.txt
+                    
+                    # Extract the next version from dry-run output
+                    NEXT_VERSION=$(grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt || echo "")
+                    if [ -n "$NEXT_VERSION" ]; then
+                      echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+                      echo "new_release_published=true" >> $GITHUB_OUTPUT
+                      echo "Detected version: $NEXT_VERSION"
+                    else
+                      echo "No version detected from dry-run"
+                      echo "new_release_published=false" >> $GITHUB_OUTPUT
+                    fi
                   else
                     echo "🚀 Running semantic-release in PRODUCTION mode"
                     npx semantic-release
@@ -138,11 +173,27 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Determine version for artifacts
+              id: determine_version
+              run: |
+                  # Use semantic-release version if available, otherwise fall back to last tag
+                  if [ -n "${{ steps.semantic_release.outputs.new_release_version }}" ]; then
+                    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+                    echo "Using version from semantic-release: $VERSION"
+                  else
+                    # Fall back to last tag (remove 'v' prefix if present)
+                    LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
+                    VERSION="${LAST_TAG#v}"
+                    echo "Semantic-release did not produce version, using last tag: $VERSION"
+                  fi
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "Final version for artifacts: $VERSION"
+
             - name: Build Python package
               working-directory: ./ragora
               run: |
                   bash ../tools/release-scripts/build-python-package.sh \
-                    "${{ steps.semantic_release.outputs.new_release_version }}" \
+                    "${{ steps.determine_version.outputs.version }}" \
                     "${{ needs.check-milestone.outputs.dry_run }}"
 
             - name: Upload Python artifacts
@@ -151,30 +202,38 @@ jobs:
                   name: python-packages
                   path: ragora/dist/*
 
+            - name: Create database server metadata
+              if: steps.determine_version.outputs.version != ''
+              run: |
+                  VERSION="${{ steps.determine_version.outputs.version }}"
+
+                  # Create version metadata files
+                  bash tools/release-scripts/create-version-metadata.sh \
+                    "$VERSION" \
+                    "${{ github.sha }}" \
+                    "${{ github.ref_name }}" \
+                    "${{ github.repository }}"
+
+                  # Update README with version
+                  bash tools/release-scripts/update-readme-version.sh \
+                    "$VERSION" \
+                    "${{ github.repository }}"
+
             - name: Create database server archive
               id: create_db_archive
+              if: steps.determine_version.outputs.version != ''
               run: |
-                  if [ -d "tools/database_server" ]; then
-                    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                    
-                    # Run archive creation script
-                    ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh \
-                      "$VERSION" \
-                      "${{ github.sha }}" \
-                      "${{ github.ref_name }}" \
-                      "${{ github.repository }}")
-                    
-                    # Extract archive filenames from output
-                    TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
-                    ZIP_ARCHIVE=$(echo "$ARCHIVES" | grep "\.zip$" | tail -1)
-                    
-                    echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
-                    echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
-                  else
-                    echo "❌ Database server directory not found"
-                    echo "tar_archive=" >> $GITHUB_OUTPUT
-                    echo "zip_archive=" >> $GITHUB_OUTPUT
-                  fi
+                  VERSION="${{ steps.determine_version.outputs.version }}"
+
+                  # Create archives (simple, just version needed)
+                  ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh "$VERSION")
+
+                  # Extract archive filenames from output
+                  TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
+                  ZIP_ARCHIVE=$(echo "$ARCHIVES" | grep "\.zip$" | tail -1)
+
+                  echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
+                  echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
 
             - name: Upload database server archives
               if: steps.create_db_archive.outputs.tar_archive != ''
@@ -184,6 +243,52 @@ jobs:
                   path: |
                       ${{ steps.create_db_archive.outputs.tar_archive }}
                       ${{ steps.create_db_archive.outputs.zip_archive }}
+
+            - name: Create draft release (dry-run mode)
+              if: needs.check-milestone.outputs.dry_run == 'true' && steps.determine_version.outputs.version != ''
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ steps.determine_version.outputs.version }}"
+                  TAG="v$VERSION"
+                  BRANCH="${{ needs.check-milestone.outputs.release_branch }}"
+
+                  echo "Creating draft release for version $VERSION on branch $BRANCH"
+
+                  # Create draft release with basic release notes
+                  RELEASE_NOTES=$(cat <<EOF
+                  ## 🧪 Draft Release - $VERSION
+
+                  This is a **draft release** created in dry-run mode from branch \`$BRANCH\`.
+
+                  ### What's Included
+                  - Python package (wheel and source distribution)
+                  - Database server archives (tar.gz and zip)
+
+                  ### ⚠️ Note
+                  This is a draft release for testing purposes. It has not been published to PyPI.
+                  Review the artifacts and release notes before publishing.
+
+                  ---
+                  *Branch: $BRANCH | Commit: ${{ github.sha }}*
+                  EOF
+                  )
+
+                  # Create the draft release
+                  gh release create "$TAG" \
+                    --draft \
+                    --title "v$VERSION (Draft)" \
+                    --notes "$RELEASE_NOTES" \
+                    --target "$BRANCH" \
+                    ragora/dist/*.whl \
+                    ragora/dist/*.tar.gz \
+                    ${{ steps.create_db_archive.outputs.tar_archive }} \
+                    ${{ steps.create_db_archive.outputs.zip_archive }} || {
+                      echo "Failed to create draft release"
+                      echo "This might be because the tag already exists or there are no artifacts"
+                    }
+
+                  echo "✅ Draft release created: $TAG"
 
     publish-pypi:
         needs: [check-milestone, release]
@@ -221,7 +326,7 @@ jobs:
 
     attach-milestone-summary:
         needs: [check-milestone, release]
-        if: needs.release.outputs.published == 'true'
+        if: needs.release.outputs.published == 'true' && needs.check-milestone.outputs.dry_run == 'false'
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -231,6 +336,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v4
               with:
+                  ref: ${{ needs.check-milestone.outputs.release_branch }}
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
 
