@@ -138,9 +138,8 @@ jobs:
               with:
                   python-version: ${{ env.PYTHON_VERSION }}
 
-            - name: Install semantic-release
-              run: |
-                  npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
+            - name: Install semantic-release dependencies
+              run: npm install
 
             - name: Install Python dependencies
               working-directory: ./ragora
