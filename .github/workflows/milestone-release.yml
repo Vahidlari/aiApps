@@ -197,6 +197,57 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Verify tag creation (production mode)
+              if: needs.check-milestone.outputs.dry_run == 'false'
+              run: |
+                  echo "🔍 Verifying that semantic-release created a new git tag..."
+
+                  # Refresh tags from repository
+                  git fetch --tags --force
+
+                  # Get the latest tag
+                  LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+                  LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
+
+                  echo "Last tag before release: $LAST_TAG"
+                  echo "Latest tag after semantic-release: $LATEST_TAG"
+
+                  # Check if we have a tag at all
+                  if [ -z "$LATEST_TAG" ]; then
+                    echo "❌ ERROR: No git tags found in repository!"
+                    echo "Semantic-release may have failed to create a tag."
+                    exit 1
+                  fi
+
+                  # Check if the tag changed (new tag was created)
+                  if [ "$LATEST_TAG" = "$LAST_TAG" ]; then
+                    echo "❌ ERROR: No new tag was created!"
+                    echo "Expected: New tag different from $LAST_TAG"
+                    echo "Actual: Latest tag is still $LATEST_TAG"
+                    echo ""
+                    echo "This usually means:"
+                    echo "  1. Semantic-release failed to create the tag (check semantic-release output above)"
+                    echo "  2. GitHub prevented tag creation (possibly a deleted tag being recreated)"
+                    echo "  3. No commits warranted a new release"
+                    echo ""
+                    echo "Cannot proceed with building Python package using stale version."
+                    exit 1
+                  fi
+
+                  # Verify the new tag matches what semantic-release reported
+                  EXPECTED_VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+                  if [ -n "$EXPECTED_VERSION" ]; then
+                    EXPECTED_TAG="v$EXPECTED_VERSION"
+                    if [ "$LATEST_TAG" != "$EXPECTED_TAG" ]; then
+                      echo "⚠️ WARNING: Tag mismatch!"
+                      echo "Semantic-release reported version: $EXPECTED_VERSION (tag: $EXPECTED_TAG)"
+                      echo "Latest git tag: $LATEST_TAG"
+                      echo "Proceeding with git tag version, but this may indicate an issue."
+                    fi
+                  fi
+
+                  echo "✅ Tag verification passed: New tag $LATEST_TAG was created successfully"
+
             - name: Determine version for artifacts
               id: determine_version
               run: |
