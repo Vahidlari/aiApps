@@ -108,24 +108,6 @@
         [
             "@semantic-release/github",
             {
-                "assets": [
-                    {
-                        "path": "ragora/dist/*.whl",
-                        "label": "Python Wheel"
-                    },
-                    {
-                        "path": "ragora/dist/*.tar.gz",
-                        "label": "Python Source Distribution"
-                    },
-                    {
-                        "path": "database_server-*.tar.gz",
-                        "label": "Database Server (tar.gz)"
-                    },
-                    {
-                        "path": "database_server-*.zip",
-                        "label": "Database Server (zip)"
-                    }
-                ],
                 "successComment": "🎉 This PR is included in version ${nextRelease.version} of the package.",
                 "releasedLabels": [
                     "released on ${nextRelease.gitTag}"
