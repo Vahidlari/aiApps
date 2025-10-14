@@ -19,6 +19,11 @@ on:
                 required: false
                 type: boolean
                 default: false
+            use_test_pypi:
+                description: "Publish to test.pypi.org instead of PyPI (only applies if dry-run is disabled)"
+                required: false
+                type: boolean
+                default: false
 
 env:
     PYTHON_VERSION: "3.11"
@@ -33,6 +38,7 @@ jobs:
             has_release_commits: ${{ steps.check_commits.outputs.has_release_commits }}
             last_tag: ${{ steps.get_last_tag.outputs.tag }}
             dry_run: ${{ github.event.inputs.dry_run == 'true' }}
+            use_test_pypi: ${{ github.event.inputs.use_test_pypi == 'true' }}
             release_branch: ${{ steps.determine_branch.outputs.branch }}
         steps:
             - name: Determine release branch
@@ -120,6 +126,19 @@ jobs:
                   echo "  ❌ SKIP git tags and commits"
                   echo ""
                   echo "This allows you to test the release workflow without publishing to PyPI."
+
+            - name: Log test PyPI mode
+              if: needs.check-milestone.outputs.dry_run == 'false' && needs.check-milestone.outputs.use_test_pypi == 'true'
+              run: |
+                  echo "🧪 **TEST PYPI MODE ENABLED**"
+                  echo "This workflow will:"
+                  echo "  ✅ Create a GitHub release"
+                  echo "  ✅ Build Python packages"
+                  echo "  ✅ Create database server archives"
+                  echo "  ✅ Publish to test.pypi.org (NOT production PyPI)"
+                  echo "  ✅ Create git tags and commits"
+                  echo ""
+                  echo "Package will be available at: https://test.pypi.org/project/ragora/"
 
             - name: Checkout repository
               uses: actions/checkout@v4
@@ -379,15 +398,33 @@ jobs:
                   name: python-packages
                   path: ./dist
 
-            - name: Publish to PyPI
+            - name: Publish to PyPI (production)
+              if: needs.check-milestone.outputs.use_test_pypi == 'false'
               uses: pypa/gh-action-pypi-publish@release/v1
               with:
                   skip-existing: true
                   password: ${{ secrets.PYPI_TOKEN }}
 
+            - name: Publish to Test PyPI
+              if: needs.check-milestone.outputs.use_test_pypi == 'true'
+              uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  repository-url: https://test.pypi.org/legacy/
+                  skip-existing: true
+                  password: ${{ secrets.TEST_PYPI_TOKEN }}
+
             - name: Log success
               run: |
-                  echo "✅ Successfully published to PyPI"
+                  if [ "${{ needs.check-milestone.outputs.use_test_pypi }}" = "true" ]; then
+                    echo "✅ Successfully published to Test PyPI"
+                    echo "📦 Package available at: https://test.pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
+                    echo ""
+                    echo "To install from Test PyPI:"
+                    echo "  pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple ragora"
+                  else
+                    echo "✅ Successfully published to PyPI"
+                    echo "📦 Package available at: https://pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
+                  fi
 
     skip-pypi-dry-run:
         needs: [check-milestone, release]
