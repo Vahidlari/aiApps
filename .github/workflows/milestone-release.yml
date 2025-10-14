@@ -579,6 +579,19 @@ jobs:
                     echo "⚠️ Database server zip not found"
                   fi
 
+            - name: Publish the release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ needs.release.outputs.version }}"
+
+                  echo "Publishing release v$VERSION..."
+
+                  # Publish the release (change from draft to published)
+                  gh release edit "v$VERSION" --draft=false
+
+                  echo "✅ Release v$VERSION has been published!"
+
     no-release-needed:
         needs: check-milestone
         if: needs.check-milestone.outputs.has_release_commits == 'false'
