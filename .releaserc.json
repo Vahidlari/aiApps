@@ -11,11 +11,11 @@
         },
         {
             "name": "release/*",
-            "prerelease": "rc"
+            "prerelease": "${name.replace(/^release\\//g, '').replace(/[^a-zA-Z0-9.-]/g, '-')}"
         },
         {
             "name": "feature/*",
-            "prerelease": "beta"
+            "prerelease": "${name.replace(/^feature\\//g, '').replace(/[^a-zA-Z0-9.-]/g, '-')}"
         }
     ],
     "plugins": [
@@ -99,7 +99,8 @@
             {
                 "assets": [
                     "CHANGELOG.md",
-                    "dummypkg/pyproject.toml"
+                    "ragora/pyproject.toml",
+                    "ragora/ragora/_version.py"
                 ],
                 "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
             }
