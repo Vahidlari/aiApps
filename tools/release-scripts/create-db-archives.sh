@@ -27,7 +27,8 @@ OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"  # Get absolute path
 
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_SERVER_DIR="$SCRIPT_DIR/../database_server"
+TOOLS_DIR="$SCRIPT_DIR/.."
+DB_SERVER_DIR="$TOOLS_DIR/database_server"
 
 # Check if database_server directory exists
 if [ ! -d "$DB_SERVER_DIR" ]; then
