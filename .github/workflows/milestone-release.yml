@@ -180,7 +180,7 @@ jobs:
                     
                     # Extract changelog from dry-run output
                     # Look for the changelog section in the output
-                    CHANGELOG=$(grep -A 1000 "## \[.*\]" semantic-release-output.txt | head -n -1 || echo "")
+                    CHANGELOG=$(awk '/^## \[/{flag=1; next} /^## \[/ && flag{exit} flag' semantic-release-output.txt || echo "")
                     
                     if [ -n "$NEXT_VERSION" ]; then
                       echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
@@ -205,7 +205,7 @@ jobs:
                     # Extract changelog from the generated CHANGELOG.md
                     if [ -f "CHANGELOG.md" ]; then
                       # Get the latest changelog entry
-                      CHANGELOG=$(awk '/^## \[/{flag=1; next} /^## \[/ && flag{exit} flag' CHANGELOG.md || echo "")
+                      CHANGELOG=$(awk '/^## \[/{flag=1} /^## \[/ && flag{exit} flag' CHANGELOG.md || echo "")
                     fi
                     
                     # Fallback: if version not found in output, check if a new tag was created
@@ -244,7 +244,7 @@ jobs:
                   # Extract the latest release section from CHANGELOG.md
                   VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
                   if [ -n "$VERSION" ]; then
-                    CHANGELOG=$(awk '/^## \['$VERSION'\]/{flag=1; next} /^## \[/ && flag{exit} flag' CHANGELOG.md)
+                    CHANGELOG=$(awk '/^## \['$VERSION'\]/{flag=1} /^## \[/ && flag{exit} flag' CHANGELOG.md)
                     
                     echo "changelog<<EOF" >> $GITHUB_OUTPUT
                     echo "$CHANGELOG" >> $GITHUB_OUTPUT
