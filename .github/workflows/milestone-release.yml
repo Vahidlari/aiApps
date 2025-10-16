@@ -382,8 +382,8 @@ jobs:
               run: |
                   VERSION="${{ steps.determine_version.outputs.version }}"
 
-                  # Create archives (simple, just version needed)
-                  ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh "$VERSION")
+                  # Create archives in artifacts folder
+                  ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh "$VERSION" "artifacts")
 
                   # Extract archive filenames from output
                   TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
@@ -393,7 +393,7 @@ jobs:
                   echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
 
             - name: Upload database server archives
-              if: steps.create_db_archive.outputs.tar_archive != ''
+              if: steps.create_db_archive.outputs.tar_archive != '' && steps.create_db_archive.outputs.zip_archive != ''
               uses: actions/upload-artifact@v4
               with:
                   name: database-server-archives

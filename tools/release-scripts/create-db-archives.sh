@@ -1,17 +1,19 @@
 #!/bin/bash
 # Create database server archives
-# Usage: create-db-archives.sh <version>
+# Usage: create-db-archives.sh <version> [output_dir]
 
 set -euo pipefail
 
 # Check arguments
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 <version>" >&2
-    echo "Example: $0 1.2.0" >&2
+    echo "Usage: $0 <version> [output_dir]" >&2
+    echo "Example: $0 1.2.0 artifacts" >&2
     exit 1
 fi
 
 VERSION="$1"
+# Determine output directory (default to current directory)
+OUTPUT_DIR="${2:-.}"
 
 # Validate version is not empty
 if [ -z "$VERSION" ]; then
@@ -19,9 +21,14 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
+OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"  # Get absolute path
+
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_SERVER_DIR="$SCRIPT_DIR/../database_server"
+TOOLS_DIR="$SCRIPT_DIR/.."
+DB_SERVER_DIR="$TOOLS_DIR/database_server"
 
 # Check if database_server directory exists
 if [ ! -d "$DB_SERVER_DIR" ]; then
@@ -44,16 +51,16 @@ tar --exclude='*.pyc' \
     --exclude='node_modules' \
     --exclude='*.log' \
     --exclude='*.tmp' \
-    -czf "$TAR_ARCHIVE" \
-    -C "$SCRIPT_DIR/.." database_server
+    -czf "$OUTPUT_DIR/$TAR_ARCHIVE" \
+    -C "$TOOLS_DIR" database_server
 
-echo "✅ Created: $TAR_ARCHIVE"
+echo "✅ Created: $OUTPUT_DIR/$TAR_ARCHIVE"
 
 # Create zip archive with same exclusions (if zip is available)
 if command -v zip &> /dev/null; then
     echo "Creating zip archive..."
-    cd "$SCRIPT_DIR/.."
-    zip -q -r "$ZIP_ARCHIVE" database_server \
+    cd "$TOOLS_DIR"
+    zip -q -r "$OUTPUT_DIR/$ZIP_ARCHIVE" database_server \
         -x "*.pyc" \
         -x "*__pycache__*" \
         -x "*.git*" \
@@ -62,15 +69,15 @@ if command -v zip &> /dev/null; then
         -x "*.tmp"
     cd - > /dev/null
     
-    echo "✅ Created: $ZIP_ARCHIVE"
+    echo "✅ Created: $OUTPUT_DIR/$ZIP_ARCHIVE"
     echo ""
     echo "📦 Archives created successfully:"
-    echo "$TAR_ARCHIVE"
-    echo "$ZIP_ARCHIVE"
+    echo "$OUTPUT_DIR/$TAR_ARCHIVE"
+    echo "$OUTPUT_DIR/$ZIP_ARCHIVE"
 else
     echo "⚠️  zip command not available, skipping zip archive"
     echo ""
     echo "📦 Archive created successfully:"
-    echo "$TAR_ARCHIVE"
+    echo "$OUTPUT_DIR/$TAR_ARCHIVE"
 fi
 
