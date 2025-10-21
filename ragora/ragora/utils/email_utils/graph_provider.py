@@ -91,7 +91,14 @@ class GraphProvider(EmailProvider):
     def _make_request(
         self, method: str, endpoint: str, data: Optional[Dict] = None
     ) -> Dict[str, Any]:
-        """Make authenticated request to Microsoft Graph API."""
+        """Make authenticated request to Microsoft Graph API.
+        Args:
+            method: The HTTP method to use
+            endpoint: The endpoint to request
+            data: The data to send with the request
+        Returns:
+            Dictionary containing the response data
+        """
         if not self.is_connected:
             raise ConnectionError("Not connected to Microsoft Graph")
 
@@ -125,7 +132,14 @@ class GraphProvider(EmailProvider):
     def fetch_messages(
         self, limit: int = 50, folder: Optional[str] = None, unread_only: bool = False
     ) -> List[EmailMessage]:
-        """Fetch messages from Microsoft Graph API."""
+        """Fetch messages from Microsoft Graph API.
+        Args:
+            limit: The maximum number of messages to fetch
+            folder: The folder to search for messages
+            unread_only: Whether to only fetch unread messages
+        Returns:
+            List of EmailMessage objects
+        """
         try:
             # Build endpoint
             if folder:
@@ -166,7 +180,12 @@ class GraphProvider(EmailProvider):
             raise RuntimeError(f"Failed to fetch messages: {str(e)}")
 
     def fetch_message_by_id(self, message_id: str) -> Optional[EmailMessage]:
-        """Fetch a specific message by its ID."""
+        """Fetch a specific message by its ID.
+        Args:
+            message_id: The ID of the message to fetch
+        Returns:
+            EmailMessage object if the message was found, None otherwise
+        """
         try:
             endpoint = f"/me/messages/{message_id}"
             response = self._make_request("GET", endpoint)
@@ -179,7 +198,12 @@ class GraphProvider(EmailProvider):
             raise RuntimeError(f"Failed to fetch message {message_id}: {str(e)}")
 
     def _parse_graph_message(self, msg_data: Dict[str, Any]) -> Optional[EmailMessage]:
-        """Parse Microsoft Graph message data into EmailMessage object."""
+        """Parse Microsoft Graph message data into EmailMessage object.
+        Args:
+            msg_data: The message data to parse
+        Returns:
+            EmailMessage object if the message was found, None otherwise
+        """
         try:
             # Extract basic fields
             message_id = msg_data.get("id", "")
@@ -267,7 +291,12 @@ class GraphProvider(EmailProvider):
             return None
 
     def _parse_graph_date(self, date_str: Optional[str]) -> Optional[datetime]:
-        """Parse Microsoft Graph date string."""
+        """Parse Microsoft Graph date string.
+        Args:
+            date_str: The date string to parse
+        Returns:
+            datetime object if the date was parsed successfully, None otherwise
+        """
         if not date_str:
             return None
 
@@ -280,7 +309,12 @@ class GraphProvider(EmailProvider):
     def _parse_graph_attachments(
         self, attachments_data: List[Dict[str, Any]]
     ) -> List[EmailAttachment]:
-        """Parse Microsoft Graph attachments."""
+        """Parse Microsoft Graph attachments.
+        Args:
+            attachments_data: The attachments data to parse
+        Returns:
+            List of EmailAttachment objects
+        """
         attachments = []
 
         for attachment_data in attachments_data:
@@ -322,7 +356,18 @@ class GraphProvider(EmailProvider):
         attachments: Optional[List[str]] = None,
         folder: str = "Drafts",
     ) -> EmailDraft:
-        """Create a draft message using Microsoft Graph API."""
+        """Create a draft message using Microsoft Graph API.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+            folder: The folder to save the draft message
+        Returns:
+            EmailDraft object
+        """
         try:
             # Prepare message data
             message_data = {
@@ -411,7 +456,13 @@ class GraphProvider(EmailProvider):
             raise RuntimeError(f"Failed to create draft: {str(e)}")
 
     def send_message(self, draft_id: str, folder: str = "Drafts") -> bool:
-        """Send a draft message."""
+        """Send a draft message.
+        Args:
+            draft_id: The ID of the draft message to send
+            folder: The folder to search for the draft message
+        Returns:
+            True if the draft message was sent successfully, False otherwise
+        """
         try:
             self._make_request("POST", f"/me/messages/{draft_id}/send")
             return True
@@ -428,7 +479,17 @@ class GraphProvider(EmailProvider):
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[str]] = None,
     ) -> bool:
-        """Send a message directly via Microsoft Graph API."""
+        """Send a message directly via Microsoft Graph API.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+        Returns:
+            True if the message was sent successfully, False otherwise
+        """
         try:
             # Create draft first
             draft = self.create_draft(to, subject, body, cc, bcc, attachments)
@@ -440,7 +501,12 @@ class GraphProvider(EmailProvider):
             raise RuntimeError(f"Failed to send message directly: {str(e)}")
 
     def mark_as_read(self, message_id: str) -> bool:
-        """Mark a message as read."""
+        """Mark a message as read.
+        Args:
+            message_id: The ID of the message to mark as read
+        Returns:
+            True if the message was marked as read successfully, False otherwise
+        """
         try:
             update_data = {"isRead": True}
             self._make_request("PATCH", f"/me/messages/{message_id}", update_data)
@@ -452,7 +518,10 @@ class GraphProvider(EmailProvider):
             raise RuntimeError(f"Failed to mark message as read: {str(e)}")
 
     def get_folders(self) -> List[str]:
-        """Get list of available folders."""
+        """Get list of available folders.
+        Returns:
+            List of available folders
+        """
         try:
             response = self._make_request("GET", "/me/mailFolders")
             folders_data = response.get("value", [])
@@ -468,11 +537,17 @@ class GraphProvider(EmailProvider):
 
     @property
     def is_connected(self) -> bool:
-        """Check if connected to Microsoft Graph API."""
+        """Check if connected to Microsoft Graph API.
+        Returns:
+            True if connected to Microsoft Graph API, False otherwise
+        """
         return self._connected and self._access_token is not None
 
 
 class AuthenticationError(Exception):
-    """Raised when authentication fails."""
+    """Raised when authentication fails.
+    Args:
+        message: The error message
+    """
 
     pass
