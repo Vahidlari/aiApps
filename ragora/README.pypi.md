@@ -32,57 +32,16 @@ You need a Weaviate instance running. Download the pre-configured Ragora databas
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+wget https://github.com/Vahidlari/aiApps/releases/download/v<x.y.z>/database_server-<x.y.z>.tar.gz
 
 # Extract and start
-tar -xzf ragora-database-server.tar.gz
-cd ragora-database-server
+tar -xzf database_server-<x.y.z>.tar.gz
+cd database-server
 ./database-manager.sh start
 ```
 
+Update `<x.y.z>` with the actual package version- For example use `1.0.0` for version `v1.0.0`.
 The database server is a zero-dependency solution (only requires Docker) that works on Windows, macOS, and Linux.
-
-## 🎯 Quick Start
-
-```python
-from ragora import KnowledgeBaseManager
-
-# Initialize the knowledge base manager
-kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    class_name="Documents",
-    embedding_model="all-mpnet-base-v2"
-)
-
-# Process documents
-document_paths = ["paper1.tex", "paper2.tex"]
-chunk_ids = kbm.process_documents(document_paths)
-print(f"Processed {len(chunk_ids)} chunks")
-
-# Query the knowledge base
-results = kbm.query(
-    "What is quantum entanglement?",
-    search_type="hybrid",
-    top_k=5
-)
-
-# Display results
-for result in results['chunks']:
-    print(f"Score: {result['similarity_score']:.3f}")
-    print(f"Content: {result['content'][:200]}...\n")
-```
-
-## 📚 Core Concepts
-
-### Three-Layer Architecture
-
-Ragora uses a clean three-layer architecture that separates concerns:
-
-1. **DatabaseManager** (Infrastructure Layer): Low-level Weaviate operations
-2. **VectorStore** (Storage Layer): Document storage and CRUD operations  
-3. **Retriever** (Search Layer): Search algorithms and query processing
-
-This design provides flexibility, testability, and makes it easy to extend or swap components.
 
 ### Document Processing
 
@@ -125,64 +84,6 @@ results = kbm.query("neural networks", search_type="hybrid", alpha=0.7)
 - **🤖 AI Assistants**: Ground LLM responses in your specific domain knowledge
 - **💬 Question Answering**: Build Q&A systems over your document collections
 - **🔬 Literature Review**: Efficiently search and synthesize information from research papers
-
-## 🔧 Advanced Usage
-
-### Custom Pipeline
-
-Build custom RAG pipelines with low-level components:
-
-```python
-from ragora.core import (
-    DatabaseManager,
-    VectorStore,
-    Retriever,
-    EmbeddingEngine
-)
-
-# Initialize components
-db_manager = DatabaseManager(url="http://localhost:8080")
-vector_store = VectorStore(db_manager, class_name="MyDocs")
-retriever = Retriever(db_manager, class_name="MyDocs")
-embedder = EmbeddingEngine(model_name="all-mpnet-base-v2")
-
-# Build custom workflow
-embeddings = embedder.embed_batch(texts)
-vector_store.store_chunks(chunks)
-results = retriever.search_hybrid(query, alpha=0.7, top_k=10)
-```
-
-### Multiple Search Strategies
-
-Compare different search approaches:
-
-```python
-# Semantic search for conceptual similarity
-semantic = retriever.search_similar(
-    "artificial intelligence applications",
-    top_k=5
-)
-
-# Keyword search for exact matches
-keyword = retriever.search_keyword(
-    "neural network architecture",
-    top_k=5
-)
-
-# Hybrid search with custom weighting
-hybrid = retriever.search_hybrid(
-    "deep learning models",
-    alpha=0.7,  # 70% vector, 30% keyword
-    top_k=5
-)
-
-# Search with metadata filters
-filtered = retriever.search_with_filter(
-    "quantum mechanics",
-    filters={"author": "Feynman", "year": 1965},
-    top_k=5
-)
-```
 
 ## 📖 Documentation & Examples
 
