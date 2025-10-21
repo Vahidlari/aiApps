@@ -151,4 +151,8 @@ markers = [
 
 [tool.setuptools_scm]
 write_to = "ragora/_version.py"
-write_to_template = '"""Version information for the ragora package."""\n\n__version__ = "{version}"\n__version_info__ = tuple(map(int, __version__.split(".")))\n'
+write_to_template = """\"\"\"Version information for the ragora package.\"\"\"
+
+__version__ = "{version}"
+__version_info__ = tuple(map(int, __version__.split(".")))
+"""
