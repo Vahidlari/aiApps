@@ -320,6 +320,7 @@ class GraphProvider(EmailProvider):
         cc: Optional[List[str]] = None,
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[str]] = None,
+        folder: str = "Drafts",
     ) -> EmailDraft:
         """Create a draft message using Microsoft Graph API."""
         try:
@@ -409,7 +410,7 @@ class GraphProvider(EmailProvider):
         except Exception as e:
             raise RuntimeError(f"Failed to create draft: {str(e)}")
 
-    def send_message(self, draft_id: str) -> bool:
+    def send_message(self, draft_id: str, folder: str = "Drafts") -> bool:
         """Send a draft message."""
         try:
             self._make_request("POST", f"/me/messages/{draft_id}/send")

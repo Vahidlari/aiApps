@@ -339,18 +339,60 @@ class IMAPProvider(EmailProvider):
 
         return attachments
 
-    def create_draft(
+    def _create_draft_message(
         self,
         to: List[str],
         subject: str,
         body: str,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-        attachments: Optional[List[str]] = None,
+        cc: Optional[List[str]],
+        bcc: Optional[List[str]],
+        attachments: Optional[List[str]],
+        draft_id: str,
+    ) -> str:
+        """Create a properly formatted draft message for IMAP APPEND."""
+        # Create the message structure
+        msg = MIMEMultipart()
+
+        # Set headers
+        msg["From"] = self.credentials.username
+        msg["To"] = ", ".join(to)
+        msg["Subject"] = subject
+        msg["Message-ID"] = f"<{draft_id}@draft>"
+        msg["Date"] = email.utils.formatdate(localtime=True)
+
+        if cc:
+            msg["Cc"] = ", ".join(cc)
+        if bcc:
+            msg["Bcc"] = ", ".join(bcc)
+
+        # Add body
+        msg.attach(MIMEText(body, "plain"))
+
+        # Add attachments
+        if attachments:
+            for file_path in attachments:
+                if os.path.exists(file_path):
+                    with open(file_path, "rb") as attachment:
+                        part = MIMEApplication(
+                            attachment.read(), Name=Path(file_path).name
+                        )
+                        part["Content-Disposition"] = (
+                            f'attachment; filename="{Path(file_path).name}"'
+                        )
+                        msg.attach(part)
+
+        return msg.as_string()
+
+    def _create_local_draft(
+        self,
+        to: List[str],
+        subject: str,
+        body: str,
+        cc: Optional[List[str]],
+        bcc: Optional[List[str]],
+        attachments: Optional[List[str]],
     ) -> EmailDraft:
-        """Create a draft message (IMAP doesn't support drafts directly, so we simulate)."""
-        # IMAP doesn't have native draft support, so we create a draft object
-        # that can be used to send the message directly
+        """Create a local draft without storing on server."""
         draft_id = f"draft_{datetime.now().timestamp()}"
 
         # Parse recipients
@@ -387,11 +429,122 @@ class IMAPProvider(EmailProvider):
             modified_date=datetime.now(),
         )
 
-    def send_message(self, draft_id: str) -> bool:
-        """Send a draft message (not directly supported by IMAP)."""
-        # IMAP doesn't support draft sending, so this would need to be
-        # implemented with a draft storage mechanism
-        raise NotImplementedError("Draft sending not directly supported by IMAP")
+    def create_draft(
+        self,
+        to: List[str],
+        subject: str,
+        body: str,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+        attachments: Optional[List[str]] = None,
+        folder: str = "Drafts",
+    ) -> EmailDraft:
+        """Create and store a draft message on the server using IMAP APPEND."""
+        # If not connected, create a local draft only
+        if not self.is_connected:
+            return self._create_local_draft(to, subject, body, cc, bcc, attachments)
+
+        draft_id = f"draft_{datetime.now().timestamp()}"
+
+        # Parse recipients
+        to_addresses = [EmailAddress(addr) for addr in to]
+        cc_addresses = [EmailAddress(addr) for addr in (cc or [])]
+        bcc_addresses = [EmailAddress(addr) for addr in (bcc or [])]
+
+        # Process attachments
+        email_attachments = []
+        if attachments:
+            for file_path in attachments:
+                if os.path.exists(file_path):
+                    with open(file_path, "rb") as f:
+                        content = f.read()
+
+                    email_attachments.append(
+                        EmailAttachment(
+                            filename=Path(file_path).name,
+                            content_type="application/octet-stream",
+                            size=len(content),
+                            content=content,
+                        )
+                    )
+
+        # Create the draft message
+        draft_msg = self._create_draft_message(
+            to, subject, body, cc, bcc, attachments, draft_id
+        )
+
+        try:
+            # Select the drafts folder
+            self._imap_client.select(folder)
+
+            # Append the draft message to the server
+            status, response = self._imap_client.append(
+                folder,
+                "(\\Draft)",  # Set the \Draft flag
+                None,  # Use current date/time
+                draft_msg.encode("utf-8"),
+            )
+
+            if status != "OK":
+                raise RuntimeError(f"Failed to store draft on server: {response}")
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to create draft: {str(e)}")
+
+        return EmailDraft(
+            draft_id=draft_id,
+            subject=subject,
+            recipients=to_addresses,
+            cc_recipients=cc_addresses,
+            bcc_recipients=bcc_addresses,
+            body_text=body,
+            attachments=email_attachments,
+            created_date=datetime.now(),
+            modified_date=datetime.now(),
+        )
+
+    def send_message(self, draft_id: str, folder: str = "Drafts") -> bool:
+        """Send a draft message by fetching from server and sending via SMTP."""
+        if not self.is_connected:
+            raise ConnectionError("Not connected to email servers")
+        # If draft_id starts with "draft_" and contains timestamp,
+        # it's a local draft. In this case, we can't send it since
+        # it wasn't stored on the server
+        if draft_id.startswith("draft_") and "." in draft_id:
+            raise RuntimeError(
+                "Cannot send local draft - draft must be stored on server first"
+            )
+
+        try:
+            # Select the drafts folder
+            self._imap_client.select(folder)
+
+            # Search for the draft message
+            status, messages = self._imap_client.search(
+                None, f'HEADER Message-ID "<{draft_id}@draft>"'
+            )
+            if status != "OK" or not messages[0]:
+                raise RuntimeError(f"Draft with ID {draft_id} not found")
+
+            msg_ids = messages[0].split()
+            if not msg_ids:
+                raise RuntimeError(f"Draft with ID {draft_id} not found")
+
+            # Fetch the draft message
+            status, msg_data = self._imap_client.fetch(msg_ids[0], "(RFC822)")
+            if status != "OK":
+                raise RuntimeError("Failed to fetch draft message")
+
+            # Send the message via SMTP
+            raw_email = msg_data[0][1]
+            self._smtp_client.send_message(email.message_from_bytes(raw_email))
+
+            # Optionally delete the draft after sending
+            # self._imap_client.store(msg_ids[0], "+FLAGS", "\\Deleted")
+
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to send draft message: {str(e)}")
 
     def send_message_direct(
         self,
@@ -430,7 +583,7 @@ class IMAPProvider(EmailProvider):
                                 attachment.read(), Name=Path(file_path).name
                             )
                             part["Content-Disposition"] = (
-                                f'attachment; filename="{Path(file_path).name}"'
+                                f"attachment; filename=" f'"{Path(file_path).name}"'
                             )
                             msg.attach(part)
 
