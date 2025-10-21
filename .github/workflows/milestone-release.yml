@@ -228,8 +228,23 @@ jobs:
                     
                     # Extract changelog from the generated CHANGELOG.md
                     if [ -f "CHANGELOG.md" ]; then
-                      # Get the latest changelog entry
-                      CHANGELOG=$(awk '/^## \[/{flag=1} /^## \[/ && flag{exit} flag' CHANGELOG.md || echo "")
+                      # Get the latest changelog entry - try multiple patterns
+                      CHANGELOG=""
+                      for pattern in "^## \\[" "^## v" "^## [0-9]"; do
+                        CHANGELOG=$(awk "/$pattern/{flag=1; next} /^## / && flag{exit} flag" CHANGELOG.md || echo "")
+                        if [ -n "$CHANGELOG" ]; then
+                          echo "Found changelog with pattern: $pattern"
+                          break
+                        fi
+                      done
+                      
+                      if [ -z "$CHANGELOG" ]; then
+                        echo "⚠️ Warning: Could not extract changelog from CHANGELOG.md"
+                        echo "CHANGELOG.md content preview:"
+                        head -20 CHANGELOG.md || echo "File is empty or unreadable"
+                      fi
+                    else
+                      echo "⚠️ Warning: CHANGELOG.md not found after semantic-release"
                     fi
                     
                     # Fallback: if version not found in output, check if a new tag was created
@@ -261,22 +276,65 @@ jobs:
             - name: Extract changelog for current release
               id: extract_changelog
               run: |
-                  # Fetch the latest commit that semantic-release just made
-                  git fetch origin ${{ needs.check-milestone.outputs.release_branch }}
-                  git checkout origin/${{ needs.check-milestone.outputs.release_branch }} -- CHANGELOG.md
+                  echo "🔍 Extracting changelog for release..."
 
-                  # Extract the latest release section from CHANGELOG.md
-                  VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                  if [ -n "$VERSION" ]; then
-                    CHANGELOG=$(awk '/^## \['$VERSION'\]/{flag=1} /^## \[/ && flag{exit} flag' CHANGELOG.md)
-                    
+                  # Use semantic-release's built-in release notes from the previous step
+                  SEMANTIC_RELEASE_NOTES="${{ steps.semantic_release.outputs.new_release_notes }}"
+
+                  if [ -n "$SEMANTIC_RELEASE_NOTES" ]; then
+                    echo "✅ Using semantic-release generated changelog"
                     echo "changelog<<EOF" >> $GITHUB_OUTPUT
-                    echo "$CHANGELOG" >> $GITHUB_OUTPUT
+                    echo "$SEMANTIC_RELEASE_NOTES" >> $GITHUB_OUTPUT
                     echo "EOF" >> $GITHUB_OUTPUT
-                    echo "Extracted changelog for version $VERSION"
+                    echo "Successfully extracted changelog from semantic-release output"
                   else
-                    echo "No version found, skipping changelog extraction"
-                    echo "changelog=" >> $GITHUB_OUTPUT
+                    echo "⚠️ No changelog found in semantic-release output, attempting fallback..."
+                    
+                    # Fallback: Try to extract from CHANGELOG.md if semantic-release output is empty
+                    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+                    if [ -n "$VERSION" ]; then
+                      echo "Attempting to extract from CHANGELOG.md for version $VERSION"
+                      
+                      # Fetch the latest commit that semantic-release just made
+                      git fetch origin ${{ needs.check-milestone.outputs.release_branch }}
+                      
+                      # Check if CHANGELOG.md exists
+                      if git show origin/${{ needs.check-milestone.outputs.release_branch }}:CHANGELOG.md > /dev/null 2>&1; then
+                        echo "CHANGELOG.md found, extracting version section..."
+                        git checkout origin/${{ needs.check-milestone.outputs.release_branch }} -- CHANGELOG.md
+                        
+                        # Try multiple version format patterns
+                        CHANGELOG=""
+                        for pattern in "## \\[$VERSION\\]" "## \\[v$VERSION\\]" "## $VERSION" "## v$VERSION"; do
+                          CHANGELOG=$(awk "/^$pattern/{flag=1; next} /^## \\[/ && flag{exit} flag" CHANGELOG.md || echo "")
+                          if [ -n "$CHANGELOG" ]; then
+                            echo "Found changelog with pattern: $pattern"
+                            break
+                          fi
+                        done
+                        
+                        if [ -n "$CHANGELOG" ]; then
+                          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+                          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+                          echo "EOF" >> $GITHUB_OUTPUT
+                          echo "✅ Successfully extracted changelog from CHANGELOG.md"
+                        else
+                          echo "❌ ERROR: Could not extract changelog for version $VERSION from CHANGELOG.md"
+                          echo "Available sections in CHANGELOG.md:"
+                          grep "^## " CHANGELOG.md | head -5 || echo "No sections found"
+                          echo "changelog=" >> $GITHUB_OUTPUT
+                          exit 1
+                        fi
+                      else
+                        echo "❌ ERROR: CHANGELOG.md not found in repository"
+                        echo "changelog=" >> $GITHUB_OUTPUT
+                        exit 1
+                      fi
+                    else
+                      echo "❌ ERROR: No version available for changelog extraction"
+                      echo "changelog=" >> $GITHUB_OUTPUT
+                      exit 1
+                    fi
                   fi
 
             - name: Verify tag creation (production mode)
@@ -515,6 +573,41 @@ jobs:
                   # Save to file for later use
                   echo "$MILESTONE_SUMMARY" > milestone_summary.md
 
+            - name: Validate changelog extraction
+              if: needs.check-milestone.outputs.dry_run == 'false'
+              run: |
+                  echo "🔍 Validating changelog extraction..."
+
+                  CHANGELOG="${{ needs.release.outputs.changelog }}"
+
+                  if [ -z "$CHANGELOG" ]; then
+                    echo "❌ CRITICAL ERROR: No changelog was extracted!"
+                    echo "This indicates a failure in the changelog extraction process."
+                    echo "The release cannot proceed without a changelog."
+                    echo ""
+                    echo "Possible causes:"
+                    echo "  1. Semantic-release failed to generate release notes"
+                    echo "  2. CHANGELOG.md was not created or is empty"
+                    echo "  3. Version format mismatch in CHANGELOG.md parsing"
+                    echo "  4. Git fetch/checkout issues"
+                    echo ""
+                    echo "Please check the 'Extract changelog for current release' step output above."
+                    exit 1
+                  fi
+
+                  # Basic validation - check if changelog has reasonable content
+                  CHANGELOG_LENGTH=$(echo "$CHANGELOG" | wc -c)
+                  if [ "$CHANGELOG_LENGTH" -lt 50 ]; then
+                    echo "⚠️ WARNING: Changelog seems too short ($CHANGELOG_LENGTH characters)"
+                    echo "Changelog content:"
+                    echo "$CHANGELOG"
+                    echo ""
+                    echo "This might indicate an extraction issue, but proceeding with release..."
+                  fi
+
+                  echo "✅ Changelog validation passed"
+                  echo "Changelog length: $CHANGELOG_LENGTH characters"
+
             - name: Create GitHub release (Production mode)
               if: needs.check-milestone.outputs.dry_run == 'false'
               env:
@@ -537,9 +630,11 @@ jobs:
                   # Combine all content - put changelog first, then installation instructions
                   if [ -n "$CHANGELOG" ]; then
                     RELEASE_BODY=$(printf "%s\n\n%s" "$CHANGELOG" "$ADDITIONAL_CONTENT")
+                    echo "✅ Release body includes changelog and installation instructions"
                   else
-                    echo "⚠️ Warning: No changelog extracted, using only installation instructions"
-                    RELEASE_BODY="$ADDITIONAL_CONTENT"
+                    echo "❌ CRITICAL ERROR: No changelog available for release body!"
+                    echo "This should not happen after validation step."
+                    exit 1
                   fi
 
                   # Create release with all artifacts attached
