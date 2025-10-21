@@ -242,3 +242,6 @@ Thumbs.db
 
 # Python lock files
 poetry.lock
+
+# Version file
+_version.py

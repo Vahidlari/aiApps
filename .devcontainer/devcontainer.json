@@ -15,7 +15,8 @@
                 "ms-toolsai.vscode-jupyter-slideshow",
                 "ms-vscode.vscode-json",
                 "redhat.vscode-yaml",
-                "ms-vscode.vscode-docker"
+                "ms-vscode.vscode-docker",
+                "eamodio.gitlens"
             ],
             "settings": {
                 "python.linting.enabled": true,
@@ -38,6 +39,6 @@
             }
         }
     },
-    "postCreateCommand": "cd /workspaces/aiApps/ragora && pip install -e . && echo 'export PATH=\"/home/vscode/.local/bin:$PATH\"' >> ~/.bashrc",
+    "postCreateCommand": "cd /workspaces/aiApps/ragora && SETUPTOOLS_SCM_PRETEND_VERSION=$(git describe --tags --always | sed 's/^v//') pip install -e . && echo 'export PATH=\"/home/vscode/.local/bin:$PATH\"' >> ~/.bashrc",
     "remoteUser": "vscode"
 }
