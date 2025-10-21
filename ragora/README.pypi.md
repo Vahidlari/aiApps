@@ -32,14 +32,15 @@ You need a Weaviate instance running. Download the pre-configured Ragora databas
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+wget https://github.com/Vahidlari/aiApps/releases/download/v<x.y.z>/database_server-<x.y.z>.tar.gz
 
 # Extract and start
-tar -xzf ragora-database-server.tar.gz
+tar -xzf database_server-<x.y.z>.tar.gz
 cd ragora-database-server
 ./database-manager.sh start
 ```
 
+Update `<x.y.z>` with the actual package version.
 The database server is a zero-dependency solution (only requires Docker) that works on Windows, macOS, and Linux.
 
 ## 🎯 Quick Start
