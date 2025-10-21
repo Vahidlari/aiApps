@@ -81,6 +81,7 @@ class EmailProvider(ABC):
         cc: Optional[List[str]] = None,
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[str]] = None,
+        folder: str = "Drafts",
     ) -> EmailDraft:
         """Create a draft message.
 
@@ -91,6 +92,7 @@ class EmailProvider(ABC):
             cc: Optional list of CC recipient email addresses
             bcc: Optional list of BCC recipient email addresses
             attachments: Optional list of file paths to attach
+            folder: Folder to store the draft in (default: "Drafts")
 
         Returns:
             EmailDraft object with the created draft
@@ -102,11 +104,12 @@ class EmailProvider(ABC):
         pass
 
     @abstractmethod
-    def send_message(self, draft_id: str) -> bool:
+    def send_message(self, draft_id: str, folder: str = "Drafts") -> bool:
         """Send a draft message.
 
         Args:
             draft_id: ID of the draft to send
+            folder: Folder where the draft is stored (default: "Drafts")
 
         Returns:
             True if message was sent successfully

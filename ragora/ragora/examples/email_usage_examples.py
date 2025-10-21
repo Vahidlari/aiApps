@@ -85,7 +85,10 @@ Try with a personal Gmail account if you're using a work account.
 """
 
 import getpass
+import os
 from typing import List
+
+from dotenv import load_dotenv
 
 from ragora.utils import (
     EmailProvider,
@@ -96,9 +99,24 @@ from ragora.utils import (
 )
 
 
+def get_user_credentials_from_file():
+    """Get email credentials from a .env file."""
+    # load the .env file
+    load_dotenv()
+    # get the email, password and recipient from the .env file
+    email = os.getenv("EMAIL")
+    password = os.getenv("PASSWORD")
+    recipient = os.getenv("RECIPIENT")
+    return email, password, recipient
+
+
 def get_user_credentials():
     """Get email credentials from user input."""
     print("=== Email Credentials Setup ===")
+    # if credentials are provided in the .env file, use them
+    email, password, recipient = get_user_credentials_from_file()
+    if email and password and recipient:
+        return email, password, recipient
 
     # Get Gmail address
     email = input("Enter your Gmail address: ").strip()
@@ -163,12 +181,17 @@ def example_imap_usage():
             print(f"Body preview: {msg.get_body()[:100]}...")
             print("-" * 50)
 
+        # getting the list of folders
+        folders = provider.get_folders()
+        print(f"Available folders: {folders}")
+
         # Create and send a draft
         draft = provider.create_draft(
             to=[recipient],
             subject="Test Email from RAG System",
             body="This is a test email sent from the RAG system.",
             cc=["cc@example.com"],
+            folder="[Gmail]/Drafts",
         )
         print(f"Created draft with ID: {draft.draft_id}")
 
@@ -179,10 +202,6 @@ def example_imap_usage():
             body="This email was sent directly without creating a draft.",
         )
         print(f"Message sent successfully: {success}")
-
-        # Get available folders
-        folders = provider.get_folders()
-        print(f"Available folders: {folders}")
 
     except Exception as e:
         print(f"Error: {e}")

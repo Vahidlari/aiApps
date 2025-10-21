@@ -100,7 +100,14 @@ class IMAPProvider(EmailProvider):
     def fetch_messages(
         self, limit: int = 50, folder: Optional[str] = None, unread_only: bool = False
     ) -> List[EmailMessage]:
-        """Fetch messages from IMAP server."""
+        """Fetch messages from IMAP server.
+        Args:
+            limit: The maximum number of messages to fetch
+            folder: The folder to search for messages
+            unread_only: Whether to only fetch unread messages
+        Returns:
+            List of EmailMessage objects
+        """
         if not self.is_connected:
             raise ConnectionError("Not connected to IMAP server")
 
@@ -138,7 +145,12 @@ class IMAPProvider(EmailProvider):
             raise RuntimeError(f"Failed to fetch messages: {str(e)}")
 
     def fetch_message_by_id(self, message_id: str) -> Optional[EmailMessage]:
-        """Fetch a specific message by its ID."""
+        """Fetch a specific message by its ID.
+        Args:
+            message_id: The ID of the message to fetch
+        Returns:
+            EmailMessage object if the message was found, None otherwise
+        """
         if not self.is_connected:
             raise ConnectionError("Not connected to IMAP server")
 
@@ -160,7 +172,12 @@ class IMAPProvider(EmailProvider):
             raise RuntimeError(f"Failed to fetch message {message_id}: {str(e)}")
 
     def _fetch_single_message(self, msg_id: bytes) -> Optional[EmailMessage]:
-        """Fetch and parse a single message."""
+        """Fetch and parse a single message.
+        Args:
+            msg_id: The ID of the message to fetch
+        Returns:
+            EmailMessage object if the message was found, None otherwise
+        """
         try:
             status, msg_data = self._imap_client.fetch(msg_id, "(RFC822)")
             if status != "OK":
@@ -177,7 +194,13 @@ class IMAPProvider(EmailProvider):
     def _parse_email_message(
         self, email_msg: email.message.Message, msg_id: str
     ) -> EmailMessage:
-        """Parse email.message.Message into EmailMessage object."""
+        """Parse email.message.Message into EmailMessage object.
+        Args:
+            email_msg: The email.message.Message object to parse
+            msg_id: The ID of the message
+        Returns:
+            EmailMessage object
+        """
         # Extract headers
         subject = self._decode_header(email_msg.get("Subject", ""))
         sender = self._parse_address(email_msg.get("From", ""))
@@ -215,7 +238,12 @@ class IMAPProvider(EmailProvider):
         )
 
     def _decode_header(self, header: str) -> str:
-        """Decode email header."""
+        """Decode email header.
+        Args:
+            header: The email header to decode
+        Returns:
+            Decoded email header
+        """
         if not header:
             return ""
 
@@ -234,7 +262,12 @@ class IMAPProvider(EmailProvider):
         return decoded_string
 
     def _parse_address(self, address_str: str) -> EmailAddress:
-        """Parse a single email address."""
+        """Parse a single email address.
+        Args:
+            address_str: The email address to parse
+        Returns:
+            EmailAddress object
+        """
         if not address_str:
             return EmailAddress("")
 
@@ -249,7 +282,12 @@ class IMAPProvider(EmailProvider):
             return EmailAddress(decoded.strip())
 
     def _parse_address_list(self, address_list: str) -> List[EmailAddress]:
-        """Parse a list of email addresses."""
+        """Parse a list of email addresses.
+        Args:
+            address_list: The list of email addresses to parse
+        Returns:
+            List of EmailAddress objects
+        """
         if not address_list:
             return []
 
@@ -262,7 +300,12 @@ class IMAPProvider(EmailProvider):
         return addresses
 
     def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
-        """Parse email date string."""
+        """Parse email date string.
+        Args:
+            date_str: The email date string to parse
+        Returns:
+            datetime object if the date was parsed successfully, None otherwise
+        """
         if not date_str:
             return None
 
@@ -275,7 +318,12 @@ class IMAPProvider(EmailProvider):
     def _extract_body(
         self, email_msg: email.message.Message
     ) -> tuple[Optional[str], Optional[str]]:
-        """Extract text and HTML body from email message."""
+        """Extract text and HTML body from email message.
+        Args:
+            email_msg: The email.message.Message object to extract the body from
+        Returns:
+            Tuple of text and HTML body
+        """
         body_text = None
         body_html = None
 
@@ -339,18 +387,80 @@ class IMAPProvider(EmailProvider):
 
         return attachments
 
-    def create_draft(
+    def _create_draft_message(
         self,
         to: List[str],
         subject: str,
         body: str,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-        attachments: Optional[List[str]] = None,
+        cc: Optional[List[str]],
+        bcc: Optional[List[str]],
+        attachments: Optional[List[str]],
+        draft_id: str,
+    ) -> str:
+        """Create a properly formatted draft message for IMAP APPEND.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+        Returns:
+            String representation of the draft message
+        """
+        # Create the message structure
+        msg = MIMEMultipart()
+
+        # Set headers
+        msg["From"] = self.credentials.username
+        msg["To"] = ", ".join(to)
+        msg["Subject"] = subject
+        msg["Message-ID"] = f"<{draft_id}@draft>"
+        msg["Date"] = email.utils.formatdate(localtime=True)
+
+        if cc:
+            msg["Cc"] = ", ".join(cc)
+        if bcc:
+            msg["Bcc"] = ", ".join(bcc)
+
+        # Add body
+        msg.attach(MIMEText(body, "plain"))
+
+        # Add attachments
+        if attachments:
+            for file_path in attachments:
+                if os.path.exists(file_path):
+                    with open(file_path, "rb") as attachment:
+                        part = MIMEApplication(
+                            attachment.read(), Name=Path(file_path).name
+                        )
+                        part["Content-Disposition"] = (
+                            f'attachment; filename="{Path(file_path).name}"'
+                        )
+                        msg.attach(part)
+
+        return msg.as_string()
+
+    def _create_local_draft(
+        self,
+        to: List[str],
+        subject: str,
+        body: str,
+        cc: Optional[List[str]],
+        bcc: Optional[List[str]],
+        attachments: Optional[List[str]],
     ) -> EmailDraft:
-        """Create a draft message (IMAP doesn't support drafts directly, so we simulate)."""
-        # IMAP doesn't have native draft support, so we create a draft object
-        # that can be used to send the message directly
+        """Create a local draft without storing on server.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+        Returns:
+            EmailDraft object
+        """
         draft_id = f"draft_{datetime.now().timestamp()}"
 
         # Parse recipients
@@ -387,11 +497,139 @@ class IMAPProvider(EmailProvider):
             modified_date=datetime.now(),
         )
 
-    def send_message(self, draft_id: str) -> bool:
-        """Send a draft message (not directly supported by IMAP)."""
-        # IMAP doesn't support draft sending, so this would need to be
-        # implemented with a draft storage mechanism
-        raise NotImplementedError("Draft sending not directly supported by IMAP")
+    def create_draft(
+        self,
+        to: List[str],
+        subject: str,
+        body: str,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+        attachments: Optional[List[str]] = None,
+        folder: str = "Drafts",
+    ) -> EmailDraft:
+        """Create and store a draft message on the server using IMAP APPEND.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+        Returns:
+            EmailDraft object
+        """
+        # If not connected, create a local draft only
+        if not self.is_connected:
+            return self._create_local_draft(to, subject, body, cc, bcc, attachments)
+
+        draft_id = f"draft_{datetime.now().timestamp()}"
+
+        # Parse recipients
+        to_addresses = [EmailAddress(addr) for addr in to]
+        cc_addresses = [EmailAddress(addr) for addr in (cc or [])]
+        bcc_addresses = [EmailAddress(addr) for addr in (bcc or [])]
+
+        # Process attachments
+        email_attachments = []
+        if attachments:
+            for file_path in attachments:
+                if os.path.exists(file_path):
+                    with open(file_path, "rb") as f:
+                        content = f.read()
+
+                    email_attachments.append(
+                        EmailAttachment(
+                            filename=Path(file_path).name,
+                            content_type="application/octet-stream",
+                            size=len(content),
+                            content=content,
+                        )
+                    )
+
+        # Create the draft message
+        draft_msg = self._create_draft_message(
+            to, subject, body, cc, bcc, attachments, draft_id
+        )
+
+        try:
+            # Select the drafts folder
+            self._imap_client.select(folder)
+
+            # Append the draft message to the server
+            status, response = self._imap_client.append(
+                folder,
+                "(\\Draft)",  # Set the \Draft flag
+                None,  # Use current date/time
+                draft_msg.encode("utf-8"),
+            )
+
+            if status != "OK":
+                raise RuntimeError(f"Failed to store draft on server: {response}")
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to create draft: {str(e)}")
+
+        return EmailDraft(
+            draft_id=draft_id,
+            subject=subject,
+            recipients=to_addresses,
+            cc_recipients=cc_addresses,
+            bcc_recipients=bcc_addresses,
+            body_text=body,
+            attachments=email_attachments,
+            created_date=datetime.now(),
+            modified_date=datetime.now(),
+        )
+
+    def send_message(self, draft_id: str, folder: str = "Drafts") -> bool:
+        """Send a draft message by fetching from server and sending via SMTP.
+        Args:
+            draft_id: The ID of the draft message to send
+            folder: The folder to search for the draft message
+        Returns:
+            True if the draft message was sent successfully, False otherwise
+        """
+
+        if not self.is_connected:
+            raise ConnectionError("Not connected to email servers")
+        # If draft_id starts with "draft_" and contains timestamp,
+        # it's a local draft. In this case, we can't send it since
+        # it wasn't stored on the server
+        if draft_id.startswith("draft_") and "." in draft_id:
+            raise RuntimeError(
+                "Cannot send local draft - draft must be stored on server first"
+            )
+
+        try:
+            # Select the drafts folder
+            self._imap_client.select(folder)
+
+            # Search for the draft message
+            status, messages = self._imap_client.search(
+                None, f'HEADER Message-ID "<{draft_id}@draft>"'
+            )
+            if status != "OK" or not messages[0]:
+                raise RuntimeError(f"Draft with ID {draft_id} not found")
+
+            msg_ids = messages[0].split()
+            if not msg_ids:
+                raise RuntimeError(f"Draft with ID {draft_id} not found")
+
+            # Fetch the draft message
+            status, msg_data = self._imap_client.fetch(msg_ids[0], "(RFC822)")
+            if status != "OK":
+                raise RuntimeError("Failed to fetch draft message")
+
+            # Send the message via SMTP
+            raw_email = msg_data[0][1]
+            self._smtp_client.send_message(email.message_from_bytes(raw_email))
+
+            # Optionally delete the draft after sending
+            # self._imap_client.store(msg_ids[0], "+FLAGS", "\\Deleted")
+
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to send draft message: {str(e)}")
 
     def send_message_direct(
         self,
@@ -402,7 +640,17 @@ class IMAPProvider(EmailProvider):
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[str]] = None,
     ) -> bool:
-        """Send a message directly via SMTP."""
+        """Send a message directly via SMTP.
+        Args:
+            to: List of recipient email addresses
+            subject: Email subject line
+            body: Email body content (HTML or plain text)
+            cc: Optional list of CC recipient email addresses
+            bcc: Optional list of BCC recipient email addresses
+            attachments: Optional list of attachment file paths
+        Returns:
+            True if the message was sent successfully, False otherwise
+        """
         if not self.is_connected or not self._smtp_client:
             raise ConnectionError("Not connected to SMTP server")
 
@@ -444,7 +692,12 @@ class IMAPProvider(EmailProvider):
             raise RuntimeError(f"Failed to send message: {str(e)}")
 
     def mark_as_read(self, message_id: str) -> bool:
-        """Mark a message as read."""
+        """Mark a message as read.
+        Args:
+            message_id: The ID of the message to mark as read
+        Returns:
+            True if the message was marked as read successfully, False otherwise
+        """
         if not self.is_connected:
             raise ConnectionError("Not connected to IMAP server")
 
@@ -468,7 +721,10 @@ class IMAPProvider(EmailProvider):
             return False
 
     def get_folders(self) -> List[str]:
-        """Get list of available folders."""
+        """Get list of available folders.
+        Returns:
+            List of available folders
+        """
         if not self.is_connected:
             raise ConnectionError("Not connected to IMAP server")
 
@@ -491,7 +747,10 @@ class IMAPProvider(EmailProvider):
 
     @property
     def is_connected(self) -> bool:
-        """Check if connected to email servers."""
+        """Check if connected to email servers.
+        Returns:
+            True if connected to email servers, False otherwise
+        """
         return (
             self._connected
             and self._imap_client is not None
