@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/Vahidlari/aiApps/compare/v1.0.0...v1.0.1) (2025-10-21)
+
+
+### Bug Fixes
+
+* fixed an issue in the version information formatting in pyprojec… ([#41](https://github.com/Vahidlari/aiApps/issues/41)) ([ab8f40a](https://github.com/Vahidlari/aiApps/commit/ab8f40ada5d065a74c2036f165f7595f842b3db6))
+* update README for database server download instructions ([#42](https://github.com/Vahidlari/aiApps/issues/42)) ([643805c](https://github.com/Vahidlari/aiApps/commit/643805c6e0de165ea196aa5e6d247b46390ea7ca)), closes [#38](https://github.com/Vahidlari/aiApps/issues/38)
+
 ## [1.0.0](https://github.com/Vahidlari/aiApps/compare/v0.1.0...v1.0.0) (2025-10-20)
 
 
