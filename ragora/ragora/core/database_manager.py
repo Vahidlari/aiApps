@@ -109,6 +109,27 @@ class DatabaseManager:
             self.is_connected = False
             raise ConnectionError(f"Connection test failed: {str(e)}")
 
+    def _normalize_collection_name(self, name: str) -> str:
+        """Normalize collection name to Weaviate's naming convention.
+
+        Weaviate automatically capitalizes the first letter of collection
+        names. This method ensures we match Weaviate's expected format.
+
+        Args:
+            name: The original collection name
+
+        Returns:
+            str: Collection name with first letter capitalized
+
+        Raises:
+            ValueError: If name is empty
+        """
+        if not name or not name.strip():
+            raise ValueError("Collection name cannot be empty")
+
+        # Capitalize first letter, keep rest as-is
+        return name[0].upper() + name[1:]
+
     def is_ready(self) -> bool:
         """Check if the database is ready for operations.
 
@@ -138,8 +159,10 @@ class DatabaseManager:
             raise ValueError("Collection name cannot be empty")
 
         try:
-            collection = self.client.collections.get(name)
-            self.logger.debug(f"Retrieved collection: {name}")
+            # Normalize name to Weaviate's naming convention
+            normalized_name = self._normalize_collection_name(name)
+            collection = self.client.collections.get(normalized_name)
+            self.logger.debug(f"Retrieved collection: {normalized_name}")
             return collection
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to get collection {name}: {str(e)}")
@@ -171,17 +194,19 @@ class DatabaseManager:
             raise ValueError("Collection name cannot be empty")
 
         try:
-            self.logger.info(f"Creating collection: {name}")
+            # Normalize name to Weaviate's naming convention
+            normalized_name = self._normalize_collection_name(name)
+            self.logger.info(f"Creating collection: {normalized_name}")
 
             # Create the collection using V4 API
             collection = self.client.collections.create(
-                name=name,
+                name=normalized_name,
                 description=description,
                 vectorizer_config=vectorizer_config,
                 properties=properties or [],
             )
 
-            self.logger.info(f"Successfully created collection: {name}")
+            self.logger.info(f"Successfully created collection: {normalized_name}")
             return collection
 
         except WeaviateBaseError as e:
@@ -205,9 +230,11 @@ class DatabaseManager:
             raise ValueError("Collection name cannot be empty")
 
         try:
-            self.logger.info(f"Deleting collection: {name}")
-            self.client.collections.delete(name)
-            self.logger.info(f"Successfully deleted collection: {name}")
+            # Normalize name to Weaviate's naming convention
+            normalized_name = self._normalize_collection_name(name)
+            self.logger.info(f"Deleting collection: {normalized_name}")
+            self.client.collections.delete(normalized_name)
+            self.logger.info(f"Successfully deleted collection: {normalized_name}")
             return True
 
         except WeaviateBaseError as e:
@@ -225,7 +252,7 @@ class DatabaseManager:
         """
         try:
             collections = self.client.collections.list_all()
-            collection_names = list(collections.keys())
+            collection_names = list[str](collections.keys())
             self.logger.debug(f"Found {len(collection_names)} collections")
             return collection_names
         except WeaviateBaseError as e:
@@ -248,8 +275,10 @@ class DatabaseManager:
             raise ValueError("Collection name cannot be empty")
 
         try:
+            # Normalize the name to Weaviate's naming convention
+            normalized_name = self._normalize_collection_name(name)
             collections = self.list_collections()
-            return name in collections
+            return normalized_name in collections
         except Exception as e:
             self.logger.error(f"Failed to check if collection {name} exists: {str(e)}")
             return False

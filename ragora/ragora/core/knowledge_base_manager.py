@@ -334,40 +334,43 @@ class KnowledgeBaseManager:
         """
         return self.retriever.search_keyword(query, top_k=top_k, class_name=class_name)
 
-    def get_chunk(self, chunk_id: str) -> Optional[Dict[str, Any]]:
+    def get_chunk(self, chunk_id: str, class_name: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its ID.
 
         Args:
             chunk_id: Unique identifier of the chunk
-
+            class_name: Name of the Weaviate class for document storage
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
         """
-        return self.vector_store.get_chunk_by_id(chunk_id)
+        return self.vector_store.get_chunk_by_id(chunk_id, class_name=class_name)
 
-    def delete_chunk(self, chunk_id: str) -> bool:
+    def delete_chunk(self, chunk_id: str, class_name: str) -> bool:
         """Delete a chunk by its ID.
 
         Args:
             chunk_id: Unique identifier of the chunk to delete
-
+            class_name: Name of the Weaviate class for document storage
         Returns:
             bool: True if deletion was successful, False otherwise
         """
-        return self.vector_store.delete_chunk(chunk_id)
+        return self.vector_store.delete_chunk(chunk_id, class_name=class_name)
 
-    def get_system_stats(self) -> Dict[str, Any]:
+    def get_system_stats(self, class_name: str) -> Dict[str, Any]:
         """Get comprehensive system statistics.
+
+        Args:
+            class_name: Name of the Weaviate class for document storage
 
         Returns:
             Dict[str, Any]: System statistics including storage, retrieval, and configuration info
         """
         try:
             # Get vector store stats
-            vector_stats = self.vector_store.get_stats()
+            vector_stats = self.vector_store.get_stats(class_name=class_name)
 
             # Get retrieval stats
-            retrieval_stats = self.retriever.get_retrieval_stats()
+            retrieval_stats = self.retriever.get_retrieval_stats(class_name=class_name)
 
             # Get embedding engine info
             embedding_info = self.embedding_engine.get_model_info()
@@ -404,8 +407,11 @@ class KnowledgeBaseManager:
             self.logger.error(f"Failed to get system stats: {str(e)}")
             raise
 
-    def clear_database(self) -> None:
+    def clear_database(self, class_name: str) -> None:
         """Clear all data from the vector database.
+
+        Args:
+            class_name: Name of the Weaviate class for document storage
 
         Raises:
             RuntimeError: If system not initialized
@@ -415,7 +421,7 @@ class KnowledgeBaseManager:
 
         try:
             self.logger.warning("Clearing all data from vector database")
-            self.vector_store.clear_all()
+            self.vector_store.clear_all(class_name=class_name)
             self.logger.info("Database cleared successfully")
         except Exception as e:
             self.logger.error(f"Failed to clear database: {str(e)}")

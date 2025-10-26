@@ -1,6 +1,6 @@
 """Unit tests for DatabaseManager class."""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from weaviate.exceptions import WeaviateBaseError
@@ -112,7 +112,8 @@ class TestDatabaseManager:
         result = database_manager.get_collection("test_collection")
 
         assert result == mock_collection
-        mock_weaviate_client.collections.get.assert_called_once_with("test_collection")
+        # Name should be normalized (first letter capitalized)
+        mock_weaviate_client.collections.get.assert_called_once_with("Test_collection")
 
     def test_get_collection_empty_name(self, database_manager):
         """Test get_collection with empty name."""
@@ -128,6 +129,9 @@ class TestDatabaseManager:
         with pytest.raises(WeaviateBaseError):
             database_manager.get_collection("test_collection")
 
+        # Should have tried with normalized name
+        mock_weaviate_client.collections.get.assert_called_once_with("Test_collection")
+
     def test_create_collection_success(self, database_manager, mock_weaviate_client):
         """Test successful collection creation."""
         mock_collection = Mock()
@@ -141,7 +145,10 @@ class TestDatabaseManager:
         )
 
         assert result == mock_collection
+        # Name should be normalized in the call
         mock_weaviate_client.collections.create.assert_called_once()
+        call_args = mock_weaviate_client.collections.create.call_args
+        assert call_args.kwargs["name"] == "Test_collection"
 
     def test_create_collection_empty_name(self, database_manager):
         """Test create_collection with empty name."""
@@ -162,8 +169,9 @@ class TestDatabaseManager:
         result = database_manager.delete_collection("test_collection")
 
         assert result is True
+        # Name should be normalized (first letter capitalized)
         mock_weaviate_client.collections.delete.assert_called_once_with(
-            "test_collection"
+            "Test_collection"
         )
 
     def test_delete_collection_empty_name(self, database_manager):
@@ -202,16 +210,18 @@ class TestDatabaseManager:
 
     def test_collection_exists_true(self, database_manager, mock_weaviate_client):
         """Test collection_exists when collection exists."""
-        mock_collections = {"test_collection": Mock()}
+        # Collection name in server is capitalized (Weaviate convention)
+        mock_collections = {"Test_collection": Mock()}
         mock_weaviate_client.collections.list_all.return_value = mock_collections
 
+        # Input with lowercase first letter should match
         result = database_manager.collection_exists("test_collection")
 
         assert result is True
 
     def test_collection_exists_false(self, database_manager, mock_weaviate_client):
         """Test collection_exists when collection does not exist."""
-        mock_collections = {"other_collection": Mock()}
+        mock_collections = {"Other_collection": Mock()}
         mock_weaviate_client.collections.list_all.return_value = mock_collections
 
         result = database_manager.collection_exists("test_collection")
@@ -257,3 +267,38 @@ class TestDatabaseManager:
 
             # close should be called when exiting context
             assert db_manager.is_connected is False
+
+    def test_normalize_collection_name_basic(self, database_manager):
+        """Test _normalize_collection_name with basic lowercase input."""
+        result = database_manager._normalize_collection_name("test_collection")
+        assert result == "Test_collection"
+
+    def test_normalize_collection_name_capitalized(self, database_manager):
+        """Test _normalize_collection_name with capitalized input."""
+        result = database_manager._normalize_collection_name("Test_collection")
+        assert result == "Test_collection"
+
+    def test_normalize_collection_name_all_lowercase(self, database_manager):
+        """Test _normalize_collection_name with all lowercase."""
+        result = database_manager._normalize_collection_name("ragora_advanced_usage")
+        assert result == "Ragora_advanced_usage"
+
+    def test_normalize_collection_name_preserves_case(self, database_manager):
+        """Test _normalize_collection_name preserves case."""
+        result = database_manager._normalize_collection_name("test_Advanced_Usage")
+        assert result == "Test_Advanced_Usage"
+
+    def test_normalize_collection_name_single_char(self, database_manager):
+        """Test _normalize_collection_name with single character."""
+        result = database_manager._normalize_collection_name("a")
+        assert result == "A"
+
+    def test_normalize_collection_name_empty(self, database_manager):
+        """Test _normalize_collection_name with empty string."""
+        with pytest.raises(ValueError, match="Collection name cannot be empty"):
+            database_manager._normalize_collection_name("")
+
+    def test_normalize_collection_name_whitespace(self, database_manager):
+        """Test _normalize_collection_name with whitespace only."""
+        with pytest.raises(ValueError, match="Collection name cannot be empty"):
+            database_manager._normalize_collection_name("   ")
