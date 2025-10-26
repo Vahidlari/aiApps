@@ -5,7 +5,17 @@ embedding generation, vector storage, retrieval operations, and the
 main RAG system orchestrator.
 """
 
-from .data_chunker import ChunkMetadata, DataChunk, DataChunker
+from .chunking import (
+    ChunkingContext,
+    ChunkingContextBuilder,
+    ChunkingStrategy,
+    ChunkMetadata,
+    DataChunk,
+    DataChunker,
+    DocumentChunkingStrategy,
+    EmailChunkingStrategy,
+    TextChunkingStrategy,
+)
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
@@ -17,6 +27,12 @@ __all__ = [
     "DataChunk",
     "DataChunker",
     "ChunkMetadata",
+    "ChunkingContext",
+    "ChunkingContextBuilder",
+    "ChunkingStrategy",
+    "TextChunkingStrategy",
+    "DocumentChunkingStrategy",
+    "EmailChunkingStrategy",
     "DatabaseManager",
     "DocumentPreprocessor",
     "EmbeddingEngine",

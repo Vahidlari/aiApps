@@ -56,7 +56,7 @@ class TestKnowledgeBaseManager:
     @pytest.fixture
     def sample_chunks(self):
         """Create sample DataChunk objects for testing."""
-        from ragora.core.data_chunker import ChunkMetadata
+        from ragora.core.chunking import ChunkMetadata
 
         return [
             DataChunk(
@@ -115,55 +115,37 @@ class TestKnowledgeBaseManager:
             },
         ]
 
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
-    @patch("ragora.ragora.core.knowledge_base_manager.DataChunker")
     def test_knowledge_base_manager_initialization_success(
         self,
-        mock_data_chunker,
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
         mock_db_manager,
-        mock_embedding_engine,
     ):
         """Test successful KnowledgeBaseManager initialization."""
         # Setup mocks
-        mock_embedding_engine.return_value = Mock()
         mock_db_manager.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
-        mock_data_chunker.return_value = Mock()
 
         # Test
         kbm = KnowledgeBaseManager(
-            weaviate_url="http://localhost:8080",
-            class_name="TestDocument",
-            embedding_model="all-mpnet-base-v2",
-            chunk_size=512,
-            chunk_overlap=50,
+            weaviate_url="http://localhost:8080", class_name="TestDocument"
         )
 
         # Assertions
         assert kbm.is_initialized is True
-        mock_embedding_engine.assert_called_once_with(model_name="all-mpnet-base-v2")
+        assert kbm.embedding_engine is None  # Not initialized by default
+        assert kbm.data_chunker is None  # Not initialized by KnowledgeBaseManager
         mock_db_manager.assert_called_once_with(url="http://localhost:8080")
         mock_vector_store.assert_called_once()
         mock_retriever.assert_called_once()
-        mock_document_preprocessor.assert_called_once()
-        mock_data_chunker.assert_called_once_with(chunk_size=512, overlap_size=50)
-
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
-    def test_knowledge_base_manager_initialization_failure(self, mock_embedding_engine):
-        """Test KnowledgeBaseManager initialization failure."""
-        mock_embedding_engine.side_effect = Exception("Embedding engine failed")
-
-        with pytest.raises(Exception, match="Embedding engine failed"):
-            KnowledgeBaseManager()
+        mock_document_preprocessor.assert_called_once_with(chunker=None)
 
     def test_process_document_success(self, mock_components, sample_chunks):
         """Test successful document processing."""
@@ -436,8 +418,11 @@ class TestKnowledgeBaseManager:
         kbm.retriever = mock_components["retriever"]
         kbm.embedding_engine = mock_components["embedding_engine"]
         kbm.data_chunker = mock_components["data_chunker"]
-        kbm.data_chunker.chunk_size = 768
-        kbm.data_chunker.overlap = 100
+        # Create a mock strategy for the data_chunker
+        mock_strategy = Mock()
+        mock_strategy.chunk_size = 768
+        mock_strategy.overlap_size = 100
+        kbm.data_chunker.default_strategy = mock_strategy
         kbm.logger = Mock()
 
         # Test
@@ -451,7 +436,7 @@ class TestKnowledgeBaseManager:
         assert stats["vector_store"]["total_objects"] == 100
         assert stats["embedding_engine"]["model_name"] == "all-mpnet-base-v2"
         assert stats["data_chunker"]["chunk_size"] == 768
-        assert stats["data_chunker"]["overlap"] == 100
+        assert stats["data_chunker"]["overlap_size"] == 100
         assert "components" in stats
         assert "architecture" in stats
         assert (

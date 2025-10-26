@@ -9,8 +9,8 @@ class ChunkConfig:
     """Configuration for document chunking."""
 
     chunk_size: int = 768
-    overlap: int = 100
-    strategy: str = "adaptive_fixed_size"
+    overlap_size: int = 100
+    chunk_type: str = "document"
 
 
 @dataclass
@@ -36,18 +36,28 @@ class DatabaseManagerConfig:
 class KnowledgeBaseManagerConfig:
     """Main configuration for Knowledge Base Manager."""
 
-    chunk_config: ChunkConfig
-    embedding_config: EmbeddingConfig
-    database_manager_config: DatabaseManagerConfig
+    chunk_config: Optional[ChunkConfig] = None
+    embedding_config: Optional[EmbeddingConfig] = None
+    database_manager_config: Optional[DatabaseManagerConfig] = None
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "KnowledgeBaseManagerConfig":
         """Create config from dictionary."""
         return cls(
-            chunk_config=ChunkConfig(**config_dict.get("chunk", {})),
-            embedding_config=EmbeddingConfig(**config_dict.get("embedding", {})),
-            database_manager_config=DatabaseManagerConfig(
-                **config_dict.get("database_manager", {})
+            chunk_config=(
+                ChunkConfig(**config_dict.get("chunk", {}))
+                if config_dict.get("chunk")
+                else None
+            ),
+            embedding_config=(
+                EmbeddingConfig(**config_dict.get("embedding", {}))
+                if config_dict.get("embedding")
+                else None
+            ),
+            database_manager_config=(
+                DatabaseManagerConfig(**config_dict.get("database_manager", {}))
+                if config_dict.get("database_manager")
+                else None
             ),
         )
 

@@ -18,7 +18,8 @@ of concerns between storage, retrieval, and generation layers.
 import logging
 from typing import Any, Dict, List, Optional
 
-from .data_chunker import DataChunker
+from ..config import KnowledgeBaseManagerConfig
+from .chunking import DataChunker
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .embedding_engine import EmbeddingEngine
@@ -46,22 +47,16 @@ class KnowledgeBaseManager:
 
     def __init__(
         self,
-        config: Optional[Any] = None,
+        config: Optional[KnowledgeBaseManagerConfig] = None,
         weaviate_url: str = "http://localhost:8080",
         class_name: str = "Document",
-        embedding_model: str = "all-mpnet-base-v2",
-        chunk_size: int = 768,
-        chunk_overlap: int = 100,
     ):
         """Initialize the knowledge base manager.
 
         Args:
-            config: RAGConfig object with system configuration (optional)
+            config: RagoraConfig object with system configuration (optional)
             weaviate_url: Weaviate server URL (used if config not provided)
             class_name: Name of the Weaviate class for document storage (used if config not provided)
-            embedding_model: Name of the embedding model to use (used if config not provided)
-            chunk_size: Size of text chunks in tokens (used if config not provided)
-            chunk_overlap: Overlap between chunks in tokens (used if config not provided)
 
         Raises:
             ConnectionError: If unable to connect to Weaviate
@@ -71,18 +66,40 @@ class KnowledgeBaseManager:
         self.logger = logging.getLogger(__name__)
 
         try:
+            self.embedding_engine = None
+            self.data_chunker = None
+            self.db_manager = None
+            self.vector_store = None
+            self.retriever = None
+            self.document_preprocessor = None
+
             # Handle configuration - use provided config or create from individual parameters
             if config is not None:
-                embedding_model = config.embedding_config.model_name
-                weaviate_url = config.database_manager_config.url
-                chunk_size = config.chunk_config.chunk_size
-                chunk_overlap = config.chunk_config.overlap
+                if config.embedding_config:
+                    # Initialize embedding engine
+                    self.embedding_engine = EmbeddingEngine(
+                        model_name=config.embedding_config.model_name,
+                        device=(
+                            config.embedding_config.device
+                            if config.embedding_config.device
+                            else None
+                        ),
+                        cache_folder=(
+                            config.embedding_config.cache_folder
+                            if config.embedding_config.cache_folder
+                            else None
+                        ),
+                    )
+                if config.database_manager_config:
+                    weaviate_url = config.database_manager_config.url
+                if config.chunk_config:
+                    from .chunking import DocumentChunkingStrategy
 
-            # Initialize embedding engine
-            self.logger.info(
-                f"Initializing embedding engine with model: {embedding_model}"
-            )
-            self.embedding_engine = EmbeddingEngine(model_name=embedding_model)
+                    custom_strategy = DocumentChunkingStrategy(
+                        chunk_size=config.chunk_config.chunk_size,
+                        overlap_size=config.chunk_config.overlap_size,
+                    )
+                    self.data_chunker = DataChunker(default_strategy=custom_strategy)
 
             # Initialize database manager (infrastructure layer)
             self.logger.info(f"Initializing database manager at {weaviate_url}")
@@ -92,27 +109,24 @@ class KnowledgeBaseManager:
             self.logger.info("Initializing vector store")
             self.vector_store = VectorStore(
                 db_manager=self.db_manager,
-                embedding_engine=self.embedding_engine,
+                embedding_engine=(
+                    self.embedding_engine if self.embedding_engine else None
+                ),
             )
 
             # Initialize retriever (search layer)
             self.logger.info("Initializing retriever")
             self.retriever = Retriever(
                 db_manager=self.db_manager,
-                embedding_engine=self.embedding_engine,
+                embedding_engine=(
+                    self.embedding_engine if self.embedding_engine else None
+                ),
             )
 
-            # Initialize document preprocessor
+            # Initialize document preprocessor with chunking parameters
             self.logger.info("Initializing document preprocessor")
-            self.document_preprocessor = DocumentPreprocessor()
-
-            # Initialize data chunker
-            self.logger.info(
-                f"Initializing data chunker (size={chunk_size}, overlap={chunk_overlap})"
-            )
-            self.data_chunker = DataChunker(
-                chunk_size=chunk_size,
-                overlap_size=chunk_overlap,
+            self.document_preprocessor = DocumentPreprocessor(
+                chunker=(self.data_chunker if self.data_chunker else None)
             )
 
             self.is_initialized = True
@@ -373,14 +387,26 @@ class KnowledgeBaseManager:
             retrieval_stats = self.retriever.get_retrieval_stats(class_name=class_name)
 
             # Get embedding engine info
-            embedding_info = self.embedding_engine.get_model_info()
+            embedding_info = (
+                self.embedding_engine.get_model_info()
+                if self.embedding_engine
+                else {"model_name": "Not initialized", "dimension": None}
+            )
 
             # Get chunker configuration
-            chunker_config = {
-                "chunk_size": self.data_chunker.chunk_size,
-                "overlap": self.data_chunker.overlap,
-                "chunking_strategy": "adaptive_fixed_size",
-            }
+            chunker_config = (
+                {
+                    "chunk_size": self.data_chunker.default_strategy.chunk_size,
+                    "overlap_size": self.data_chunker.default_strategy.overlap_size,
+                    "chunk_type": "custom",
+                }
+                if self.data_chunker
+                else {
+                    "chunk_size": "Not initialized",
+                    "overlap_size": "Not initialized",
+                    "chunk_type": "Not initialized",
+                }
+            )
 
             return {
                 "system_initialized": self.is_initialized,

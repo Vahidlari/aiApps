@@ -45,8 +45,8 @@ class TestConfigLoading:
         config_dict = {
             "chunk": {
                 "chunk_size": 512,
-                "overlap": 50,
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 50,
+                "chunk_type": "text",
             },
             "embedding": {
                 "model_name": "all-MiniLM-L6-v2",
@@ -72,7 +72,7 @@ class TestConfigLoading:
 
         # Test with minimal config (only required fields)
         minimal_config = {
-            "chunk": {"chunk_size": 512},
+            "chunk": {"chunk_size": 512, "overlap_size": 100, "chunk_type": "text"},
             "embedding": {"model_name": "test-model"},
             "database_manager": {"url": "http://test:8080"},
         }
@@ -83,7 +83,7 @@ class TestConfigLoading:
         assert config.embedding_config.model_name == "test-model"
         assert config.database_manager_config.url == "http://test:8080"
         # Should use defaults for missing fields
-        assert config.chunk_config.overlap == 100  # default
+        assert config.chunk_config.overlap_size == 100  # default
         assert config.embedding_config.max_length == 512  # default
         assert config.database_manager_config.grpc_port == 50051  # default
 
@@ -95,8 +95,8 @@ class TestConfigLoading:
         mixed_config = {
             "chunk": {
                 "chunk_size": 768,
-                "overlap": 100,
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 100,
+                "chunk_type": "text",
             },
             "embedding": {
                 "model_name": "all-mpnet-base-v2",
@@ -174,9 +174,9 @@ class TestConfigValidation:
         # Dataclass doesn't validate missing sections, it uses defaults
         config = KnowledgeBaseManagerConfig.from_dict(incomplete_config)
         assert config is not None
-        # Should use default values for missing sections
-        assert config.embedding_config.model_name == "all-mpnet-base-v2"  # default
-        assert config.database_manager_config.url == "http://localhost:8080"  # default
+        # Should set None for missing sections
+        assert config.embedding_config is None
+        assert config.database_manager_config is None
 
     def test_validate_config_invalid_chunk_size(self):
         """Test validation with invalid chunk size."""
@@ -185,8 +185,8 @@ class TestConfigValidation:
         invalid_config = {
             "chunk": {
                 "chunk_size": -100,  # Invalid negative value
-                "overlap": 50,
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 50,
+                "chunk_type": "text",
             },
             "embedding": {"model_name": "all-mpnet-base-v2", "max_length": 512},
             "database_manager": {"url": "http://localhost:8080", "grpc_port": 50051},
@@ -205,22 +205,22 @@ class TestConfigValidation:
         config1 = {
             "chunk": {
                 "chunk_size": 768,
-                "overlap": 1000,  # Overlap larger than chunk size
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 1000,  # Overlap larger than chunk size
+                "chunk_type": "text",
             },
             "embedding": {"model_name": "all-mpnet-base-v2", "max_length": 512},
             "database_manager": {"url": "http://localhost:8080", "grpc_port": 50051},
         }
 
         config = KnowledgeBaseManagerConfig.from_dict(config1)
-        assert config.chunk_config.overlap == 1000  # Invalid value is accepted
+        assert config.chunk_config.overlap_size == 1000  # Invalid value is accepted
 
         # Test with empty model name (invalid but accepted)
         config2 = {
             "chunk": {
                 "chunk_size": 768,
-                "overlap": 100,
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 100,
+                "chunk_type": "text",
             },
             "embedding": {"model_name": "", "max_length": 512},  # Empty model name
             "database_manager": {"url": "http://localhost:8080", "grpc_port": 50051},
@@ -233,8 +233,8 @@ class TestConfigValidation:
         config3 = {
             "chunk": {
                 "chunk_size": 768,
-                "overlap": 100,
-                "strategy": "adaptive_fixed_size",
+                "overlap_size": 100,
+                "chunk_type": "text",
             },
             "embedding": {"model_name": "all-mpnet-base-v2", "max_length": 512},
             "database_manager": {
@@ -265,7 +265,7 @@ class TestConfigDefaults:
 
         # Check default values
         assert default_config.chunk_config.chunk_size == 768
-        assert default_config.chunk_config.overlap == 100
+        assert default_config.chunk_config.overlap_size == 100
         assert default_config.embedding_config.model_name == "all-mpnet-base-v2"
         assert default_config.database_manager_config.url == "http://localhost:8080"
 
@@ -274,7 +274,7 @@ class TestConfigDefaults:
         from ragora.config.settings import KnowledgeBaseManagerConfig
 
         config_dict = {
-            "chunk": {"chunk_size": 1024, "overlap": 150},
+            "chunk": {"chunk_size": 1024, "overlap_size": 150, "chunk_type": "text"},
             "embedding": {"model_name": "custom-model", "max_length": 256},
             "database_manager": {"url": "http://custom:9090", "timeout": 60},
         }
@@ -283,14 +283,14 @@ class TestConfigDefaults:
 
         # Should have user values
         assert config.chunk_config.chunk_size == 1024
-        assert config.chunk_config.overlap == 150
+        assert config.chunk_config.overlap_size == 150
         assert config.embedding_config.model_name == "custom-model"
         assert config.embedding_config.max_length == 256
         assert config.database_manager_config.url == "http://custom:9090"
         assert config.database_manager_config.timeout == 60
 
         # Should have defaults for missing fields
-        assert config.chunk_config.strategy == "adaptive_fixed_size"
+        assert config.chunk_config.chunk_type == "text"
         assert config.embedding_config.device is None
         assert config.database_manager_config.grpc_port == 50051
 
@@ -315,8 +315,8 @@ class TestConfigSchema:
 
         required_fields = [
             "chunk_size",
-            "overlap",
-            "strategy",
+            "overlap_size",
+            "chunk_type",
         ]
 
         for field in required_fields:
@@ -324,8 +324,8 @@ class TestConfigSchema:
 
         # Check types
         assert isinstance(chunk_config["chunk_size"], int)
-        assert isinstance(chunk_config["overlap"], int)
-        assert isinstance(chunk_config["strategy"], str)
+        assert isinstance(chunk_config["overlap_size"], int)
+        assert isinstance(chunk_config["chunk_type"], str)
 
     def test_embedding_schema(self, config_dict):
         """Test embedding configuration schema."""

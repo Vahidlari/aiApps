@@ -55,7 +55,7 @@ def main():
         logger.info("⚙️  Creating custom configuration...")
         config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(
-                chunk_size=512, overlap=50, strategy="adaptive_fixed_size"
+                chunk_size=512, overlap_size=50, chunk_type="document"
             ),
             embedding_config=EmbeddingConfig(
                 model_name="all-mpnet-base-v2", max_length=512

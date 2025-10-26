@@ -23,7 +23,7 @@ from weaviate.classes.config import Configure, DataType, Property
 from weaviate.classes.query import Filter, MetadataQuery
 from weaviate.exceptions import WeaviateBaseError
 
-from .data_chunker import DataChunk
+from .chunking import DataChunk
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
 

@@ -118,48 +118,38 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         ]
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
-    @patch("ragora.ragora.core.knowledge_base_manager.DataChunker")
     def test_complete_knowledge_base_manager_initialization(
         self,
-        mock_data_chunker,
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test complete knowledge base manager initialization."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
-        mock_data_chunker.return_value = Mock()
 
         # Test
         kbm = KnowledgeBaseManager(
             weaviate_url="http://localhost:8080",
             class_name="TestDocument",
-            embedding_model="all-mpnet-base-v2",
-            chunk_size=768,
-            chunk_overlap=100,
         )
 
         # Assertions
         assert kbm.is_initialized is True
         assert kbm.vector_store is not None
         assert kbm.retriever is not None
-        assert kbm.embedding_engine is not None
+        assert kbm.embedding_engine is None  # Not initialized by default
         assert kbm.document_preprocessor is not None
-        assert kbm.data_chunker is not None
+        assert kbm.data_chunker is None  # Not initialized by KnowledgeBaseManager
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -170,7 +160,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
         sample_latex_document,
         sample_chunks,
@@ -178,7 +167,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         """Test complete document processing pipeline."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -220,7 +208,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             os.unlink(temp_path)
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -231,14 +218,12 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
         sample_chunks,
     ):
         """Test complete query processing pipeline."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -292,28 +277,22 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         )
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
-    @patch("ragora.ragora.core.knowledge_base_manager.DataChunker")
     def test_system_statistics_integration(
         self,
-        mock_data_chunker,
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test system statistics integration."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
-        mock_data_chunker.return_value = Mock()
 
         # Setup statistics mocks
         mock_vector_store.return_value.get_stats.return_value = {
@@ -326,10 +305,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             "embedding_model": "all-mpnet-base-v2",
             "embedding_dimension": 768,
         }
-        mock_embedding_engine.return_value.get_model_info.return_value = {
-            "model_name": "all-mpnet-base-v2",
-            "dimension": 768,
-        }
 
         # Create RAG system
         kbm = KnowledgeBaseManager()
@@ -340,12 +315,13 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Assertions
         assert stats["system_initialized"] is True
         assert stats["vector_store"]["total_objects"] == 150
-        assert stats["embedding_engine"]["model_name"] == "all-mpnet-base-v2"
+        assert (
+            stats["embedding_engine"]["model_name"] == "Not initialized"
+        )  # Not initialized by default
         assert "components" in stats
         assert "retrieval" in stats
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -356,13 +332,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test error handling across components."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -381,7 +355,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
             kbm.search_similar("test query")
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -392,13 +365,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test context manager integration."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -414,7 +385,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert kbm.is_initialized is False
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -425,13 +395,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test communication between components."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -447,7 +415,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert kbm.is_initialized is True
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
@@ -458,13 +425,11 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test performance characteristics of the system."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
@@ -477,47 +442,38 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert kbm.is_initialized is True
         assert hasattr(kbm, "vector_store")
         assert hasattr(kbm, "retriever")
-        assert hasattr(kbm, "embedding_engine")
+        assert hasattr(kbm, "embedding_engine")  # Attribute exists but may be None
         assert hasattr(kbm, "document_preprocessor")
-        assert hasattr(kbm, "data_chunker")
+        assert hasattr(kbm, "data_chunker")  # Attribute exists but may be None
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
-    @patch("ragora.ragora.core.knowledge_base_manager.EmbeddingEngine")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
     @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
     @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
-    @patch("ragora.ragora.core.knowledge_base_manager.DataChunker")
     def test_configuration_validation(
         self,
-        mock_data_chunker,
         mock_document_preprocessor,
         mock_retriever,
         mock_vector_store,
-        mock_embedding_engine,
         mock_db_manager,
     ):
         """Test configuration validation."""
         # Setup mocks
         mock_db_manager.return_value = Mock()
-        mock_embedding_engine.return_value = Mock()
         mock_vector_store.return_value = Mock()
         mock_retriever.return_value = Mock()
         mock_document_preprocessor.return_value = Mock()
-        mock_data_chunker.return_value = Mock()
 
         # Test with custom configuration
         kbm = KnowledgeBaseManager(
             weaviate_url="http://custom:8080",
             class_name="CustomDocument",
-            embedding_model="custom-model",
-            chunk_size=512,
-            chunk_overlap=50,
         )
 
         # Assertions
         assert kbm.is_initialized is True
         assert kbm.vector_store is not None
         assert kbm.retriever is not None
-        assert kbm.embedding_engine is not None
+        assert kbm.embedding_engine is None  # Not initialized by default
         assert kbm.document_preprocessor is not None
-        assert kbm.data_chunker is not None
+        assert kbm.data_chunker is None  # Not initialized by KnowledgeBaseManager

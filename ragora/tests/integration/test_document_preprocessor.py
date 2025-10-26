@@ -10,7 +10,14 @@ import tempfile
 
 import pytest
 
-from ragora import ChunkMetadata, DataChunk, DataChunker, DocumentPreprocessor
+from ragora import (
+    ChunkingContext,
+    ChunkingContextBuilder,
+    ChunkMetadata,
+    DataChunk,
+    DataChunker,
+    DocumentPreprocessor,
+)
 
 
 class TestDocumentPreprocessorIntegration:
@@ -336,8 +343,11 @@ This is a simple section with minimal content.
             file_path = f.name
 
         try:
-            # Create custom chunker
-            custom_chunker = DataChunker(chunk_size=512, overlap_size=50)
+            # Create custom chunker with custom strategy
+            from ragora import TextChunkingStrategy
+
+            custom_strategy = TextChunkingStrategy(chunk_size=512, overlap_size=50)
+            custom_chunker = DataChunker(default_strategy=custom_strategy)
 
             # Create preprocessor with custom chunker
             preprocessor = DocumentPreprocessor(chunker=custom_chunker)
@@ -350,8 +360,8 @@ This is a simple section with minimal content.
             assert len(chunks) > 0
 
             # Verify chunker parameters
-            assert preprocessor.chunker.chunk_size == 512
-            assert preprocessor.chunker.overlap_size == 50
+            assert preprocessor.chunker.default_strategy.chunk_size == 512
+            assert preprocessor.chunker.default_strategy.overlap_size == 50
 
         finally:
             # Clean up
@@ -654,8 +664,12 @@ E = mc^2
             file_path = f.name
 
         try:
-            # Create preprocessor with specific overlap
-            preprocessor = DocumentPreprocessor(chunk_size=200, overlap_size=50)
+            # Create preprocessor with specific overlap using custom strategy
+            from ragora import TextChunkingStrategy
+
+            custom_strategy = TextChunkingStrategy(chunk_size=200, overlap_size=50)
+            custom_chunker = DataChunker(default_strategy=custom_strategy)
+            preprocessor = DocumentPreprocessor(chunker=custom_chunker)
 
             # Process document
             chunks = preprocessor.preprocess_document(file_path)

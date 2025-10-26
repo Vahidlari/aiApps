@@ -25,30 +25,34 @@ class TestDocumentPreprocessor:
 
         assert preprocessor.chunker is not None
         assert isinstance(preprocessor.chunker, DataChunker)
-        assert preprocessor.chunker.chunk_size == 768
-        assert preprocessor.chunker.overlap_size == 100
+        assert preprocessor.chunker.default_strategy.chunk_size == 768
+        assert preprocessor.chunker.default_strategy.overlap_size == 100
         assert preprocessor.latex_parser is not None
 
     def test_init_custom_parameters(self):
         """Test DocumentPreprocessor initialization with custom parameters."""
-        custom_chunker = DataChunker(chunk_size=512, overlap_size=50)
-        preprocessor = DocumentPreprocessor(
-            chunker=custom_chunker, chunk_size=1024, overlap_size=150
-        )
+        from ragora import TextChunkingStrategy
+
+        custom_strategy = TextChunkingStrategy(chunk_size=512, overlap_size=50)
+        custom_chunker = DataChunker(default_strategy=custom_strategy)
+        preprocessor = DocumentPreprocessor(chunker=custom_chunker)
 
         assert preprocessor.chunker is custom_chunker
-        assert preprocessor.chunker.chunk_size == 512
-        assert preprocessor.chunker.overlap_size == 50
+        assert preprocessor.chunker.default_strategy.chunk_size == 512
+        assert preprocessor.chunker.default_strategy.overlap_size == 50
         assert preprocessor.latex_parser is not None
 
     def test_init_custom_chunker_only(self):
         """Test DocumentPreprocessor initialization with custom chunker."""
-        custom_chunker = DataChunker(chunk_size=256, overlap_size=25)
+        from ragora import TextChunkingStrategy
+
+        custom_strategy = TextChunkingStrategy(chunk_size=256, overlap_size=25)
+        custom_chunker = DataChunker(default_strategy=custom_strategy)
         preprocessor = DocumentPreprocessor(chunker=custom_chunker)
 
         assert preprocessor.chunker is custom_chunker
-        assert preprocessor.chunker.chunk_size == 256
-        assert preprocessor.chunker.overlap_size == 25
+        assert preprocessor.chunker.default_strategy.chunk_size == 256
+        assert preprocessor.chunker.default_strategy.overlap_size == 25
 
     @patch("ragora.core.document_preprocessor.LatexParser")
     def test_preprocess_document_success(self, mock_latex_parser_class):
@@ -578,14 +582,13 @@ class TestDocumentPreprocessor:
         result = preprocessor._chunk_document(document)
 
         # Verify chunker was called correctly
-        mock_chunker.chunk.assert_called_once_with(
-            "First paragraph contentSecond paragraph content",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Test Document",
-            created_at=None,
-        )
+        mock_chunker.chunk.assert_called_once()
+        call_args = mock_chunker.chunk.call_args
+        assert call_args[0][0] == "First paragraph contentSecond paragraph content"
+        context = call_args[0][1]
+        assert context.chunk_type == "document"
+        assert context.source_document == "test.tex"
+        assert context.section_title == "Test Document"
         assert result == expected_chunks
 
     def test_chunk_document_with_chapters_only(self):
@@ -641,22 +644,24 @@ class TestDocumentPreprocessor:
 
         # Verify chunker was called for each chapter
         assert mock_chunker.chunk.call_count == 2
-        mock_chunker.chunk.assert_any_call(
-            "# Chapter 1Chapter 1 paragraph 1Chapter 1 paragraph 2",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Chapter 1",
-            created_at=None,
+
+        # Check first call
+        first_call = mock_chunker.chunk.call_args_list[0]
+        assert (
+            first_call[0][0] == "# Chapter 1Chapter 1 paragraph 1Chapter 1 paragraph 2"
         )
-        mock_chunker.chunk.assert_any_call(
-            "# Chapter 2Chapter 2 paragraph",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Chapter 2",
-            created_at=None,
-        )
+        context1 = first_call[0][1]
+        assert context1.chunk_type == "document"
+        assert context1.source_document == "test.tex"
+        assert context1.section_title == "Chapter 1"
+
+        # Check second call
+        second_call = mock_chunker.chunk.call_args_list[1]
+        assert second_call[0][0] == "# Chapter 2Chapter 2 paragraph"
+        context2 = second_call[0][1]
+        assert context2.chunk_type == "document"
+        assert context2.source_document == "test.tex"
+        assert context2.section_title == "Chapter 2"
         assert result == expected_chunks
 
     def test_chunk_document_with_chapters_and_sections(self):
@@ -725,30 +730,28 @@ class TestDocumentPreprocessor:
 
         # Verify chunker was called for chapter and each section
         assert mock_chunker.chunk.call_count == 3
-        mock_chunker.chunk.assert_any_call(
-            "# Chapter 1Chapter paragraph",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Chapter 1",
-            created_at=None,
+
+        # Check chapter call
+        chapter_call = mock_chunker.chunk.call_args_list[0]
+        assert chapter_call[0][0] == "# Chapter 1Chapter paragraph"
+        context1 = chapter_call[0][1]
+        assert context1.chunk_type == "document"
+        assert context1.source_document == "test.tex"
+        assert context1.section_title == "Chapter 1"
+
+        # Check section calls
+        section1_call = mock_chunker.chunk.call_args_list[1]
+        assert (
+            section1_call[0][0]
+            == "## Section 1.1Section 1.1 paragraph 1Section 1.1 paragraph 2"
         )
-        mock_chunker.chunk.assert_any_call(
-            "## Section 1.1Section 1.1 paragraph 1Section 1.1 paragraph 2",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Section 1.1",
-            created_at=None,
-        )
-        mock_chunker.chunk.assert_any_call(
-            "## Section 1.2Section 1.2 paragraph",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Section 1.2",
-            created_at=None,
-        )
+        context2 = section1_call[0][1]
+        assert context2.section_title == "Section 1.1"
+
+        section2_call = mock_chunker.chunk.call_args_list[2]
+        assert section2_call[0][0] == "## Section 1.2Section 1.2 paragraph"
+        context3 = section2_call[0][1]
+        assert context3.section_title == "Section 1.2"
         assert result == expected_chunks
 
     def test_chunk_document_with_standalone_sections(self):
@@ -804,22 +807,25 @@ class TestDocumentPreprocessor:
 
         # Verify chunker was called for each standalone section
         assert mock_chunker.chunk.call_count == 2
-        mock_chunker.chunk.assert_any_call(
-            "## Standalone Section 1Standalone section 1 paragraph 1Standalone section 1 paragraph 2",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Standalone Section 1",
-            created_at=None,
+
+        # Check first section call
+        first_call = mock_chunker.chunk.call_args_list[0]
+        assert (
+            first_call[0][0]
+            == "## Standalone Section 1Standalone section 1 paragraph 1Standalone section 1 paragraph 2"
         )
-        mock_chunker.chunk.assert_any_call(
-            "## Standalone Section 2Standalone section 2 paragraph",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Standalone Section 2",
-            created_at=None,
+        context1 = first_call[0][1]
+        assert context1.chunk_type == "document"
+        assert context1.source_document == "test.tex"
+        assert context1.section_title == "Standalone Section 1"
+
+        # Check second section call
+        second_call = mock_chunker.chunk.call_args_list[1]
+        assert (
+            second_call[0][0] == "## Standalone Section 2Standalone section 2 paragraph"
         )
+        context2 = second_call[0][1]
+        assert context2.section_title == "Standalone Section 2"
         assert result == expected_chunks
 
     def test_chunk_document_with_tables(self):
@@ -880,22 +886,23 @@ class TestDocumentPreprocessor:
 
         # Verify chunker was called for each table
         assert mock_chunker.chunk.call_count == 2
-        mock_chunker.chunk.assert_any_call(
-            "Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Test Document",
-            created_at=None,
+
+        # Check first table call
+        first_call = mock_chunker.chunk.call_args_list[0]
+        assert (
+            first_call[0][0]
+            == "Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2"
         )
-        mock_chunker.chunk.assert_any_call(
-            "Table: Table 2\nA | B\n1 | 2",
-            chunk_type="text",
-            source_document="test.tex",
-            page_number=None,
-            section_title="Test Document",
-            created_at=None,
-        )
+        context1 = first_call[0][1]
+        assert context1.chunk_type == "document"
+        assert context1.source_document == "test.tex"
+        assert context1.section_title == "Test Document"
+
+        # Check second table call
+        second_call = mock_chunker.chunk.call_args_list[1]
+        assert second_call[0][0] == "Table: Table 2\nA | B\n1 | 2"
+        context2 = second_call[0][1]
+        assert context2.section_title == "Test Document"
         assert result == expected_chunks
 
     def test_chunk_document_with_all_content_types(self):

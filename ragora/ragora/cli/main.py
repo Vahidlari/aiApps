@@ -28,7 +28,9 @@ def process_document_command(args) -> None:
     """Process a LaTeX document."""
     try:
         config = KnowledgeBaseManagerConfig(
-            chunk_config=ChunkConfig(chunk_size=args.chunk_size, overlap=args.overlap),
+            chunk_config=ChunkConfig(
+                chunk_size=args.chunk_size, overlap_size=args.overlap
+            ),
             embedding_config=EmbeddingConfig(model_name=args.embedding_model),
             database_manager_config=DatabaseManagerConfig(url=args.weaviate_url),
         )
