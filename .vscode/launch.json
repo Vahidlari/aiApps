@@ -14,5 +14,15 @@
                 "PYTHONPATH": "${workspaceFolder}"
             }
         },
+        {
+            "name": "Debug Advanced Usage Example",
+            "type": "python",
+            "request": "launch",
+            "module": "ragora.ragora.examples.advanced_usage",
+            "args": [],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+        }
     ]
 }
