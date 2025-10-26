@@ -8,28 +8,28 @@ from typing import Any, Dict, Optional
 class ChunkConfig:
     """Configuration for document chunking."""
 
-    chunk_size: int = 768
-    overlap_size: int = 100
-    chunk_type: str = "document"
+    chunk_size: int = 768  # size of the chunk
+    overlap_size: int = 100  # overlap size of the chunk
+    chunk_type: str = "document"  # type of the chunk
 
 
 @dataclass
 class EmbeddingConfig:
     """Configuration for embedding engine."""
 
-    model_name: str = "all-mpnet-base-v2"
-    device: Optional[str] = None
-    max_length: int = 512
+    model_name: str = "all-mpnet-base-v2"  # model to use for the embedding
+    device: Optional[str] = None  # device to use for the embedding
+    max_length: int = 512  # max length of the embedding
 
 
 @dataclass
 class DatabaseManagerConfig:
     """Configuration for database manager."""
 
-    url: str = "http://localhost:8080"
-    grpc_port: int = 50051
-    timeout: int = 30
-    retry_attempts: int = 3
+    url: str = "http://localhost:8080"  # url of the database manager
+    grpc_port: int = 50051  # grpc port of the database manager
+    timeout: int = 30  # timeout for the database manager
+    retry_attempts: int = 3  # retry attempts for the database manager
 
 
 @dataclass

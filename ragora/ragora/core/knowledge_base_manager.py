@@ -84,11 +84,6 @@ class KnowledgeBaseManager:
                             if config.embedding_config.device
                             else None
                         ),
-                        cache_folder=(
-                            config.embedding_config.cache_folder
-                            if config.embedding_config.cache_folder
-                            else None
-                        ),
                     )
                 if config.database_manager_config:
                     weaviate_url = config.database_manager_config.url
