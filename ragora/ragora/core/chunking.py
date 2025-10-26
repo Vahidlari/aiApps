@@ -277,7 +277,6 @@ class DataChunk:
     start_idx: int  # The start index of the chunk
     end_idx: int  # The end index of the chunk
     metadata: ChunkMetadata  # The metadata of the chunk
-    chunk_id: Optional[str] = None  # Unique identifier for the chunk
     source_document: Optional[str] = None  # Source document filename
     chunk_type: Optional[str] = None  # Type of chunk (text, citation, equation, etc.)
 
