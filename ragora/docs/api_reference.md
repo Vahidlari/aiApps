@@ -103,17 +103,16 @@ preprocessor = DocumentPreprocessor()
 Text chunking operations.
 
 ```python
-from ragora.core import DataChunker
+from ragora.core import DataChunker, ChunkingContextBuilder
 
-chunker = DataChunker(
-    chunk_size: int = 768,
-    overlap: int = 100
-)
+chunker = DataChunker()
+context = ChunkingContextBuilder().for_document().build()
+chunks = chunker.chunk(text, context)
 ```
 
 **Key Methods:**
-- `chunk_text(text: str) -> List[Chunk]` - Chunk text
-- `chunk_with_metadata(text: str, metadata: Dict) -> List[Chunk]` - Chunk with metadata
+- `chunk(text: str, context: ChunkingContext) -> List[DataChunk]` - Chunk text with context
+- `register_strategy(chunk_type: str, strategy: ChunkingStrategy)` - Register custom strategy
 
 #### `ragora.core.EmbeddingEngine`
 

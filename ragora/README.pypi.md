@@ -57,9 +57,12 @@ document = preprocessor.parse_latex(
     bibliography_path="references.bib"
 )
 
-# Chunk with configurable size and overlap
-chunker = DataChunker(chunk_size=768, overlap=100)
-chunks = chunker.chunk_text(document.content)
+# Chunk with configurable size and overlap using new API
+from ragora import DataChunker, ChunkingContextBuilder
+
+chunker = DataChunker()
+context = ChunkingContextBuilder().for_document().build()
+chunks = chunker.chunk(document.content, context)
 ```
 
 ## 🔍 Search Modes

@@ -85,12 +85,12 @@ def create_knowledge_base_manager_config() -> KnowledgeBaseManagerConfig:
     # Chunk configuration - determines how documents are split
     chunk_config = ChunkConfig(
         chunk_size=512,  # Size of each text chunk in characters
-        overlap=50,  # Overlap between consecutive chunks
-        strategy="adaptive_fixed_size",  # Chunking strategy
+        overlap_size=50,  # Overlap between consecutive chunks
+        chunk_type="document",  # Chunking type
     )
     print(
         f"📄 Chunk Config: {chunk_config.chunk_size} chars, "
-        f"{chunk_config.overlap} overlap"
+        f"{chunk_config.overlap_size} overlap"
     )
 
     # Embedding configuration - determines how text is vectorized

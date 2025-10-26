@@ -150,7 +150,7 @@ from ragora.core import (
 
 # Initialize components
 preprocessor = DocumentPreprocessor()
-chunker = DataChunker(chunk_size=768, overlap=100)
+chunker = DataChunker()
 embedder = EmbeddingEngine(model_name="all-mpnet-base-v2")
 
 # Process a LaTeX document

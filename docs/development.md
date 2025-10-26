@@ -151,12 +151,13 @@ from ragora.core import DataChunker
 
 def test_chunker_basic():
     """Test basic chunking functionality."""
-    chunker = DataChunker(chunk_size=100, overlap=20)
+    chunker = DataChunker()
+    context = ChunkingContextBuilder().for_text().build()
     text = "This is a test document. " * 50
-    chunks = chunker.chunk_text(text)
+    chunks = chunker.chunk(text, context)
     
     assert len(chunks) > 0
-    assert all(len(chunk) <= 100 for chunk in chunks)
+    assert all(isinstance(chunk, DataChunk) for chunk in chunks)
 ```
 
 For more details, see [`ragora/docs/testing.md`](../ragora/docs/testing.md).
