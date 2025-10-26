@@ -23,6 +23,16 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
+        },
+        {
+            "name": "Debug Email Usage Examples",
+            "type": "python",
+            "request": "launch",
+            "module": "ragora.ragora.examples.email_usage_examples",
+            "args": [],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
         }
     ]
 }
