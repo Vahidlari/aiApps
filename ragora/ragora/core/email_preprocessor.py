@@ -27,20 +27,20 @@ class EmailPreprocessor:
     DocumentPreprocessor for consistency in the codebase.
 
     Attributes:
-        data_chunker: DataChunker instance for chunking email content
+        chunker: DataChunker instance for chunking email content
     """
 
-    def __init__(self, data_chunker: DataChunker = None):
+    def __init__(self, chunker: DataChunker = None):
         """Initialize the EmailPreprocessor.
 
         Args:
-            data_chunker: DataChunker instance (optional)
+            chunker: DataChunker instance (optional)
         """
-        if data_chunker is not None:
-            self.data_chunker = data_chunker
+        if chunker is not None:
+            self.chunker = chunker
         else:
             # Create a default chunker
-            self.data_chunker = DataChunker()
+            self.chunker = DataChunker()
 
     def preprocess_emails(
         self, emails: List[EmailMessage], start_chunk_id: int = 0
@@ -118,4 +118,4 @@ class EmailPreprocessor:
             .build()
         )
 
-        return self.data_chunker.chunk(email_text, context)
+        return self.chunker.chunk(email_text, context)

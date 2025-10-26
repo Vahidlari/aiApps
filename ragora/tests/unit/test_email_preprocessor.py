@@ -30,30 +30,30 @@ class TestEmailPreprocessor:
         )
 
     @pytest.fixture
-    def mock_data_chunker(self):
+    def mock_chunker(self):
         """Create a mock DataChunker for testing."""
         chunker = Mock(spec=DataChunker)
         return chunker
 
     @pytest.fixture
-    def email_preprocessor_with_chunker(self, mock_data_chunker):
+    def email_preprocessor_with_chunker(self, mock_chunker):
         """Create EmailPreprocessor with mocked chunker."""
-        return EmailPreprocessor(data_chunker=mock_data_chunker)
+        return EmailPreprocessor(chunker=mock_chunker)
 
     @pytest.fixture
     def email_preprocessor_without_chunker(self):
         """Create EmailPreprocessor without chunker (uses default)."""
         return EmailPreprocessor()
 
-    def test_init_with_chunker(self, mock_data_chunker):
+    def test_init_with_chunker(self, mock_chunker):
         """Test EmailPreprocessor initialization with chunker."""
-        preprocessor = EmailPreprocessor(data_chunker=mock_data_chunker)
-        assert preprocessor.data_chunker == mock_data_chunker
+        preprocessor = EmailPreprocessor(chunker=mock_chunker)
+        assert preprocessor.chunker == mock_chunker
 
     def test_init_without_chunker(self):
         """Test EmailPreprocessor initialization without chunker."""
         preprocessor = EmailPreprocessor()
-        assert isinstance(preprocessor.data_chunker, DataChunker)
+        assert isinstance(preprocessor.chunker, DataChunker)
 
     def test_preprocess_email(self, email_preprocessor_with_chunker, mock_email):
         """Test preprocessing a single email."""
@@ -64,13 +64,13 @@ class TestEmailPreprocessor:
             DataChunk(text="chunk1", start_idx=0, end_idx=10, metadata=mock_metadata),
             DataChunk(text="chunk2", start_idx=11, end_idx=20, metadata=mock_metadata),
         ]
-        email_preprocessor_with_chunker.data_chunker.chunk.return_value = mock_chunks
+        email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         result = email_preprocessor_with_chunker.preprocess_email(mock_email)
 
         assert len(result) == 2
         assert result == mock_chunks
-        email_preprocessor_with_chunker.data_chunker.chunk.assert_called_once()
+        email_preprocessor_with_chunker.chunker.chunk.assert_called_once()
 
     def test_preprocess_email_with_start_id(
         self, email_preprocessor_with_chunker, mock_email
@@ -82,7 +82,7 @@ class TestEmailPreprocessor:
         mock_chunks = [
             DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
         ]
-        email_preprocessor_with_chunker.data_chunker.chunk.return_value = mock_chunks
+        email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         result = email_preprocessor_with_chunker.preprocess_email(
             mock_email, start_chunk_id=5
@@ -90,7 +90,7 @@ class TestEmailPreprocessor:
 
         assert len(result) == 1
         # Verify context was created with correct start_chunk_id
-        email_preprocessor_with_chunker.data_chunker.chunk.assert_called_once()
+        email_preprocessor_with_chunker.chunker.chunk.assert_called_once()
 
     def test_preprocess_emails(self, email_preprocessor_with_chunker, mock_email):
         """Test preprocessing multiple emails."""
@@ -100,13 +100,13 @@ class TestEmailPreprocessor:
         mock_chunks = [
             DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
         ]
-        email_preprocessor_with_chunker.data_chunker.chunk.return_value = mock_chunks
+        email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         emails = [mock_email, mock_email, mock_email]
         result = email_preprocessor_with_chunker.preprocess_emails(emails)
 
         assert len(result) == 3
-        assert email_preprocessor_with_chunker.data_chunker.chunk.call_count == 3
+        assert email_preprocessor_with_chunker.chunker.chunk.call_count == 3
 
     def test_preprocess_emails_empty_list(self, email_preprocessor_with_chunker):
         """Test preprocessing empty list of emails."""
@@ -123,7 +123,7 @@ class TestEmailPreprocessor:
         mock_chunks = [
             DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
         ]
-        email_preprocessor_with_chunker.data_chunker.chunk.return_value = mock_chunks
+        email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         emails = [mock_email, mock_email]
         result = email_preprocessor_with_chunker.preprocess_emails(
@@ -131,7 +131,7 @@ class TestEmailPreprocessor:
         )
 
         assert len(result) == 2
-        assert email_preprocessor_with_chunker.data_chunker.chunk.call_count == 2
+        assert email_preprocessor_with_chunker.chunker.chunk.call_count == 2
 
     def test_chunking_context_creation(
         self, email_preprocessor_with_chunker, mock_email
@@ -143,12 +143,12 @@ class TestEmailPreprocessor:
         mock_chunks = [
             DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
         ]
-        email_preprocessor_with_chunker.data_chunker.chunk.return_value = mock_chunks
+        email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         email_preprocessor_with_chunker.preprocess_email(mock_email)
 
         # Verify chunk was called with proper arguments
-        call_args = email_preprocessor_with_chunker.data_chunker.chunk.call_args
+        call_args = email_preprocessor_with_chunker.chunker.chunk.call_args
         assert call_args is not None
         text_arg, context_arg = call_args[0]
         assert text_arg == mock_email.get_body()
