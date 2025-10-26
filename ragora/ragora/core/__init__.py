@@ -18,6 +18,7 @@ from .chunking import (
 )
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
+from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .knowledge_base_manager import KnowledgeBaseManager
 from .retriever import Retriever
@@ -35,6 +36,7 @@ __all__ = [
     "EmailChunkingStrategy",
     "DatabaseManager",
     "DocumentPreprocessor",
+    "EmailPreprocessor",
     "EmbeddingEngine",
     "KnowledgeBaseManager",
     "Retriever",

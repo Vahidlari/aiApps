@@ -53,6 +53,7 @@ from .core.chunking import (
 )
 from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
+from .core.email_preprocessor import EmailPreprocessor
 from .core.embedding_engine import EmbeddingEngine
 from .core.knowledge_base_manager import KnowledgeBaseManager
 from .core.retriever import Retriever
@@ -86,6 +87,7 @@ __all__ = [
     "EmailChunkingStrategy",
     "DatabaseManager",
     "DocumentPreprocessor",
+    "EmailPreprocessor",
     "EmbeddingEngine",
     "Retriever",
     "VectorStore",

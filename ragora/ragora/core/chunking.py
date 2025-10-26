@@ -439,7 +439,6 @@ class TextChunkingStrategy(ChunkingStrategy):
                     email_id=context.email_id,
                     email_folder=context.email_folder,
                 ),
-                chunk_id=str(chunk_id),
                 chunk_type=context.chunk_type,
                 source_document=context.source_document,
             )
@@ -509,7 +508,6 @@ class DocumentChunkingStrategy(ChunkingStrategy):
                     email_id=context.email_id,
                     email_folder=context.email_folder,
                 ),
-                chunk_id=str(chunk_id),
                 chunk_type=context.chunk_type,
                 source_document=context.source_document,
             )
@@ -579,7 +577,6 @@ class EmailChunkingStrategy(ChunkingStrategy):
                     email_id=context.email_id,
                     email_folder=context.email_folder,
                 ),
-                chunk_id=str(chunk_id),
                 chunk_type=context.chunk_type,
                 source_document=context.source_document,
             )

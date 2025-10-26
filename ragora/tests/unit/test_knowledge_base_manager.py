@@ -592,3 +592,120 @@ class TestKnowledgeBaseManager:
         assert result["avg_similarity"] == 0.4  # (0.8 + 0) / 2
         assert result["max_similarity"] == 0.8
         assert result["num_chunks"] == 2
+
+    # Email processing tests
+
+    def test_check_new_emails_success(self, mock_components):
+        """Test checking new emails."""
+        from ragora.utils.email_utils.models import EmailAddress, EmailMessage
+
+        # Create mock emails
+        mock_emails = [
+            EmailMessage(
+                message_id="msg1",
+                subject="Test 1",
+                sender=EmailAddress("sender@example.com"),
+                recipients=[EmailAddress("recipient@example.com")],
+                body_text="Body 1",
+            ),
+            EmailMessage(
+                message_id="msg2",
+                subject="Test 2",
+                sender=EmailAddress("sender@example.com"),
+                recipients=[EmailAddress("recipient@example.com")],
+                body_text="Body 2",
+            ),
+        ]
+
+        # Mock email provider
+        mock_provider = Mock()
+        mock_provider.is_connected = False
+        mock_provider.fetch_messages.return_value = mock_emails
+
+        # Create KBM with email preprocessor
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.logger = Mock()
+        kbm.email_preprocessor = Mock()
+
+        # Test
+        result = kbm.check_new_emails(mock_provider)
+
+        # Assertions
+        assert result["count"] == 2
+        assert len(result["emails"]) == 2
+        assert result["emails"][0]["email_id"] == "msg1"
+        mock_provider.connect.assert_called_once()
+        mock_provider.fetch_messages.assert_called_once()
+
+    def test_process_new_emails_success(self, mock_components):
+        """Test processing new emails."""
+        from ragora.core.email_preprocessor import EmailPreprocessor
+        from ragora.utils.email_utils.models import EmailAddress, EmailMessage
+
+        # Create mock emails
+        mock_emails = [
+            EmailMessage(
+                message_id="msg1",
+                subject="Test 1",
+                sender=EmailAddress("sender@example.com"),
+                recipients=[EmailAddress("recipient@example.com")],
+                body_text="Body 1",
+            ),
+        ]
+
+        # Mock components
+        mock_provider = Mock()
+        mock_provider.is_connected = True
+        mock_provider.fetch_messages.return_value = mock_emails
+
+        mock_email_preprocessor = Mock(spec=EmailPreprocessor)
+        mock_email_preprocessor.preprocess_emails.return_value = []
+
+        mock_components["vector_store"].store_chunks.return_value = ["uuid1"]
+
+        # Setup KBM
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.email_preprocessor = mock_email_preprocessor
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.process_new_emails(mock_provider)
+
+        # Assertions
+        assert result == ["uuid1"]
+        mock_provider.connect.assert_not_called()  # Already connected
+        mock_email_preprocessor.preprocess_emails.assert_called_once()
+        mock_components["vector_store"].store_chunks.assert_called_once()
+
+    def test_search_emails_success(self, mock_components):
+        """Test searching emails."""
+        mock_search_results = [{"content": "email content", "subject": "Test"}]
+        mock_components["retriever"].search_similar.return_value = mock_search_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.search_emails("test query", class_name="Email")
+
+        # Assertions
+        assert result == mock_search_results
+        mock_components["retriever"].search_similar.assert_called_once_with(
+            "test query", top_k=5, class_name="Email"
+        )
+
+    def test_search_emails_invalid_type(self, mock_components):
+        """Test search_emails with invalid search type."""
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        with pytest.raises(ValueError, match="Invalid search type"):
+            kbm.search_emails("query", search_type="invalid")
