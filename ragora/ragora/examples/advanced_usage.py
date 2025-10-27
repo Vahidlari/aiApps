@@ -3,9 +3,10 @@
 
 This example demonstrates advanced usage with custom configuration:
 1. Custom configuration setup
-2. Multiple document processing
-3. Different search types
-4. System monitoring and statistics
+2. Modern chunking using DataChunker and ChunkingContextBuilder
+3. Multiple chunking strategies (document, email, text)
+4. Different search types
+5. System monitoring and statistics
 
 Prerequisites:
 - Weaviate running on localhost:8080 (or set WEAVIATE_URL in .env file)
@@ -24,13 +25,13 @@ from dotenv import load_dotenv
 
 from ragora import (
     ChunkConfig,
+    ChunkingContextBuilder,
     DatabaseManagerConfig,
-    DataChunk,
+    DataChunker,
     EmbeddingConfig,
     KnowledgeBaseManager,
     KnowledgeBaseManagerConfig,
 )
-from ragora.core.chunking import ChunkMetadata
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -77,91 +78,177 @@ def main():
         logger.info("📊 Creating vector store schema...")
         kbm.vector_store.create_schema(force_recreate=True, class_name=collection_name)
 
-        # Add comprehensive sample data
-        logger.info("📝 Adding comprehensive sample data...")
-        sample_chunks = [
-            DataChunk(
-                chunk_id="physics_001",
-                text="Einstein's theory of special relativity introduced the concept of time dilation.",
-                start_idx=0,
-                end_idx=80,
-                metadata=ChunkMetadata(
-                    chunk_idx=1,
-                    chunk_size=80,
-                    total_chunks=1,
-                    created_at=datetime.now().isoformat(),
-                    page_number=1,
-                    section_title="Physics",
-                ),
-                source_document="physics_theory.tex",
-                chunk_type="text",
-            ),
-            DataChunk(
-                chunk_id="physics_002",
-                text="The famous equation E = mc² shows the relationship between energy and mass.",
-                start_idx=81,
-                end_idx=150,
-                metadata=ChunkMetadata(
-                    chunk_idx=2,
-                    chunk_size=69,
-                    total_chunks=1,
-                    created_at=datetime.now().isoformat(),
-                    page_number=1,
-                    section_title="Physics",
-                ),
-                source_document="physics_theory.tex",
-                chunk_type="equation",
-            ),
-            DataChunk(
-                chunk_id="physics_003",
-                text="Quantum mechanics describes the behavior of matter at atomic and subatomic scales.",
-                start_idx=151,
-                end_idx=220,
-                metadata=ChunkMetadata(
-                    chunk_idx=3,
-                    chunk_size=69,
-                    total_chunks=1,
-                    created_at=datetime.now().isoformat(),
-                    page_number=1,
-                    section_title="Physics",
-                ),
-                source_document="quantum_physics.tex",
-                chunk_type="text",
-            ),
-            DataChunk(
-                chunk_id="physics_004",
-                text="Schrödinger's equation: iℏ∂ψ/∂t = Ĥψ describes quantum state evolution.",
-                start_idx=221,
-                end_idx=290,
-                metadata=ChunkMetadata(
-                    chunk_idx=4,
-                    chunk_size=69,
-                    total_chunks=1,
-                    created_at=datetime.now().isoformat(),
-                    page_number=1,
-                    section_title="Physics",
-                ),
-                source_document="quantum_physics.tex",
-                chunk_type="equation",
-            ),
-            DataChunk(
-                chunk_id="physics_005",
-                text="The uncertainty principle states that certain pairs of physical properties cannot be simultaneously measured.",
-                start_idx=291,
-                end_idx=370,
-                metadata=ChunkMetadata(
-                    chunk_idx=5,
-                    chunk_size=69,
-                    total_chunks=1,
-                    created_at=datetime.now().isoformat(),
-                    page_number=1,
-                    section_title="Physics",
-                ),
-                source_document="quantum_physics.tex",
-                chunk_type="text",
-            ),
-        ]
+        # Add comprehensive sample data using modern chunking approach
+        logger.info("📝 Adding comprehensive sample data using modern chunking...")
 
+        # Create a chunker instance
+        chunker = DataChunker()
+
+        # Sample documents content
+        physics_document = """
+        Einstein's theory of special relativity introduced the concept of time dilation.
+        The famous equation E = mc² shows the relationship between energy and mass.
+        This revolutionary theory changed our understanding of space and time.
+        """
+
+        quantum_document = """
+        Quantum mechanics describes the behavior of matter at atomic and subatomic scales.
+        Schrödinger's equation: iℏ∂ψ/∂t = Ĥψ describes quantum state evolution.
+        The uncertainty principle states that certain pairs of physical properties cannot be simultaneously measured.
+        Wave-particle duality is a fundamental concept in quantum physics.
+        """
+
+        computer_science_document = """
+        Computer science is the study of computation, algorithms, and information processing.
+        The Turing machine is a theoretical model of computation.
+        The halting problem is a fundamental problem in computer science.
+        """
+
+        van_neumann_document = """
+        John von Neumann was a Hungarian-American mathematician and computer scientist.
+        He is known for his contributions to the development of the modern computer.
+        He is also known for his contributions to the development of the theory of computation.
+        """
+
+        karl_popper_document = """
+        Karl Popper was an Austrian–British[5] philosopher, academic and social commentator.
+        One of the 20th century's most influential philosophers of science, Popper is known for 
+        his rejection of the classical inductivist views on the scientific method in favour of 
+        empirical falsification made possible by his falsifiability criterion, and for founding 
+        the Department of Philosophy at the London School of Economics and Political Science.
+        """
+
+        # Create chunks using ChunkingContextBuilder
+        sample_chunks = []
+
+        # Physics document chunks
+        physics_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("physics_theory.tex")
+            .with_page(1)
+            .with_section("Physics")
+            .with_created_at(datetime.now().isoformat())
+            .with_start_chunk_id(0)
+            .build()
+        )
+        physics_chunks = chunker.chunk(physics_document, physics_context)
+        sample_chunks.extend(physics_chunks)
+
+        # Quantum physics document chunks
+        quantum_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("quantum_physics.tex")
+            .with_page(1)
+            .with_section("Quantum Physics")
+            .with_created_at(datetime.now().isoformat())
+            .with_start_chunk_id(len(physics_chunks))
+            .build()
+        )
+        quantum_chunks = chunker.chunk(quantum_document, quantum_context)
+        sample_chunks.extend(quantum_chunks)
+
+        computer_science_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("computer_science.tex")
+            .with_page(1)
+            .with_section("Computer Science")
+            .with_created_at(datetime.now().isoformat())
+            .with_start_chunk_id(len(quantum_chunks))
+            .build()
+        )
+        computer_science_chunks = chunker.chunk(
+            computer_science_document, computer_science_context
+        )
+        sample_chunks.extend(computer_science_chunks)
+
+        van_neumann_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("van_neumann.tex")
+            .with_page(1)
+            .with_section("Van Neumann")
+            .with_created_at(datetime.now().isoformat())
+            .with_start_chunk_id(len(computer_science_chunks))
+            .build()
+        )
+        van_neumann_chunks = chunker.chunk(van_neumann_document, van_neumann_context)
+        sample_chunks.extend(van_neumann_chunks)
+
+        karl_popper_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("karl_popper.tex")
+            .with_page(1)
+            .with_section("Karl Popper")
+            .with_created_at(datetime.now().isoformat())
+            .with_start_chunk_id(len(van_neumann_chunks))
+            .build()
+        )
+        karl_popper_chunks = chunker.chunk(karl_popper_document, karl_popper_context)
+        sample_chunks.extend(karl_popper_chunks)
+
+        logger.info(
+            f"Created {len(sample_chunks)} chunks using modern chunking approach"
+        )
+
+        # Demonstrate different chunking strategies
+        logger.info("🔧 Demonstrating different chunking strategies...")
+
+        # Email chunking example
+        email_content = """
+        Subject: Project Update Meeting
+
+        Hi Team,
+
+        I wanted to update everyone on our project progress. We've completed the initial
+        research phase and are moving into the development stage. The next milestone is
+        scheduled for next Friday.
+
+        Best regards,
+        Project Manager
+        """
+
+        email_context = (
+            ChunkingContextBuilder()
+            .for_email()
+            .with_email_info(
+                subject="Project Update Meeting",
+                sender="manager@company.com",
+                recipient="team@company.com",
+                email_id="msg_001",
+                email_date=datetime.now().isoformat(),
+                email_folder="inbox",
+            )
+            .with_start_chunk_id(len(sample_chunks))
+            .build()
+        )
+        email_chunks = chunker.chunk(email_content, email_context)
+        sample_chunks.extend(email_chunks)
+
+        # Text chunking example (general content)
+        general_text = """
+        This is a general text document that doesn't fit into specific categories.
+        It contains various topics and information that would be processed using
+        the default text chunking strategy.
+        """
+
+        text_context = (
+            ChunkingContextBuilder()
+            .for_text()
+            .with_source("general_content.txt")
+            .with_start_chunk_id(len(sample_chunks))
+            .build()
+        )
+        text_chunks = chunker.chunk(general_text, text_context)
+        sample_chunks.extend(text_chunks)
+
+        logger.info(f"Total chunks created: {len(sample_chunks)}")
+        logger.info(
+            f"  - Document chunks: {len(physics_chunks + quantum_chunks + computer_science_chunks + van_neumann_chunks + karl_popper_chunks)}"
+        )
         # Store all chunks
         stored_uuids = kbm.vector_store.store_chunks(
             sample_chunks, class_name=collection_name
@@ -174,7 +261,7 @@ def main():
         # 1. Vector similarity search
         logger.info("\n1️⃣ Vector Similarity Search:")
         similar_results = kbm.search_similar(
-            "Einstein relativity equations", top_k=3, class_name=collection_name
+            "computer science and quantum physics", top_k=3, class_name=collection_name
         )
         for i, result in enumerate(similar_results, 1):
             logger.info(f"   {i}. Score: {result.get('similarity_score', 'N/A'):.3f}")
@@ -183,7 +270,7 @@ def main():
         # 2. Hybrid search
         logger.info("\n2️⃣ Hybrid Search:")
         hybrid_results = kbm.search_hybrid(
-            "quantum mechanics equations",
+            "computer science and quantum physics",
             alpha=0.7,
             top_k=3,
             class_name=collection_name,
@@ -197,7 +284,7 @@ def main():
 
         queries = [
             ("What equations did Einstein develop?", "hybrid"),
-            ("What is quantum mechanics about?", "similar"),
+            ("What is computer science about?", "similar"),
         ]
 
         for question, search_type in queries:
@@ -224,15 +311,21 @@ def main():
         # Component access demonstration
         logger.info("\n🔧 Component Access:")
 
-        # Direct access to specific chunk
-        chunk_data = kbm.get_chunk("physics_002", class_name=collection_name)
-        if chunk_data:
-            logger.info(f"   Retrieved specific chunk: {chunk_data['content']}")
+        # Direct access to specific chunk (using first chunk's ID)
+        if sample_chunks:
+            first_chunk_id = sample_chunks[0].chunk_id
+            chunk_data = kbm.get_chunk(first_chunk_id, class_name=collection_name)
+            if chunk_data:
+                logger.info(
+                    f"   Retrieved specific chunk: {chunk_data['content'][:50]}..."
+                )
 
-        # Test chunk deletion
-        deleted = kbm.delete_chunk("physics_003", class_name=collection_name)
-        if deleted:
-            logger.info("   Successfully deleted chunk quantum_003")
+        # Test chunk deletion (using second chunk's ID if available)
+        if len(sample_chunks) > 1:
+            second_chunk_id = sample_chunks[1].chunk_id
+            deleted = kbm.delete_chunk(second_chunk_id, class_name=collection_name)
+            if deleted:
+                logger.info(f"   Successfully deleted chunk {second_chunk_id}")
 
         # Updated statistics
         updated_stats = kbm.get_system_stats(class_name=collection_name)
@@ -243,6 +336,8 @@ def main():
         logger.info("\n✅ Advanced usage example completed successfully!")
         logger.info("🎯 Key features demonstrated:")
         logger.info("   ✅ Custom configuration")
+        logger.info("   ✅ Modern chunking with DataChunker and ChunkingContextBuilder")
+        logger.info("   ✅ Multiple chunking strategies (document, email, text)")
         logger.info("   ✅ Multiple search types")
         logger.info("   ✅ Component-level access")
         logger.info("   ✅ System monitoring")
