@@ -5,6 +5,12 @@ This file is used to test the email utilities.
 To run the examples, you need to have a Gmail account with 2-factor authentication enabled.
 You need to generate an app password for the account.
 
+Environment Variables (.env file):
+- EMAIL: Your Gmail address
+- PASSWORD: Your Gmail app password
+- RECIPIENT: Email address for test messages
+- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)
+
 Run the example with:
 python -m ragora.examples.email_usage_examples
 
@@ -108,6 +114,15 @@ def get_user_credentials_from_file():
     password = os.getenv("PASSWORD")
     recipient = os.getenv("RECIPIENT")
     return email, password, recipient
+
+
+def get_weaviate_url_from_file():
+    """Get Weaviate URL from a .env file."""
+    # load the .env file
+    load_dotenv()
+    # get the weaviate_url from the .env file
+    weaviate_url = os.getenv("WEAVIATE_URL")
+    return weaviate_url
 
 
 def get_user_credentials():
@@ -272,110 +287,182 @@ def example_graph_usage():
         print("Disconnected from Microsoft Graph API")
 
 
-def example_rag_integration():
-    """Example of integrating email utilities with RAG system."""
-    print("=== RAG Integration Example ===")
+def example_email_database_creation():
+    """Example of creating an email knowledge base using KnowledgeBaseManager."""
+    print("=== Email Database Creation Example ===")
 
-    # This would typically be used within a RAG system
-    def create_email_database(provider: EmailProvider, limit: int = 100) -> List[dict]:
-        """Create a database of emails for RAG system."""
-        try:
-            provider.connect()
+    from ragora import KnowledgeBaseManager
 
-            # Fetch messages
-            messages = provider.fetch_messages(limit=limit)
+    # Get credentials
+    try:
+        email, password, recipient = get_user_credentials()
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
+        return
+    except Exception as e:
+        print(f"Error getting credentials: {e}")
+        return
 
-            # Convert to database format
-            email_database = []
-            for msg in messages:
-                email_data = {
-                    "message_id": msg.message_id,
-                    "subject": msg.subject,
-                    "sender": str(msg.sender),
-                    "recipients": [str(addr) for addr in msg.recipients],
-                    "body": msg.get_body(),
-                    "date_sent": msg.date_sent.isoformat() if msg.date_sent else None,
-                    "date_received": (
-                        msg.date_received.isoformat() if msg.date_received else None
-                    ),
-                    "status": msg.status.value,
-                    "attachments": [att.filename for att in msg.attachments],
-                    "folder": msg.folder,
-                }
-                email_database.append(email_data)
-
-            return email_database
-
-        except Exception as e:
-            print(f"Error creating email database: {e}")
-            return []
-        finally:
-            provider.disconnect()
-
-    def generate_email_reply(
-        provider: EmailProvider, message_id: str, rag_response: str
-    ) -> bool:
-        """Generate and send an email reply using RAG system response."""
-        try:
-            provider.connect()
-
-            # Fetch the original message
-            original_msg = provider.fetch_message_by_id(message_id)
-            if not original_msg:
-                print(f"Message {message_id} not found")
-                return False
-
-            # Create reply subject
-            reply_subject = f"Re: {original_msg.subject}"
-            if not reply_subject.startswith("Re: "):
-                reply_subject = f"Re: {reply_subject}"
-
-            # Create reply body
-            reply_body = f"""
-Hi {original_msg.sender.name or original_msg.sender.email},
-
-{rag_response}
-
-Best regards,
-RAG Assistant
-            """.strip()
-
-            # Send reply
-            success = provider.send_message_direct(
-                to=[original_msg.sender.email], subject=reply_subject, body=reply_body
-            )
-
-            return success
-
-        except Exception as e:
-            print(f"Error generating reply: {e}")
-            return False
-        finally:
-            provider.disconnect()
-
-    # Example usage with IMAP
-    print("Creating email database with IMAP provider...")
-    imap_credentials = IMAPCredentials(
+    # Create IMAP credentials
+    credentials = IMAPCredentials(
         imap_server="imap.gmail.com",
         imap_port=993,
         smtp_server="smtp.gmail.com",
-        smtp_port=587,
-        username="your-email@gmail.com",
-        password="your-app-password",
+        smtp_port=465,
+        username=email,
+        password=password,
+        use_ssl=True,
+        use_tls=False,
     )
 
-    imap_provider = EmailProviderFactory.create_provider(
-        ProviderType.IMAP, imap_credentials
-    )
-    email_db = create_email_database(imap_provider, limit=10)
-    print(f"Created database with {len(email_db)} emails")
+    # Create provider
+    provider = EmailProviderFactory.create_provider(ProviderType.IMAP, credentials)
 
-    # Example of generating a reply (would use actual RAG response)
-    if email_db:
-        sample_msg_id = email_db[0]["message_id"]
-        rag_response = "Based on the email content, here is my response..."
-        reply_sent = generate_email_reply(imap_provider, sample_msg_id, rag_response)
-        print(f"Reply sent: {reply_sent}")
+    # Get Weaviate URL from .env file or use default
+    weaviate_url = get_weaviate_url_from_file() or "http://localhost:8080"
+
+    # Initialize Knowledge Base Manager
+    kbm = KnowledgeBaseManager(weaviate_url=weaviate_url)
+
+    try:
+        # Connect to email servers
+        provider.connect()
+        print("Connected to email servers")
+
+        # Process emails from inbox and store in knowledge base
+        print("\nProcessing emails from INBOX...")
+        stored_ids = kbm.process_email_account(
+            email_provider=provider, folder="INBOX", class_name="Email"
+        )
+        print(f"Stored {len(stored_ids)} email chunks in knowledge base")
+
+        # Search for emails
+        print("\nSearching for emails about 'meeting'...")
+        results = kbm.search_emails(
+            "meeting", top_k=3, class_name="Email", search_type="similar"
+        )
+        print(f"Found {len(results)} relevant emails")
+
+        for i, result in enumerate(results, 1):
+            print(f"\n{i}. {result.get('subject', 'No subject')}")
+            print(f"   Sender: {result.get('sender', 'Unknown')}")
+            print(f"   Content preview: {result.get('content', '')[:100]}...")
+
+        new_emails_info = kbm.check_new_emails(
+            email_provider=provider,
+            folder="INBOX",
+            include_body=True,
+            limit=5,
+        )
+
+        if new_emails_info["count"] > 0:
+            # Process unread emails only
+            print("\n\nProcessing new unread emails...")
+            new_stored = kbm.process_new_emails(
+                email_provider=provider,
+                email_ids=[
+                    email["email_id"] for email in new_emails_info["emails"][:3]
+                ],
+                class_name="Email",
+            )
+            print(f"Stored {len(new_stored)} new email chunks")
+        else:
+            print("No new emails found")
+
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        provider.disconnect()
+        print("\nDisconnected from email servers")
+
+
+def example_email_answer_drafting_workflow():
+    """Example workflow for LLM-based answer drafting using email knowledge base."""
+    print("=== Email Answer Drafting Workflow Example ===")
+
+    from ragora import KnowledgeBaseManager
+
+    # Get credentials
+    try:
+        email, password, recipient = get_user_credentials()
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
+        return
+    except Exception as e:
+        print(f"Error getting credentials: {e}")
+        return
+
+    # Create IMAP credentials
+    credentials = IMAPCredentials(
+        imap_server="imap.gmail.com",
+        imap_port=993,
+        smtp_server="smtp.gmail.com",
+        smtp_port=465,
+        username=email,
+        password=password,
+        use_ssl=True,
+        use_tls=False,
+    )
+
+    # Create provider
+    provider = EmailProviderFactory.create_provider(ProviderType.IMAP, credentials)
+
+    # Get Weaviate URL from .env file or use default
+    weaviate_url = get_weaviate_url_from_file() or "http://localhost:8080"
+
+    # Initialize Knowledge Base Manager
+    kbm = KnowledgeBaseManager(weaviate_url=weaviate_url)
+
+    try:
+        # Step 1: Check for new emails (read-only, includes body for LLM)
+        print("\nStep 1: Checking for new emails...")
+        new_emails_info = kbm.check_new_emails(
+            email_provider=provider, folder="INBOX", include_body=True, limit=5
+        )
+        print(f"Found {new_emails_info['count']} new emails")
+
+        # Step 2: For each email, find relevant context from knowledge base
+        print("\nStep 2: Finding relevant context for drafting replies...")
+        for email_data in new_emails_info["emails"][:3]:  # Process first 3
+            print(f"\n--- Processing: {email_data['subject']} ---")
+            print(f"From: {email_data['sender']}")
+
+            # Search for relevant context in knowledge base
+            query = email_data["subject"] + " " + email_data.get("body", "")[:100]
+            context_results = kbm.search_emails(
+                query=query, search_type="similar", top_k=2, class_name="Email"
+            )
+
+            print(f"Found {len(context_results)} relevant context items")
+            for i, context in enumerate(context_results, 1):
+                print(f"  {i}. {context.get('subject', 'No subject')}")
+
+            # In a real scenario, this would be passed to an LLM
+            print("  → LLM would draft reply using this context")
+            print("  → Draft would be created using EmailProvider")
+            print("  → User would review and send")
+
+        # Step 3: After handling emails, index them in knowledge base
+        print("\n\nStep 3: Indexing processed emails...")
+        # Extract email IDs from the emails we processed
+        processed_email_ids = [
+            email["email_id"] for email in new_emails_info["emails"][:3]
+        ]
+        stored_ids = kbm.process_new_emails(
+            email_provider=provider, email_ids=processed_email_ids, class_name="Email"
+        )
+        print(f"Indexed {len(stored_ids)} email chunks")
+
+        print("\nWorkflow complete!")
+        print(
+            "Note: Actual LLM integration and email sending would happen in your application"
+        )
+
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+
+        traceback.print_exc()
 
 
 def main():
@@ -397,14 +484,22 @@ def main():
     print("- SMTP: smtp.gmail.com:465 (SSL)")
     print()
     print(
-        "Note: You'll be prompted to enter your credentials when running the example."
+        """Note: before running the examples, you need to create a .env file with the following variables:
+- EMAIL: Your Gmail address
+- PASSWORD: Your Gmail app password
+- RECIPIENT: Email address for test messages
+- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)
+"""
     )
     print()
 
-    # Run the interactive example
-    example_imap_usage()
+    # Run the interactive examples
+    # example_imap_usage()
     # example_graph_usage()
-    # example_rag_integration()
+    example_email_database_creation()
+    # example_email_answer_drafting_workflow()
+
+    print("Note: Uncomment desired examples in main() to run them")
 
 
 if __name__ == "__main__":

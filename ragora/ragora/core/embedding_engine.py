@@ -23,7 +23,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from ..utils.device_utils import get_sentence_transformer_device
-from .data_chunker import DataChunk
+from .chunking import DataChunk
 
 
 class EmbeddingEngine:

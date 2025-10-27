@@ -40,9 +40,20 @@ from .config.settings import (
     EmbeddingConfig,
     KnowledgeBaseManagerConfig,
 )
-from .core.data_chunker import ChunkMetadata, DataChunk, DataChunker
+from .core.chunking import (
+    ChunkingContext,
+    ChunkingContextBuilder,
+    ChunkingStrategy,
+    ChunkMetadata,
+    DataChunk,
+    DataChunker,
+    DocumentChunkingStrategy,
+    EmailChunkingStrategy,
+    TextChunkingStrategy,
+)
 from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
+from .core.email_preprocessor import EmailPreprocessor
 from .core.embedding_engine import EmbeddingEngine
 from .core.knowledge_base_manager import KnowledgeBaseManager
 from .core.retriever import Retriever
@@ -68,8 +79,15 @@ __all__ = [
     "DataChunk",
     "DataChunker",
     "ChunkMetadata",
+    "ChunkingContext",
+    "ChunkingContextBuilder",
+    "ChunkingStrategy",
+    "TextChunkingStrategy",
+    "DocumentChunkingStrategy",
+    "EmailChunkingStrategy",
     "DatabaseManager",
     "DocumentPreprocessor",
+    "EmailPreprocessor",
     "EmbeddingEngine",
     "Retriever",
     "VectorStore",

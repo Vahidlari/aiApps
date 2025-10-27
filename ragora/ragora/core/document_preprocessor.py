@@ -1,4 +1,4 @@
-"""Document preprocessor for LaTeX RAG system.
+"""Document preprocessor for different formats of documents in the RAG system.
 
 This module handles the preprocessing pipeline for different formats of document, including
 LaTeX documents before they are used before they are used in the RAG (Retrieval-Augmented Generation) system.
@@ -19,36 +19,38 @@ the embedding engine for vector database storage.
 import os
 
 from ..utils.latex_parser import LatexDocument, LatexParser
-from .data_chunker import DataChunk, DataChunker
+from .chunking import (
+    ChunkingContext,
+    ChunkingContextBuilder,
+    DataChunk,
+    DataChunker,
+    DocumentChunkingStrategy,
+)
 
 
 class DocumentPreprocessor:
-    """Document preprocessor for different formats of documents in RAG system.
+    """Document preprocessor for different formats of documents in Ragora.
 
     This class orchestrates the complete preprocessing pipeline for different formats of documents,
     from parsing to chunking, preparing them for embedding and vector storage.
 
     Attributes:
         chunker: DataChunker instance for chunking documents
-        chunk_size: Size of text chunks in tokens (default: 768)
-        overlap_size: Overlap between chunks in tokens (default: 100-150)
+
+    if chunker is not provided, a default chunker is created with the default chunk_size and overlap_size.
     """
 
-    def __init__(
-        self,
-        chunker: DataChunker = None,
-        chunk_size: int = 768,
-        overlap_size: int = 100,
-    ):
+    def __init__(self, chunker: DataChunker = None):
         """Initialize the DocumentPreprocessor.
 
         Args:
-            chunk_size: Size of text chunks in tokens (default: 768)
-            overlap_size: Overlap between chunks in tokens (default: 100-150)
+            chunker: DataChunker instance (optional)
         """
-        self.chunker = (
-            chunker if chunker is not None else DataChunker(chunk_size, overlap_size)
-        )
+        if chunker is not None:
+            self.chunker = chunker
+        else:
+            # Create a default document strategy with specified parameters
+            self.chunker = DataChunker()
         self.file_extension_map = {
             "latex": [".tex", ".latex", ".bib"],
             "pdf": [".pdf"],
@@ -175,79 +177,91 @@ class DocumentPreprocessor:
         if document is None:
             raise ValueError("Document cannot be None")
         chunks = []
+        chunk_id_counter = 0
+
         if document.paragraphs:
             paragraph_content = ""
             for paragraph in document.paragraphs:
                 paragraph_content += paragraph.content
-            chunks.extend(
-                self.chunker.chunk(
-                    paragraph_content,
-                    chunk_type="text",
-                    source_document=document.source_document,
-                    page_number=None,
-                    section_title=document.title,
-                    created_at=None,
-                )
+            context = (
+                ChunkingContextBuilder()
+                .for_document()
+                .with_source(document.source_document)
+                .with_section(document.title)
+                .with_start_chunk_id(chunk_id_counter)
+                .build()
             )
+            doc_chunks = self.chunker.chunk(paragraph_content, context)
+            chunks.extend(doc_chunks)
+            chunk_id_counter += len(doc_chunks)
+
         if document.chapters:
             for chapter in document.chapters:
                 chapter_content = f"# {chapter.title}"
                 if chapter.paragraphs:
                     for paragraph in chapter.paragraphs:
                         chapter_content += paragraph.content
-                    chunks.extend(
-                        self.chunker.chunk(
-                            chapter_content,
-                            chunk_type="text",
-                            source_document=document.source_document,
-                            page_number=None,
-                            section_title=chapter.title,
-                            created_at=None,
-                        )
+                    context = (
+                        ChunkingContextBuilder()
+                        .for_document()
+                        .with_source(document.source_document)
+                        .with_section(chapter.title)
+                        .with_start_chunk_id(chunk_id_counter)
+                        .build()
                     )
+                    doc_chunks = self.chunker.chunk(chapter_content, context)
+                    chunks.extend(doc_chunks)
+                    chunk_id_counter += len(doc_chunks)
+
                 if chapter.sections:
                     for section in chapter.sections:
                         section_content = f"## {section.title}"
                         if section.paragraphs:
                             for paragraph in section.paragraphs:
                                 section_content += paragraph.content
-                            chunks.extend(
-                                self.chunker.chunk(
-                                    section_content,
-                                    chunk_type="text",
-                                    source_document=document.source_document,
-                                    page_number=None,
-                                    section_title=section.title,
-                                    created_at=None,
-                                )
+                            context = (
+                                ChunkingContextBuilder()
+                                .for_document()
+                                .with_source(document.source_document)
+                                .with_section(section.title)
+                                .with_start_chunk_id(chunk_id_counter)
+                                .build()
                             )
+                            doc_chunks = self.chunker.chunk(section_content, context)
+                            chunks.extend(doc_chunks)
+                            chunk_id_counter += len(doc_chunks)
+
         if document.sections:
             for section in document.sections:
                 section_content = f"## {section.title}"
                 if section.paragraphs:
                     for paragraph in section.paragraphs:
                         section_content += paragraph.content
-                    chunks.extend(
-                        self.chunker.chunk(
-                            section_content,
-                            chunk_type="text",
-                            source_document=document.source_document,
-                            page_number=None,
-                            section_title=section.title,
-                            created_at=None,
-                        )
+                    context = (
+                        ChunkingContextBuilder()
+                        .for_document()
+                        .with_source(document.source_document)
+                        .with_section(section.title)
+                        .with_start_chunk_id(chunk_id_counter)
+                        .build()
                     )
+                    doc_chunks = self.chunker.chunk(section_content, context)
+                    chunks.extend(doc_chunks)
+                    chunk_id_counter += len(doc_chunks)
+
         if document.tables:
             for table in document.tables:
                 table_content = table.to_plain_text()
-                chunks.extend(
-                    self.chunker.chunk(
-                        table_content,
-                        chunk_type="text",
-                        source_document=document.source_document,
-                        page_number=None,
-                        section_title=document.title,
-                        created_at=None,
-                    )
+                context = (
+                    ChunkingContextBuilder()
+                    .for_document()
+                    .with_source(document.source_document)
+                    .with_section(document.title)
+                    .with_start_chunk_id(chunk_id_counter)
+                    .build()
                 )
+                doc_chunks = self.chunker.chunk(table_content, context)
+                chunks.extend(doc_chunks)
+                chunk_id_counter += len(doc_chunks)
+
         return chunks

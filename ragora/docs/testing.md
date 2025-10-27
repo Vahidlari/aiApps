@@ -129,38 +129,39 @@ class TestDataChunker:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.chunker = DataChunker(chunk_size=100, overlap=20)
+        self.chunker = DataChunker()
+        self.context = ChunkingContextBuilder().for_text().build()
     
     def test_basic_chunking(self):
         """Test basic chunking functionality."""
         text = "This is a test document. " * 50
-        chunks = self.chunker.chunk_text(text)
+        chunks = self.chunker.chunk(text, self.context)
         
         assert len(chunks) > 0
-        assert all(len(chunk) <= 100 for chunk in chunks)
+        assert all(isinstance(chunk, DataChunk) for chunk in chunks)
     
     def test_chunk_overlap(self):
         """Test that chunks have proper overlap."""
         text = "Word " * 100
-        chunks = self.chunker.chunk_text(text)
+        chunks = self.chunker.chunk(text, self.context)
         
         # Verify overlap exists between consecutive chunks
         for i in range(len(chunks) - 1):
-            overlap_content = chunks[i][-20:]
-            assert overlap_content in chunks[i + 1]
+            overlap_content = chunks[i].text[-20:]
+            assert overlap_content in chunks[i + 1].text
     
     def test_empty_input(self):
         """Test handling of empty input."""
-        with pytest.raises(ValueError, match="Input text cannot be empty"):
-            self.chunker.chunk_text("")
+        chunks = self.chunker.chunk("", self.context)
+        assert len(chunks) == 0
     
     def test_very_short_text(self):
         """Test handling of text shorter than chunk size."""
         text = "Short text."
-        chunks = self.chunker.chunk_text(text)
+        chunks = self.chunker.chunk(text, self.context)
         
         assert len(chunks) == 1
-        assert chunks[0] == text
+        assert chunks[0].text == text
     
     @pytest.mark.parametrize("chunk_size,overlap", [
         (256, 50),
@@ -169,13 +170,15 @@ class TestDataChunker:
     ])
     def test_different_configurations(self, chunk_size, overlap):
         """Test chunking with different configurations."""
-        chunker = DataChunker(chunk_size=chunk_size, overlap=overlap)
+        from ragora import TextChunkingStrategy
+        custom_strategy = TextChunkingStrategy(chunk_size=chunk_size, overlap_size=overlap)
+        chunker = DataChunker(default_strategy=custom_strategy)
         text = "Test content. " * 200
         
-        chunks = chunker.chunk_text(text)
+        chunks = chunker.chunk(text, self.context)
         
         assert len(chunks) > 0
-        assert all(len(chunk) <= chunk_size for chunk in chunks)
+        assert all(len(chunk.text) <= chunk_size for chunk in chunks)
 ```
 
 ### Integration Test Example

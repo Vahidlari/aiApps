@@ -198,31 +198,36 @@ class TestDataChunker:
     
     def test_basic_chunking(self):
         """Test basic chunking functionality."""
-        chunker = DataChunker(chunk_size=100, overlap=20)
+        chunker = DataChunker()
+        context = ChunkingContextBuilder().for_text().build()
         text = "This is a test. " * 50
         
-        chunks = chunker.chunk_text(text)
+        chunks = chunker.chunk(text, context)
         
         assert len(chunks) > 0
-        assert all(len(chunk) <= 100 for chunk in chunks)
+        assert all(isinstance(chunk, DataChunk) for chunk in chunks)
     
     def test_chunking_with_overlap(self):
         """Test that overlap is correctly applied."""
-        chunker = DataChunker(chunk_size=100, overlap=20)
+        from ragora import TextChunkingStrategy
+        custom_strategy = TextChunkingStrategy(chunk_size=100, overlap_size=20)
+        chunker = DataChunker(default_strategy=custom_strategy)
+        context = ChunkingContextBuilder().for_text().build()
         text = "Test content. " * 100
         
-        chunks = chunker.chunk_text(text)
+        chunks = chunker.chunk(text, context)
         
         # Verify overlap exists
         for i in range(len(chunks) - 1):
-            assert chunks[i][-10:] in chunks[i + 1]
+            assert chunks[i].text[-10:] in chunks[i + 1].text
     
     def test_empty_text(self):
         """Test handling of empty input."""
         chunker = DataChunker()
+        context = ChunkingContextBuilder().for_text().build()
         
-        with pytest.raises(ValueError):
-            chunker.chunk_text("")
+        chunks = chunker.chunk("", context)
+        assert len(chunks) == 0
 ```
 
 ### Test Coverage

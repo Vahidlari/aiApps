@@ -23,7 +23,7 @@ from weaviate.classes.config import Configure, DataType, Property
 from weaviate.classes.query import Filter, MetadataQuery
 from weaviate.exceptions import WeaviateBaseError
 
-from .data_chunker import DataChunk
+from .chunking import DataChunk
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
 
@@ -101,9 +101,12 @@ class VectorStore:
                     self.logger.info(f"Deleting existing collection: {class_name}")
                     self.db_manager.delete_collection(class_name)
                 else:
-                    self.logger.info(f"Collection {class_name} already exists")
+                    self.logger.info(
+                        f"Collection {class_name} already exists returning without creating new one"
+                    )
                     return
-
+            else:
+                self.logger.info(f"Creating new collection: {class_name}")
             # Define schema properties
             properties = [
                 Property(
@@ -323,12 +326,8 @@ class VectorStore:
         if not chunk.text or not chunk.text.strip():
             raise ValueError("Chunk text cannot be empty")
 
-        if not chunk.chunk_id or not chunk.chunk_id.strip():
-            raise ValueError("Chunk ID cannot be empty")
-
         return {
             "content": chunk.text,
-            "chunk_id": chunk.chunk_id,
             "source_document": chunk.source_document,
             "chunk_type": chunk.chunk_type,
             "metadata_chunk_id": chunk.metadata.chunk_id,
@@ -340,13 +339,13 @@ class VectorStore:
         }
 
     def get_chunk_by_id(
-        self, chunk_id: str, class_name: str
+        self, chunk_id: int, class_name: str
     ) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: Unique identifier of the chunk
-
+            class_name: Name of the Weaviate class for document storage
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
 
@@ -359,7 +358,7 @@ class VectorStore:
 
             # Query using V4 API
             result = collection.query.fetch_objects(
-                where=Filter.by_property("chunk_id").equal(chunk_id),
+                filters=Filter.by_property("metadata_chunk_id").equal(chunk_id),
                 limit=1,
                 return_metadata=MetadataQuery(distance=True, score=True),
             )
@@ -368,7 +367,6 @@ class VectorStore:
                 obj = result.objects[0]
                 return {
                     "content": obj.properties.get("content", ""),
-                    "chunk_id": obj.properties.get("chunk_id", ""),
                     "source_document": obj.properties.get("source_document", ""),
                     "chunk_type": obj.properties.get("chunk_type", ""),
                     "metadata_chunk_id": obj.properties.get("metadata_chunk_id", 0),
@@ -389,12 +387,12 @@ class VectorStore:
             self.logger.error(f"Failed to retrieve chunk {chunk_id}: {str(e)}")
             raise
 
-    def delete_chunk(self, chunk_id: str, class_name: str) -> bool:
+    def delete_chunk(self, chunk_id: int, class_name: str) -> bool:
         """Delete a chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: Unique identifier of the chunk to delete
-
+            class_name: Name of the Weaviate class for document storage
         Returns:
             bool: True if deletion was successful, False otherwise
 
@@ -407,17 +405,14 @@ class VectorStore:
 
             # First, find the object by chunk_id
             result = collection.query.fetch_objects(
-                where=Filter.by_property("chunk_id").equal(chunk_id), limit=1
+                filters=Filter.by_property("metadata_chunk_id").equal(chunk_id), limit=1
             )
 
             if result.objects:
-                obj = result.objects[0]
                 # Delete using V4 API
-                collection.data.delete_by_id(obj.uuid)
+                collection.data.delete_by_id(result.objects[0].uuid)
                 self.logger.debug(f"Successfully deleted chunk: {chunk_id}")
                 return True
-
-            self.logger.warning(f"Chunk not found for deletion: {chunk_id}")
             return False
 
         except WeaviateBaseError as e:

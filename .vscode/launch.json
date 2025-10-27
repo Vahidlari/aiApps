@@ -14,5 +14,31 @@
                 "PYTHONPATH": "${workspaceFolder}"
             }
         },
+        {
+            "name": "Debug Advanced Usage Example",
+            "type": "python",
+            "request": "launch",
+            "module": "advanced_usage",
+            "args": [],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/ragora/ragora/examples",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/ragora/ragora/examples"
+            }
+        },
+        {
+            "name": "Debug Email Usage Examples",
+            "type": "python",
+            "request": "launch",
+            "module": "email_usage_examples",
+            "args": [],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/ragora/ragora/examples",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/ragora/ragora/examples"
+            }
+        }
     ]
 }

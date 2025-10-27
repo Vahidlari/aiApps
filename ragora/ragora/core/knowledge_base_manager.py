@@ -18,9 +18,12 @@ of concerns between storage, retrieval, and generation layers.
 import logging
 from typing import Any, Dict, List, Optional
 
-from .data_chunker import DataChunker
+from ..config import KnowledgeBaseManagerConfig
+from ..utils.email_utils.base import EmailProvider
+from .chunking import DataChunker
 from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
+from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .retriever import Retriever
 from .vector_store import VectorStore
@@ -46,22 +49,16 @@ class KnowledgeBaseManager:
 
     def __init__(
         self,
-        config: Optional[Any] = None,
+        config: Optional[KnowledgeBaseManagerConfig] = None,
         weaviate_url: str = "http://localhost:8080",
         class_name: str = "Document",
-        embedding_model: str = "all-mpnet-base-v2",
-        chunk_size: int = 768,
-        chunk_overlap: int = 100,
     ):
         """Initialize the knowledge base manager.
 
         Args:
-            config: RAGConfig object with system configuration (optional)
+            config: RagoraConfig object with system configuration (optional)
             weaviate_url: Weaviate server URL (used if config not provided)
             class_name: Name of the Weaviate class for document storage (used if config not provided)
-            embedding_model: Name of the embedding model to use (used if config not provided)
-            chunk_size: Size of text chunks in tokens (used if config not provided)
-            chunk_overlap: Overlap between chunks in tokens (used if config not provided)
 
         Raises:
             ConnectionError: If unable to connect to Weaviate
@@ -71,18 +68,36 @@ class KnowledgeBaseManager:
         self.logger = logging.getLogger(__name__)
 
         try:
+            self.embedding_engine = None
+            self.data_chunker = None
+            self.db_manager = None
+            self.vector_store = None
+            self.retriever = None
+            self.document_preprocessor = None
+            self.email_preprocessor = None
+
             # Handle configuration - use provided config or create from individual parameters
             if config is not None:
-                embedding_model = config.embedding_config.model_name
-                weaviate_url = config.database_manager_config.url
-                chunk_size = config.chunk_config.chunk_size
-                chunk_overlap = config.chunk_config.overlap
+                if config.embedding_config:
+                    # Initialize embedding engine
+                    self.embedding_engine = EmbeddingEngine(
+                        model_name=config.embedding_config.model_name,
+                        device=(
+                            config.embedding_config.device
+                            if config.embedding_config.device
+                            else None
+                        ),
+                    )
+                if config.database_manager_config:
+                    weaviate_url = config.database_manager_config.url
+                if config.chunk_config:
+                    from .chunking import DocumentChunkingStrategy
 
-            # Initialize embedding engine
-            self.logger.info(
-                f"Initializing embedding engine with model: {embedding_model}"
-            )
-            self.embedding_engine = EmbeddingEngine(model_name=embedding_model)
+                    custom_strategy = DocumentChunkingStrategy(
+                        chunk_size=config.chunk_config.chunk_size,
+                        overlap_size=config.chunk_config.overlap_size,
+                    )
+                    self.data_chunker = DataChunker(default_strategy=custom_strategy)
 
             # Initialize database manager (infrastructure layer)
             self.logger.info(f"Initializing database manager at {weaviate_url}")
@@ -92,27 +107,30 @@ class KnowledgeBaseManager:
             self.logger.info("Initializing vector store")
             self.vector_store = VectorStore(
                 db_manager=self.db_manager,
-                embedding_engine=self.embedding_engine,
+                embedding_engine=(
+                    self.embedding_engine if self.embedding_engine else None
+                ),
             )
 
             # Initialize retriever (search layer)
             self.logger.info("Initializing retriever")
             self.retriever = Retriever(
                 db_manager=self.db_manager,
-                embedding_engine=self.embedding_engine,
+                embedding_engine=(
+                    self.embedding_engine if self.embedding_engine else None
+                ),
             )
 
-            # Initialize document preprocessor
+            # Initialize document preprocessor with chunking parameters
             self.logger.info("Initializing document preprocessor")
-            self.document_preprocessor = DocumentPreprocessor()
-
-            # Initialize data chunker
-            self.logger.info(
-                f"Initializing data chunker (size={chunk_size}, overlap={chunk_overlap})"
+            self.document_preprocessor = DocumentPreprocessor(
+                chunker=(self.data_chunker if self.data_chunker else None)
             )
-            self.data_chunker = DataChunker(
-                chunk_size=chunk_size,
-                overlap_size=chunk_overlap,
+
+            # Initialize email preprocessor with chunking parameters
+            self.logger.info("Initializing email preprocessor")
+            self.email_preprocessor = EmailPreprocessor(
+                chunker=(self.data_chunker if self.data_chunker else None)
             )
 
             self.is_initialized = True
@@ -373,14 +391,26 @@ class KnowledgeBaseManager:
             retrieval_stats = self.retriever.get_retrieval_stats(class_name=class_name)
 
             # Get embedding engine info
-            embedding_info = self.embedding_engine.get_model_info()
+            embedding_info = (
+                self.embedding_engine.get_model_info()
+                if self.embedding_engine
+                else {"model_name": "Not initialized", "dimension": None}
+            )
 
             # Get chunker configuration
-            chunker_config = {
-                "chunk_size": self.data_chunker.chunk_size,
-                "overlap": self.data_chunker.overlap,
-                "chunking_strategy": "adaptive_fixed_size",
-            }
+            chunker_config = (
+                {
+                    "chunk_size": self.data_chunker.default_strategy.chunk_size,
+                    "overlap_size": self.data_chunker.default_strategy.overlap_size,
+                    "chunk_type": "custom",
+                }
+                if self.data_chunker
+                else {
+                    "chunk_size": "Not initialized",
+                    "overlap_size": "Not initialized",
+                    "chunk_type": "Not initialized",
+                }
+            )
 
             return {
                 "system_initialized": self.is_initialized,
@@ -436,6 +466,269 @@ class KnowledgeBaseManager:
             self.logger.info("Knowledge base manager closed successfully")
         except Exception as e:
             self.logger.error(f"Error closing knowledge base manager: {str(e)}")
+
+    # Email processing methods
+
+    def _ensure_email_connection(self, email_provider: EmailProvider) -> bool:
+        """Ensure email provider is connected.
+
+        Returns True if we connected it, False if already connected.
+        """
+        if not email_provider.is_connected:
+            self.logger.debug("Email provider not connected, connecting...")
+            email_provider.connect()
+            return True
+        return False
+
+    def check_new_emails(
+        self,
+        email_provider: EmailProvider,
+        folder: Optional[str] = None,
+        include_body: bool = True,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Check for new unread emails without storing them.
+
+        Args:
+            email_provider: Email provider instance
+            folder: Optional folder to check (None = all folders)
+            include_body: Include email body content (default: True)
+            limit: Maximum number of emails to return
+
+        Returns:
+            Dictionary with count and email metadata
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        try:
+            # Auto-connect if needed
+            self._ensure_email_connection(email_provider)
+
+            # Fetch unread messages
+            new_emails = email_provider.fetch_messages(
+                limit=limit, folder=folder, unread_only=True
+            )
+
+            # Build result
+            emails_data = []
+            for email in new_emails:
+                email_data = {
+                    "email_id": email.message_id,
+                    "subject": email.subject,
+                    "sender": str(email.sender) if email.sender else "",
+                    "date_sent": (
+                        email.date_sent.isoformat() if email.date_sent else None
+                    ),
+                    "folder": email.folder if hasattr(email, "folder") else None,
+                }
+
+                if include_body:
+                    email_data["body"] = email.get_body()
+
+                emails_data.append(email_data)
+
+            result = {"count": len(new_emails), "emails": emails_data}
+
+            self.logger.info(f"Found {len(new_emails)} new emails")
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Failed to check new emails: {str(e)}")
+            raise
+
+    def process_new_emails(
+        self,
+        email_provider: EmailProvider,
+        email_ids: List[str],
+        class_name: str = "Email",
+    ) -> List[str]:
+        """Process and store specific emails by their IDs.
+
+        This method processes emails that have been identified by the user
+        through check_new_emails() and filtered as needed.
+
+        Args:
+            email_provider: Email provider instance
+            email_ids: List of email IDs to process (required)
+            class_name: Vector store collection name
+
+        Returns:
+            List of stored chunk IDs
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        if not email_ids:
+            self.logger.warning("No email IDs provided")
+            return []
+
+        try:
+            # Auto-connect if needed
+            self._ensure_email_connection(email_provider)
+
+            # Fetch specific emails by ID
+            emails = []
+            for email_id in email_ids:
+                email = email_provider.fetch_message_by_id(email_id)
+                if email:
+                    emails.append(email)
+                else:
+                    self.logger.warning(f"Email {email_id} not found")
+
+            if not emails:
+                self.logger.info("No emails found to process")
+                return []
+
+            # Preprocess emails
+            self.logger.info(f"Preprocessing {len(emails)} emails")
+            chunks = self.email_preprocessor.preprocess_emails(emails)
+
+            # Store chunks
+            self.logger.info(f"Storing {len(chunks)} chunks")
+            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+
+            self.logger.info(f"Successfully processed {len(emails)} emails")
+            return stored_uuids
+
+        except Exception as e:
+            self.logger.error(f"Failed to process new emails: {str(e)}")
+            raise
+
+    def process_email_account(
+        self,
+        email_provider: EmailProvider,
+        folder: Optional[str] = None,
+        unread_only: bool = False,
+        class_name: str = "Email",
+    ) -> List[str]:
+        """Process emails from an email account.
+
+        Args:
+            email_provider: Email provider instance
+            folder: Optional folder to process (None = all folders)
+            unread_only: If True, only process unread emails
+            class_name: Vector store collection name
+
+        Returns:
+            List of stored chunk IDs
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        try:
+            # Auto-connect if needed
+            self._ensure_email_connection(email_provider)
+
+            # Fetch emails
+            emails = email_provider.fetch_messages(
+                limit=None, folder=folder, unread_only=unread_only
+            )
+
+            if not emails:
+                self.logger.info("No emails to process")
+                return []
+
+            # Preprocess emails
+            self.logger.info(f"Preprocessing {len(emails)} emails")
+            chunks = self.email_preprocessor.preprocess_emails(emails)
+
+            # Store chunks
+            self.logger.info(f"Storing {len(chunks)} chunks")
+            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+
+            self.logger.info(f"Successfully processed {len(emails)} emails")
+            return stored_uuids
+
+        except Exception as e:
+            self.logger.error(f"Failed to process email account: {str(e)}")
+            raise
+
+    def process_emails(
+        self,
+        email_provider: EmailProvider,
+        email_ids: List[str],
+        class_name: str = "Email",
+    ) -> List[str]:
+        """Process specific emails by their IDs.
+
+        Args:
+            email_provider: Email provider instance
+            email_ids: List of email IDs to process
+            class_name: Vector store collection name
+
+        Returns:
+            List of stored chunk IDs
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        try:
+            # Auto-connect if needed
+            self._ensure_email_connection(email_provider)
+
+            # Fetch emails
+            emails = []
+            for email_id in email_ids:
+                email = email_provider.fetch_message_by_id(email_id)
+                if email:
+                    emails.append(email)
+
+            if not emails:
+                self.logger.info("No emails found to process")
+                return []
+
+            # Preprocess emails
+            self.logger.info(f"Preprocessing {len(emails)} emails")
+            chunks = self.email_preprocessor.preprocess_emails(emails)
+
+            # Store chunks
+            self.logger.info(f"Storing {len(chunks)} chunks")
+            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+
+            self.logger.info(f"Successfully processed {len(emails)} emails")
+            return stored_uuids
+
+        except Exception as e:
+            self.logger.error(f"Failed to process emails: {str(e)}")
+            raise
+
+    def search_emails(
+        self,
+        query: str,
+        search_type: str = "similar",
+        top_k: int = 5,
+        class_name: str = "Email",
+    ) -> List[Dict[str, Any]]:
+        """Search emails in the knowledge base.
+
+        Args:
+            query: Search query text
+            search_type: Type of search ("similar", "hybrid", "keyword")
+            top_k: Number of results to return
+            class_name: Vector store collection name
+
+        Returns:
+            List of search results with metadata
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        # Use existing retriever methods with class_name
+        if search_type == "similar":
+            return self.retriever.search_similar(
+                query, top_k=top_k, class_name=class_name
+            )
+        elif search_type == "hybrid":
+            return self.retriever.search_hybrid(
+                query, top_k=top_k, class_name=class_name
+            )
+        elif search_type == "keyword":
+            return self.retriever.search_keyword(
+                query, top_k=top_k, class_name=class_name
+            )
+        else:
+            raise ValueError(f"Invalid search type: {search_type}")
 
     def __enter__(self):
         """Context manager entry."""

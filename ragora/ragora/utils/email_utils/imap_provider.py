@@ -98,7 +98,10 @@ class IMAPProvider(EmailProvider):
             pass
 
     def fetch_messages(
-        self, limit: int = 50, folder: Optional[str] = None, unread_only: bool = False
+        self,
+        limit: Optional[int] = None,
+        folder: Optional[str] = None,
+        unread_only: bool = False,
     ) -> List[EmailMessage]:
         """Fetch messages from IMAP server.
         Args:
@@ -127,7 +130,9 @@ class IMAPProvider(EmailProvider):
                 raise RuntimeError("Failed to search messages")
 
             message_ids = messages[0].split()
-            message_ids = message_ids[-limit:] if limit > 0 else message_ids
+            message_ids = (
+                message_ids[-limit:] if limit is not None and limit > 0 else message_ids
+            )
 
             email_messages = []
             for msg_id in message_ids:

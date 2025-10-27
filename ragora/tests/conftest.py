@@ -239,8 +239,8 @@ def config_dict():
     return {
         "chunk": {
             "chunk_size": 768,
-            "overlap": 100,
-            "strategy": "adaptive_fixed_size",
+            "overlap_size": 100,
+            "chunk_type": "text",
         },
         "embedding": {
             "model_name": "all-mpnet-base-v2",
