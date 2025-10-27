@@ -81,11 +81,12 @@ def main():
         logger.info("📝 Adding comprehensive sample data...")
         sample_chunks = [
             DataChunk(
+                chunk_id="physics_001",
                 text="Einstein's theory of special relativity introduced the concept of time dilation.",
                 start_idx=0,
                 end_idx=80,
                 metadata=ChunkMetadata(
-                    chunk_id=1,
+                    chunk_idx=1,
                     chunk_size=80,
                     total_chunks=1,
                     created_at=datetime.now().isoformat(),
@@ -96,11 +97,12 @@ def main():
                 chunk_type="text",
             ),
             DataChunk(
+                chunk_id="physics_002",
                 text="The famous equation E = mc² shows the relationship between energy and mass.",
                 start_idx=81,
                 end_idx=150,
                 metadata=ChunkMetadata(
-                    chunk_id=2,
+                    chunk_idx=2,
                     chunk_size=69,
                     total_chunks=1,
                     created_at=datetime.now().isoformat(),
@@ -111,11 +113,12 @@ def main():
                 chunk_type="equation",
             ),
             DataChunk(
+                chunk_id="physics_003",
                 text="Quantum mechanics describes the behavior of matter at atomic and subatomic scales.",
                 start_idx=151,
                 end_idx=220,
                 metadata=ChunkMetadata(
-                    chunk_id=3,
+                    chunk_idx=3,
                     chunk_size=69,
                     total_chunks=1,
                     created_at=datetime.now().isoformat(),
@@ -126,11 +129,12 @@ def main():
                 chunk_type="text",
             ),
             DataChunk(
+                chunk_id="physics_004",
                 text="Schrödinger's equation: iℏ∂ψ/∂t = Ĥψ describes quantum state evolution.",
                 start_idx=221,
                 end_idx=290,
                 metadata=ChunkMetadata(
-                    chunk_id=4,
+                    chunk_idx=4,
                     chunk_size=69,
                     total_chunks=1,
                     created_at=datetime.now().isoformat(),
@@ -141,11 +145,12 @@ def main():
                 chunk_type="equation",
             ),
             DataChunk(
+                chunk_id="physics_005",
                 text="The uncertainty principle states that certain pairs of physical properties cannot be simultaneously measured.",
                 start_idx=291,
                 end_idx=370,
                 metadata=ChunkMetadata(
-                    chunk_id=5,
+                    chunk_idx=5,
                     chunk_size=69,
                     total_chunks=1,
                     created_at=datetime.now().isoformat(),
