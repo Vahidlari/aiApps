@@ -639,7 +639,7 @@ class TestKnowledgeBaseManager:
         mock_provider.fetch_messages.assert_called_once()
 
     def test_process_new_emails_success(self, mock_components):
-        """Test processing new emails."""
+        """Test processing new emails with specific IDs."""
         from ragora.core.email_preprocessor import EmailPreprocessor
         from ragora.utils.email_utils.models import EmailAddress, EmailMessage
 
@@ -657,7 +657,7 @@ class TestKnowledgeBaseManager:
         # Mock components
         mock_provider = Mock()
         mock_provider.is_connected = True
-        mock_provider.fetch_messages.return_value = mock_emails
+        mock_provider.fetch_message_by_id.return_value = mock_emails[0]
 
         mock_email_preprocessor = Mock(spec=EmailPreprocessor)
         mock_email_preprocessor.preprocess_emails.return_value = []
@@ -671,12 +671,14 @@ class TestKnowledgeBaseManager:
         kbm.vector_store = mock_components["vector_store"]
         kbm.logger = Mock()
 
-        # Test
-        result = kbm.process_new_emails(mock_provider)
+        # Test with specific email IDs
+        email_ids = ["msg1"]
+        result = kbm.process_new_emails(mock_provider, email_ids)
 
         # Assertions
         assert result == ["uuid1"]
         mock_provider.connect.assert_not_called()  # Already connected
+        mock_provider.fetch_message_by_id.assert_called_once_with("msg1")
         mock_email_preprocessor.preprocess_emails.assert_called_once()
         mock_components["vector_store"].store_chunks.assert_called_once()
 

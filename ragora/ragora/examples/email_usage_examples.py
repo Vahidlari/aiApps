@@ -332,7 +332,7 @@ def example_email_database_creation():
         # Process emails from inbox and store in knowledge base
         print("\nProcessing emails from INBOX...")
         stored_ids = kbm.process_email_account(
-            email_provider=provider, folder="INBOX", limit=10, class_name="Email"
+            email_provider=provider, folder="INBOX", class_name="Email"
         )
         print(f"Stored {len(stored_ids)} email chunks in knowledge base")
 
@@ -348,12 +348,26 @@ def example_email_database_creation():
             print(f"   Sender: {result.get('sender', 'Unknown')}")
             print(f"   Content preview: {result.get('content', '')[:100]}...")
 
-        # Process unread emails only
-        print("\n\nProcessing new unread emails...")
-        new_stored = kbm.process_new_emails(
-            email_provider=provider, limit=5, class_name="Email"
+        new_emails_info = kbm.check_new_emails(
+            email_provider=provider,
+            folder="INBOX",
+            include_body=True,
+            limit=5,
         )
-        print(f"Stored {len(new_stored)} new email chunks")
+
+        if new_emails_info["count"] > 0:
+            # Process unread emails only
+            print("\n\nProcessing new unread emails...")
+            new_stored = kbm.process_new_emails(
+                email_provider=provider,
+                email_ids=[
+                    email["email_id"] for email in new_emails_info["emails"][:3]
+                ],
+                class_name="Email",
+            )
+            print(f"Stored {len(new_stored)} new email chunks")
+        else:
+            print("No new emails found")
 
     except Exception as e:
         print(f"Error: {e}")
@@ -430,7 +444,13 @@ def example_email_answer_drafting_workflow():
 
         # Step 3: After handling emails, index them in knowledge base
         print("\n\nStep 3: Indexing processed emails...")
-        stored_ids = kbm.process_new_emails(email_provider=provider, class_name="Email")
+        # Extract email IDs from the emails we processed
+        processed_email_ids = [
+            email["email_id"] for email in new_emails_info["emails"][:3]
+        ]
+        stored_ids = kbm.process_new_emails(
+            email_provider=provider, email_ids=processed_email_ids, class_name="Email"
+        )
         print(f"Indexed {len(stored_ids)} email chunks")
 
         print("\nWorkflow complete!")
@@ -464,7 +484,11 @@ def main():
     print("- SMTP: smtp.gmail.com:465 (SSL)")
     print()
     print(
-        "Note: You'll be prompted to enter your credentials when running the example."
+        "Note: before running the examples, you need to create a .env file with the following variables:"
+        "- EMAIL: Your Gmail address"
+        "- PASSWORD: Your Gmail app password"
+        "- RECIPIENT: Email address for test messages"
+        "- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)"
     )
     print()
 

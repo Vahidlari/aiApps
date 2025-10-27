@@ -503,7 +503,7 @@ class KnowledgeBaseManager:
 
         try:
             # Auto-connect if needed
-            we_connected = self._ensure_email_connection(email_provider)
+            self._ensure_email_connection(email_provider)
 
             # Fetch unread messages
             new_emails = email_provider.fetch_messages(
@@ -540,16 +540,17 @@ class KnowledgeBaseManager:
     def process_new_emails(
         self,
         email_provider: EmailProvider,
-        folder: Optional[str] = None,
-        email_ids: Optional[List[str]] = None,
+        email_ids: List[str],
         class_name: str = "Email",
     ) -> List[str]:
-        """Process and store new unread emails.
+        """Process and store specific emails by their IDs.
+
+        This method processes emails that have been identified by the user
+        through check_new_emails() and filtered as needed.
 
         Args:
             email_provider: Email provider instance
-            folder: Optional folder to process (None = all unread)
-            email_ids: Specific email IDs to process (overrides folder)
+            email_ids: List of email IDs to process (required)
             class_name: Vector store collection name
 
         Returns:
@@ -558,26 +559,25 @@ class KnowledgeBaseManager:
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")
 
+        if not email_ids:
+            self.logger.warning("No email IDs provided")
+            return []
+
         try:
             # Auto-connect if needed
-            we_connected = self._ensure_email_connection(email_provider)
+            self._ensure_email_connection(email_provider)
 
-            # Fetch emails
-            if email_ids:
-                # Fetch specific emails by ID
-                emails = []
-                for email_id in email_ids:
-                    email = email_provider.fetch_message_by_id(email_id)
-                    if email:
-                        emails.append(email)
-            else:
-                # Fetch unread emails from folder
-                emails = email_provider.fetch_messages(
-                    limit=None, folder=folder, unread_only=True
-                )
+            # Fetch specific emails by ID
+            emails = []
+            for email_id in email_ids:
+                email = email_provider.fetch_message_by_id(email_id)
+                if email:
+                    emails.append(email)
+                else:
+                    self.logger.warning(f"Email {email_id} not found")
 
             if not emails:
-                self.logger.info("No emails to process")
+                self.logger.info("No emails found to process")
                 return []
 
             # Preprocess emails
@@ -618,7 +618,7 @@ class KnowledgeBaseManager:
 
         try:
             # Auto-connect if needed
-            we_connected = self._ensure_email_connection(email_provider)
+            self._ensure_email_connection(email_provider)
 
             # Fetch emails
             emails = email_provider.fetch_messages(
@@ -665,7 +665,7 @@ class KnowledgeBaseManager:
 
         try:
             # Auto-connect if needed
-            we_connected = self._ensure_email_connection(email_provider)
+            self._ensure_email_connection(email_provider)
 
             # Fetch emails
             emails = []
