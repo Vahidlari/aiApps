@@ -8,11 +8,18 @@ This example demonstrates advanced usage with custom configuration:
 4. System monitoring and statistics
 
 Prerequisites:
-- Weaviate running on localhost:8080
-- Docker command: docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate:1.22.4
+- Weaviate running on localhost:8080 (or set WEAVIATE_URL in .env file)
+- Docker command: docker run -d --name weaviate -p 8080:8080 \
+  semitechnologies/weaviate:1.22.4
+
+Environment Variables (.env file):
+- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)
 """
 
 import logging
+import os
+
+from dotenv import load_dotenv
 
 from ragora import (
     ChunkConfig,
@@ -28,9 +35,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_weaviate_url_from_file():
+    """Get Weaviate URL from a .env file."""
+    # load the .env file
+    load_dotenv()
+    # get the weaviate_url from the .env file
+    weaviate_url = os.getenv("WEAVIATE_URL")
+    return weaviate_url
+
+
 def main():
     """Advanced usage example."""
     try:
+        # Get Weaviate URL from .env file or use default
+        weaviate_url = get_weaviate_url_from_file() or "http://localhost:8080"
+        logger.info(f"Using Weaviate URL: {weaviate_url}")
+
         # Create custom configuration
         logger.info("⚙️  Creating custom configuration...")
         config = KnowledgeBaseManagerConfig(
@@ -40,7 +60,7 @@ def main():
             embedding_config=EmbeddingConfig(
                 model_name="all-mpnet-base-v2", max_length=512
             ),
-            database_manager_config=DatabaseManagerConfig(url="http://localhost:8080"),
+            database_manager_config=DatabaseManagerConfig(url=weaviate_url),
         )
 
         # Initialize knowledge base manager with custom config
