@@ -27,6 +27,10 @@ kbm = KnowledgeBaseManager(
 - `process_documents(file_paths: List[str]) -> List[str]` - Process documents
 - `query(query: str, search_type: str, top_k: int) -> Dict` - Query knowledge base
 - `get_system_stats() -> Dict` - Get system statistics
+- `check_new_emails(email_provider, folder=None, include_body=True, limit=50) -> Dict` - Check for new emails
+- `process_new_emails(email_provider, email_ids, class_name="Email") -> List[str]` - Process specific emails
+- `process_email_account(email_provider, folder=None, unread_only=False, class_name="Email") -> List[str]` - Bulk email processing
+- `search_emails(query, search_type="similar", top_k=5, class_name="Email") -> List[Dict]` - Search emails
 
 #### `ragora.core.DatabaseManager`
 
@@ -98,6 +102,20 @@ preprocessor = DocumentPreprocessor()
 - `extract_citations(content: str) -> List[Citation]` - Extract citations
 - `clean_text(text: str) -> str` - Clean text content
 
+#### `ragora.core.EmailPreprocessor`
+
+Email preprocessing for RAG system.
+
+```python
+from ragora.core import EmailPreprocessor
+
+preprocessor = EmailPreprocessor()
+```
+
+**Key Methods:**
+- `preprocess_email(email: EmailMessage, start_chunk_id: int = 0) -> List[DataChunk]` - Process single email
+- `preprocess_emails(emails: List[EmailMessage], start_chunk_id: int = 0) -> List[DataChunk]` - Process multiple emails
+
 #### `ragora.core.DataChunker`
 
 Text chunking operations.
@@ -151,12 +169,24 @@ Device detection utilities.
 - `get_device() -> str` - Get optimal device (cuda/cpu)
 - `is_cuda_available() -> bool` - Check CUDA availability
 
-#### `ragora.utils.email_provider_factory`
+#### `ragora.utils.email_utils`
 
-Email provider factory for email integration.
+Email integration utilities.
+
+**Key Classes:**
+- `EmailProvider` - Abstract base class for email providers
+- `IMAPProvider` - IMAP email provider implementation
+- `GraphProvider` - Microsoft Graph email provider implementation
+- `EmailProviderFactory` - Factory for creating email providers
+
+**Key Models:**
+- `EmailMessage` - Email message data model
+- `EmailAddress` - Email address data model
+- `IMAPCredentials` - IMAP connection credentials
+- `GraphCredentials` - Microsoft Graph connection credentials
 
 **Key Functions:**
-- `create_email_provider(config: Dict) -> EmailProvider` - Create email provider
+- `create_provider(provider_type: ProviderType, credentials: EmailCredentials) -> EmailProvider` - Create email provider
 
 ### Configuration
 
@@ -188,14 +218,43 @@ kbm.process_documents(["document.tex"])
 results = kbm.query("What is quantum mechanics?", search_type="hybrid")
 ```
 
-### Example 2: Custom Component Usage
+### Example 2: Email Knowledge Base
+
+```python
+from ragora import KnowledgeBaseManager
+from ragora.utils.email_utils import EmailProviderFactory, ProviderType, IMAPCredentials
+
+# Setup email provider
+credentials = IMAPCredentials(
+    imap_server="imap.gmail.com",
+    username="user@gmail.com",
+    password="app_password"
+)
+email_provider = EmailProviderFactory.create_provider(ProviderType.IMAP, credentials)
+
+# Initialize knowledge base
+kbm = KnowledgeBaseManager(weaviate_url="http://localhost:8080")
+
+# Check for new emails
+new_emails = kbm.check_new_emails(email_provider, folder="INBOX", limit=10)
+
+# Process specific emails
+email_ids = [email["email_id"] for email in new_emails["emails"][:5]]
+stored_ids = kbm.process_new_emails(email_provider, email_ids)
+
+# Search emails
+results = kbm.search_emails("meeting notes", top_k=5)
+```
+
+### Example 3: Custom Component Usage
 
 ```python
 from ragora.core import (
     DatabaseManager,
     VectorStore,
     Retriever,
-    EmbeddingEngine
+    EmbeddingEngine,
+    EmailPreprocessor
 )
 
 # Setup components
@@ -203,6 +262,7 @@ db = DatabaseManager("http://localhost:8080")
 store = VectorStore(db, "MyDocs")
 retriever = Retriever(db, "MyDocs")
 embedder = EmbeddingEngine("all-mpnet-base-v2")
+email_preprocessor = EmailPreprocessor()
 
 # Use components
 results = retriever.search_similar("query", top_k=5)
@@ -242,6 +302,34 @@ class Citation:
     title: str
     doi: Optional[str]
     content: Optional[str]
+```
+
+### EmailMessage
+
+```python
+@dataclass
+class EmailMessage:
+    message_id: str
+    subject: str
+    sender: EmailAddress
+    recipients: List[EmailAddress]
+    body_text: Optional[str]
+    body_html: Optional[str]
+    date_sent: Optional[datetime]
+    attachments: List[Attachment]
+    thread_id: Optional[str]
+    conversation_id: Optional[str]
+    folder: Optional[str]
+    metadata: Dict[str, Any]
+```
+
+### EmailAddress
+
+```python
+@dataclass
+class EmailAddress:
+    email: str
+    name: Optional[str]
 ```
 
 ## 🔗 Related Documentation
