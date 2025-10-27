@@ -252,7 +252,7 @@ class DatabaseManager:
         """
         try:
             collections = self.client.collections.list_all()
-            collection_names = list[str](collections.keys())
+            collection_names = list(collections.keys())
             self.logger.debug(f"Found {len(collection_names)} collections")
             return collection_names
         except WeaviateBaseError as e:
