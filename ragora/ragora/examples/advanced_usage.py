@@ -225,12 +225,12 @@ def main():
         logger.info("\n🔧 Component Access:")
 
         # Direct access to specific chunk
-        chunk_data = kbm.get_chunk(2, class_name=collection_name)
+        chunk_data = kbm.get_chunk("physics_002", class_name=collection_name)
         if chunk_data:
             logger.info(f"   Retrieved specific chunk: {chunk_data['content']}")
 
         # Test chunk deletion
-        deleted = kbm.delete_chunk(3, class_name=collection_name)
+        deleted = kbm.delete_chunk("physics_003", class_name=collection_name)
         if deleted:
             logger.info("   Successfully deleted chunk quantum_003")
 

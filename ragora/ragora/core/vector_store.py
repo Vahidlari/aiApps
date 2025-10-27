@@ -20,8 +20,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from weaviate.classes.config import Configure, DataType, Property
-from weaviate.classes.query import Filter, MetadataQuery
+from weaviate.classes.query import Filter
 from weaviate.exceptions import WeaviateBaseError
+from weaviate.util import generate_uuid5
 
 from .chunking import DataChunk
 from .database_manager import DatabaseManager
@@ -87,7 +88,8 @@ class VectorStore:
         """Create the Weaviate collection for document storage using V4 API.
 
         Args:
-            force_recreate: If True, delete existing collection before creating new one
+            force_recreate: If True, delete existing collection before
+                creating new one
 
         Raises:
             WeaviateBaseError: If collection creation fails
@@ -122,6 +124,12 @@ class VectorStore:
                     vectorize_property_name=False,
                 ),
                 Property(
+                    name="chunk_key",
+                    data_type=DataType.TEXT,
+                    description="Key for the chunk (UUID5)",
+                    vectorize_property_name=False,
+                ),
+                Property(
                     name="source_document",
                     data_type=DataType.TEXT,
                     description="Source document filename",
@@ -130,13 +138,13 @@ class VectorStore:
                 Property(
                     name="chunk_type",
                     data_type=DataType.TEXT,
-                    description="Type of chunk (text, citation, equation, etc.)",
+                    description=("Type of chunk (text, citation, equation, etc.)"),
                     vectorize_property_name=False,
                 ),
                 Property(
-                    name="metadata_chunk_id",
+                    name="metadata_chunk_idx",
                     data_type=DataType.INT,
-                    description="Chunk ID from metadata",
+                    description="Chunk index from metadata",
                     vectorize_property_name=False,
                 ),
                 Property(
@@ -194,7 +202,7 @@ class VectorStore:
             chunk: DataChunk object to store
 
         Returns:
-            str: UUID of the stored object
+            None
 
         Raises:
             ValueError: If chunk is invalid
@@ -211,20 +219,23 @@ class VectorStore:
             self.create_schema(class_name)
 
             # Get the collection
-            collection = self.db_manager.get_collection(self.class_name)
+            collection = self.db_manager.get_collection(class_name)
 
             # Prepare the object data
             object_data = self.prepare_data_object(chunk)
 
             # Store the object using V4 API
             self.logger.debug(f"Storing chunk: {chunk.chunk_id}")
-            result = collection.data.insert(object_data)
-
-            chunk_uuid = result
-            self.logger.debug(
-                f"Successfully stored chunk {chunk.chunk_id} with UUID: {chunk_uuid}"
+            collection.data.insert(
+                properties=object_data,
+                uuid=object_data["chunk_key"],
             )
-            return chunk_uuid
+
+            self.logger.debug(
+                f"Successfully stored chunk {chunk.chunk_id} with UUID: {object_data['chunk_key']}"
+            )
+
+            return object_data["chunk_key"]
 
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to store chunk {chunk.chunk_id}: {str(e)}")
@@ -241,7 +252,7 @@ class VectorStore:
             batch_size: Number of chunks to process in each batch
 
         Returns:
-            List[str]: List of UUIDs of stored objects
+            List[str]: List of chunk keys (UUIDs) that were stored
 
         Raises:
             ValueError: If chunks list is empty or contains invalid chunks
@@ -261,7 +272,6 @@ class VectorStore:
         if not valid_chunks:
             raise ValueError("No valid chunks found in the list")
 
-        stored_uuids = []
         total_chunks = len(valid_chunks)
 
         try:
@@ -274,6 +284,9 @@ class VectorStore:
             self.logger.info(
                 f"Storing {total_chunks} chunks in batches of {batch_size}"
             )
+
+            # Store UUIDs for return
+            stored_uuids = []
 
             # Process chunks in batches using V4 API
             for i in range(0, total_chunks, batch_size):
@@ -289,22 +302,20 @@ class VectorStore:
                 batch_num = i // batch_size + 1
                 self.logger.debug(f"Storing batch {batch_num} with {len(batch)} chunks")
 
-                batch_uuids = []
                 for object_data in batch_data:
                     try:
                         # Insert individual object using V4 API
-                        result = collection.data.insert(object_data)
-                        batch_uuids.append(result)
+                        collection.data.insert(
+                            properties=object_data,
+                            uuid=object_data["chunk_key"],
+                        )
+                        stored_uuids.append(object_data["chunk_key"])
+
                     except Exception as e:
                         self.logger.warning(f"Failed to insert object: {e}")
                         continue
 
-                stored_uuids.extend(batch_uuids)
-                self.logger.debug(
-                    f"Stored batch {batch_num}, got {len(batch_uuids)} UUIDs"
-                )
-
-            self.logger.info(f"Successfully stored {len(stored_uuids)} chunks")
+            self.logger.info(f"Successfully stored {total_chunks} chunks")
             return stored_uuids
 
         except WeaviateBaseError as e:
@@ -334,6 +345,7 @@ class VectorStore:
             "source_document": chunk.source_document,
             "chunk_type": chunk.chunk_type,
             "chunk_id": chunk.chunk_id,
+            "chunk_key": generate_uuid5(chunk.chunk_id),
             "metadata_chunk_idx": chunk.metadata.chunk_idx,
             "metadata_chunk_size": chunk.metadata.chunk_size,
             "metadata_total_chunks": chunk.metadata.total_chunks,
@@ -343,12 +355,12 @@ class VectorStore:
         }
 
     def get_chunk_by_id(
-        self, chunk_idx: int, class_name: str
+        self, chunk_id: str, class_name: str
     ) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
-            chunk_idx: Index of the chunk in the document
+            chunk_id: ID of the chunk
             class_name: Name of the Weaviate class for document storage
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
@@ -361,42 +373,24 @@ class VectorStore:
             collection = self.db_manager.get_collection(class_name)
 
             # Query using V4 API
-            result = collection.query.fetch_objects(
-                filters=Filter.by_property("metadata_chunk_idx").equal(chunk_idx),
-                limit=1,
-                return_metadata=MetadataQuery(distance=True, score=True),
+            result = collection.query.fetch_object_by_id(
+                uuid=generate_uuid5(chunk_id),
             )
 
-            if result.objects:
-                obj = result.objects[0]
-                return {
-                    "content": obj.properties.get("content", ""),
-                    "source_document": obj.properties.get("source_document", ""),
-                    "chunk_type": obj.properties.get("chunk_type", ""),
-                    "chunk_id": obj.properties.get("chunk_id", ""),
-                    "metadata_chunk_idx": obj.properties.get("metadata_chunk_idx", 0),
-                    "metadata_chunk_size": obj.properties.get("metadata_chunk_size", 0),
-                    "metadata_total_chunks": obj.properties.get(
-                        "metadata_total_chunks", 0
-                    ),
-                    "metadata_created_at": obj.properties.get(
-                        "metadata_created_at", ""
-                    ),
-                    "page_number": obj.properties.get("page_number", 0),
-                    "section_title": obj.properties.get("section_title", ""),
-                }
-
-            return None
+            if result:
+                return result.properties
+            else:
+                return None
 
         except WeaviateBaseError as e:
-            self.logger.error(f"Failed to retrieve chunk {chunk_idx}: {str(e)}")
+            self.logger.error(f"Failed to retrieve chunk {chunk_id}: {str(e)}")
             raise
 
-    def delete_chunk(self, chunk_idx: int, class_name: str) -> bool:
+    def delete_chunk(self, chunk_id: str, class_name: str) -> bool:
         """Delete a chunk by its chunk_id using V4 API.
 
         Args:
-            chunk_idx: Index of the chunk in the document to delete
+            chunk_id: ID of the chunk to delete
             class_name: Name of the Weaviate class for document storage
         Returns:
             bool: True if deletion was successful, False otherwise
@@ -408,28 +402,69 @@ class VectorStore:
             # Get the collection
             collection = self.db_manager.get_collection(class_name)
 
-            # First, find the object by chunk_id
-            result = collection.query.fetch_objects(
-                filters=Filter.by_property("metadata_chunk_idx").equal(chunk_idx),
-                limit=1,
-            )
-
-            if result.objects:
-                # Delete using V4 API
-                collection.data.delete_by_id(result.objects[0].uuid)
-                self.logger.debug(f"Successfully deleted chunk: {chunk_idx}")
-                return True
-            return False
+            # Delete by ID
+            collection.data.delete_by_id(uuid=generate_uuid5(chunk_id))
+            self.logger.debug(f"Successfully deleted chunk: {chunk_id}")
+            return True
 
         except WeaviateBaseError as e:
-            self.logger.error(f"Failed to delete chunk {chunk_idx}: {str(e)}")
+            self.logger.error(f"Failed to delete chunk {chunk_id}: {str(e)}")
+            raise
+
+    def update_chunk(
+        self, chunk_id: str, properties: Dict[str, Any], class_name: str
+    ) -> bool:
+        """Update a chunk by its chunk_id using V4 API.
+
+        Args:
+            chunk_id: ID of the chunk to update
+            properties: Properties to update
+            class_name: Name of the Weaviate class for document storage
+        Returns:
+            None
+        """
+
+        try:
+            # Get the collection
+            collection = self.db_manager.get_collection(class_name)
+
+            # Update by ID
+            collection.data.update_by_id(
+                uuid=generate_uuid5(chunk_id),
+                properties=properties,
+            )
+            self.logger.debug(f"Successfully updated chunk: {chunk_id}")
+            return True
+
+        except WeaviateBaseError as e:
+            self.logger.error(f"Failed to update chunk {chunk_id}: {str(e)}")
+            raise
+
+    def chunk_exists(self, chunk_id: str, class_name: str) -> bool:
+        """Check if a chunk exists by its chunk_id using V4 API.
+
+        Args:
+            chunk_id: ID of the chunk to check
+            class_name: Name of the Weaviate class for document storage
+        Returns:
+            bool: True if chunk exists, False otherwise
+        """
+        try:
+            # Get the collection
+            collection = self.db_manager.get_collection(class_name)
+
+            # Check if chunk exists by ID
+            return collection.data.exists(uuid=generate_uuid5(chunk_id))
+        except WeaviateBaseError as e:
+            self.logger.error(f"Failed to check if chunk {chunk_id} exists: {str(e)}")
             raise
 
     def get_stats(self, class_name: str) -> Dict[str, Any]:
         """Get statistics about the vector store using V4 API.
 
         Returns:
-            Dict[str, Any]: Statistics including total objects, collection info, etc.
+            Dict[str, Any]: Statistics including total objects, collection
+                info, etc.
 
         Raises:
             WeaviateBaseError: If stats retrieval fails
@@ -472,7 +507,7 @@ class VectorStore:
             self.logger.warning(f"Clearing all objects from collection: {class_name}")
             self.db_manager.delete_collection(class_name)
             self.logger.info(
-                f"Successfully cleared all objects from collection: " f"{class_name}"
+                f"Successfully cleared all objects from collection: {class_name}"
             )
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to clear all objects: {str(e)}")
