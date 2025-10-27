@@ -484,11 +484,12 @@ def main():
     print("- SMTP: smtp.gmail.com:465 (SSL)")
     print()
     print(
-        "Note: before running the examples, you need to create a .env file with the following variables:"
-        "- EMAIL: Your Gmail address"
-        "- PASSWORD: Your Gmail app password"
-        "- RECIPIENT: Email address for test messages"
-        "- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)"
+        """Note: before running the examples, you need to create a .env file with the following variables:
+- EMAIL: Your Gmail address
+- PASSWORD: Your Gmail app password
+- RECIPIENT: Email address for test messages
+- WEAVIATE_URL: Weaviate server URL (defaults to http://localhost:8080)
+"""
     )
     print()
 
