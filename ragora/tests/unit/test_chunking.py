@@ -127,37 +127,37 @@ class TestChunkingStrategies:
 
         assert len(chunks) == 3
         assert chunks[0].text == "1234567890"
-        assert chunks[0].metadata.chunk_id == 0
+        assert chunks[0].chunk_id == "text:unknown:0:0000"
         assert chunks[1].text == "90abcdefgh"
-        assert chunks[1].metadata.chunk_id == 1
+        assert chunks[1].chunk_id == "text:unknown:0:0001"
         assert chunks[2].text == "ghij"  # Updated expectation
-        assert chunks[2].metadata.chunk_id == 2
+        assert chunks[2].chunk_id == "text:unknown:0:0002"
 
     def test_document_chunking_strategy(self):
         """Test DocumentChunkingStrategy."""
         strategy = DocumentChunkingStrategy(chunk_size=5, overlap_size=1)
-        context = ChunkingContext(chunk_type="document", start_chunk_id=10)
+        context = ChunkingContext(chunk_type="document", start_sequence_id=10)
         text = "1234567890"
 
         chunks = strategy.chunk(text, context)
 
         assert len(chunks) == 3
-        assert chunks[0].metadata.chunk_id == 10
-        assert chunks[1].metadata.chunk_id == 11
-        assert chunks[2].metadata.chunk_id == 12
+        assert chunks[0].chunk_id == "document:unknown:0:0010"
+        assert chunks[1].chunk_id == "document:unknown:0:0011"
+        assert chunks[2].chunk_id == "document:unknown:0:0012"
 
     def test_email_chunking_strategy(self):
         """Test EmailChunkingStrategy."""
         strategy = EmailChunkingStrategy(chunk_size=8, overlap_size=2)
-        context = ChunkingContext(chunk_type="email", start_chunk_id=5)
+        context = ChunkingContext(chunk_type="email", start_sequence_id=5)
         text = "1234567890abcdefgh"
 
         chunks = strategy.chunk(text, context)
 
         assert len(chunks) == 3
-        assert chunks[0].metadata.chunk_id == 5
-        assert chunks[1].metadata.chunk_id == 6
-        assert chunks[2].metadata.chunk_id == 7
+        assert chunks[0].chunk_id == "email:unknown:0:0005"
+        assert chunks[1].chunk_id == "email:unknown:0:0006"
+        assert chunks[2].chunk_id == "email:unknown:0:0007"
 
 
 class TestDataChunk:
@@ -165,24 +165,27 @@ class TestDataChunk:
 
     def test_data_chunk_creation(self):
         """Test basic DataChunk object creation."""
-        metadata = ChunkMetadata(chunk_id=0, chunk_size=18, total_chunks=1)
+        metadata = ChunkMetadata(chunk_idx=0, chunk_size=18, total_chunks=1)
         chunk = DataChunk(
             text="This is a test chunk",
             start_idx=0,
             end_idx=18,
+            chunk_id="test_chunk_001",
             metadata=metadata,
         )
 
         assert chunk.text == "This is a test chunk"
         assert chunk.start_idx == 0
         assert chunk.end_idx == 18
-        assert chunk.metadata.chunk_id == 0
+        assert chunk.chunk_id == "test_chunk_001"
         assert chunk.metadata.chunk_size == 18
 
     def test_data_chunk_with_empty_text(self):
         """Test DataChunk creation with empty text."""
-        metadata = ChunkMetadata(chunk_id=0, chunk_size=0, total_chunks=1)
-        chunk = DataChunk(text="", start_idx=0, end_idx=0, metadata=metadata)
+        metadata = ChunkMetadata(chunk_idx=0, chunk_size=0, total_chunks=1)
+        chunk = DataChunk(
+            text="", start_idx=0, end_idx=0, chunk_id="empty_chunk", metadata=metadata
+        )
 
         assert chunk.text == ""
         assert chunk.start_idx == 0
@@ -192,7 +195,7 @@ class TestDataChunk:
     def test_data_chunk_with_complex_metadata(self):
         """Test DataChunk creation with complex metadata."""
         metadata = ChunkMetadata(
-            chunk_id=5,
+            chunk_idx=5,
             chunk_size=100,
             total_chunks=10,
             source_document="doc123",
@@ -203,10 +206,11 @@ class TestDataChunk:
             text="Complex chunk with metadata",
             start_idx=500,
             end_idx=600,
+            chunk_id="complex_chunk_005",
             metadata=metadata,
         )
 
-        assert chunk.metadata.chunk_id == 5
+        assert chunk.chunk_id == "complex_chunk_005"
         assert chunk.metadata.chunk_size == 100
         assert chunk.metadata.total_chunks == 10
         assert chunk.metadata.source_document == "doc123"
@@ -262,7 +266,7 @@ class TestDataChunker:
         assert result[0].text == "a"
         assert result[0].start_idx == 0
         assert result[0].end_idx == 1
-        assert result[0].metadata.chunk_id == 0
+        assert result[0].chunk_id == "text:unknown:0:0000"
         assert result[0].metadata.chunk_size == 1
         assert result[0].metadata.total_chunks == 1
 
@@ -278,7 +282,7 @@ class TestDataChunker:
         assert result[0].text == text
         assert result[0].start_idx == 0
         assert result[0].end_idx == len(text)
-        assert result[0].metadata.chunk_id == 0
+        assert result[0].chunk_id == "text:unknown:0:0000"
         assert result[0].metadata.chunk_size == len(text)
         assert result[0].metadata.total_chunks == 1
 
@@ -293,7 +297,7 @@ class TestDataChunker:
         assert len(result) >= 1
         # Verify chunk_id sequence
         for i, chunk in enumerate(result):
-            assert chunk.metadata.chunk_id == i
+            assert chunk.chunk_id == f"text:unknown:0:{i:04d}"
 
     def test_chunk_with_different_strategies(self):
         """Test chunking with different strategy types."""
@@ -320,7 +324,7 @@ class TestDataChunker:
     def test_chunk_with_custom_start_id(self):
         """Test chunking with custom start chunk ID."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_chunk_id=100)
+        context = ChunkingContext(chunk_type="text", start_sequence_id=100)
         text = "1234567890"
 
         result = chunker.chunk(text, context)
@@ -328,7 +332,7 @@ class TestDataChunker:
         assert len(result) >= 1
         # Verify chunk_id starts at 100
         for i, chunk in enumerate(result):
-            assert chunk.metadata.chunk_id == 100 + i
+            assert chunk.chunk_id == f"text:unknown:0:{100 + i:04d}"
 
     def test_chunk_with_metadata(self):
         """Test chunking with metadata."""
@@ -390,12 +394,12 @@ class TestDataChunker:
                         start_idx=i,
                         end_idx=i + 1,
                         metadata=ChunkMetadata(
-                            chunk_id=context.start_chunk_id + i,
+                            chunk_idx=context.start_chunk_id + i,
                             chunk_size=1,
                             total_chunks=len(text),
                             chunk_type=context.chunk_type,
                         ),
-                        chunk_id=str(context.start_chunk_id + i),
+                        chunk_id=f"custom:unknown:0:{context.start_chunk_id + i:04d}",
                         chunk_type=context.chunk_type,
                     )
                     chunks.append(chunk)

@@ -237,9 +237,167 @@ chunks = chunker.chunk(text, context)  # Uses default_strategy
 ```
 """
 
+import hashlib
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+
+
+class ChunkIdGenerator:
+    """Centralized, deterministic chunk ID generator for all chunking strategies.
+
+    This class provides a unified way to generate human-readable, deterministic
+    chunk IDs across all content types and chunking strategies. The IDs follow
+    a composite format that includes content type, source identification,
+    location information, and sequence numbering.
+
+    ID Format: {content_type}:{source_id}:{location_id}:{sequence_id}
+
+    Examples:
+    - text:doc_001:0:0001
+    - document:paper_2024_01:page_5:0003
+    - email:msg_abc123:thread_001:0001
+    - custom:user_data:batch_001:0002
+    """
+
+    @staticmethod
+    def generate_chunk_id(
+        content_type: str,
+        source_id: str,
+        location_id: str = "0",
+        sequence_id: int = 0,
+        chunk_idx: int = 0,
+    ) -> str:
+        """Generate a deterministic, human-readable chunk ID.
+
+        Args:
+            content_type: Type of content (text, document, email, custom)
+            source_id: Unique identifier for the source document/content
+            location_id: Location within source (page, section, etc.)
+            sequence_id: Starting sequence number for this chunking session
+            chunk_idx: Index of this chunk within the sequence
+
+        Returns:
+            str: Deterministic chunk ID in format
+                 content_type:source_id:location_id:sequence_num
+        """
+        # Normalize inputs
+        content_type = ChunkIdGenerator._normalize_content_type(content_type)
+        source_id = ChunkIdGenerator._normalize_source_id(source_id)
+        location_id = ChunkIdGenerator._normalize_location_id(location_id)
+
+        # Generate sequence number
+        sequence_num = sequence_id + chunk_idx
+
+        return f"{content_type}:{source_id}:{location_id}:{sequence_num:04d}"
+
+    @staticmethod
+    def _normalize_content_type(content_type: str) -> str:
+        """Normalize content type for consistent formatting."""
+        if not content_type:
+            return "text"
+
+        # Convert to lowercase and validate
+        normalized = content_type.lower().strip()
+
+        # Map common variations to standard types
+        type_mapping = {
+            "doc": "document",
+            "docs": "document",
+            "msg": "email",
+            "mail": "email",
+            "txt": "text",
+            "plain": "text",
+        }
+
+        return type_mapping.get(normalized, normalized)
+
+    @staticmethod
+    def _normalize_source_id(source_id: str) -> str:
+        """Normalize source ID for consistent formatting."""
+        if not source_id:
+            return "unknown"
+
+        # Remove special characters, convert to lowercase, limit length
+        normalized = re.sub(r"[^a-zA-Z0-9_-]", "_", source_id.lower())
+        normalized = re.sub(r"_+", "_", normalized)  # Collapse multiple underscores
+        normalized = normalized.strip("_")  # Remove leading/trailing underscores
+
+        return normalized[:20] if normalized else "unknown"  # Limit to 20 chars
+
+    @staticmethod
+    def _normalize_location_id(location_id: str) -> str:
+        """Normalize location ID for consistent formatting."""
+        if not location_id:
+            return "0"
+
+        # Convert to string and normalize
+        location_str = str(location_id).lower().strip()
+
+        # Handle common location patterns
+        if location_str == "0":
+            return "0"  # Keep "0" as is for default case
+        elif location_str.isdigit():
+            return f"pos_{location_str}"
+        elif location_str.startswith("page_"):
+            return location_str
+        elif location_str.startswith("sec_"):
+            return location_str
+        elif location_str.startswith("msg_"):
+            return location_str
+        else:
+            # General normalization
+            normalized = re.sub(r"[^a-zA-Z0-9_-]", "_", location_str)
+            normalized = re.sub(r"_+", "_", normalized)
+            normalized = normalized.strip("_")
+            return normalized[:15] if normalized else "0"  # Limit to 15 chars
+
+    @staticmethod
+    def parse_chunk_id(chunk_id: str) -> Dict[str, str]:
+        """Parse a chunk ID back into its components.
+
+        Args:
+            chunk_id: The chunk ID to parse
+
+        Returns:
+            Dict containing parsed components: content_type, source_id, location_id, sequence_num
+
+        Raises:
+            ValueError: If chunk ID format is invalid
+        """
+        parts = chunk_id.split(":")
+        if len(parts) != 4:
+            raise ValueError(
+                f"Invalid chunk ID format: {chunk_id}. Expected format: content_type:source_id:location_id:sequence_num"
+            )
+
+        return {
+            "content_type": parts[0],
+            "source_id": parts[1],
+            "location_id": parts[2],
+            "sequence_num": parts[3],
+        }
+
+    @staticmethod
+    def get_source_hash(source_id: str, max_length: int = 8) -> str:
+        """Generate a short hash for source ID when it's too long.
+
+        Args:
+            source_id: The source ID to hash
+            max_length: Maximum length of the hash
+
+        Returns:
+            str: Short hash of the source ID
+        """
+        if not source_id:
+            return "unknown"
+
+        # Create a deterministic hash
+        hash_obj = hashlib.md5(source_id.encode("utf-8"))
+        hash_hex = hash_obj.hexdigest()
+
+        return hash_hex[:max_length]
 
 
 @dataclass
@@ -250,7 +408,7 @@ class ChunkMetadata:
     ensuring type safety and clear field definitions.
     """
 
-    chunk_id: int  # Unique identifier for the chunk
+    chunk_idx: int  # Index of the chunk in the document
     chunk_size: int  # Size of the chunk in tokens
     total_chunks: int  # Total number of chunks in the document
     source_document: Optional[str] = None  # Source document filename
@@ -276,6 +434,7 @@ class DataChunk:
     text: str  # The text of the chunk
     start_idx: int  # The start index of the chunk
     end_idx: int  # The end index of the chunk
+    chunk_id: str  # The deterministic human-readable chunk ID
     metadata: ChunkMetadata  # The metadata of the chunk
     source_document: Optional[str] = None  # Source document filename
     chunk_type: Optional[str] = None  # Type of chunk (text, citation, equation, etc.)
@@ -297,7 +456,11 @@ class ChunkingContext:
     email_date: Optional[str] = None
     email_id: Optional[str] = None
     email_folder: Optional[str] = None
-    # Configuration
+    # ID generation parameters
+    source_id: Optional[str] = None  # Unique source identifier for ID generation
+    location_id: Optional[str] = None  # Location within source (page, section, etc.)
+    start_sequence_id: int = 0  # Starting sequence number for deterministic IDs
+    # Legacy configuration (deprecated, use start_sequence_id)
     start_chunk_id: int = 0
     # Future extensions
     custom_metadata: Optional[Dict[str, Any]] = None
@@ -363,8 +526,26 @@ class ChunkingContextBuilder:
         return self
 
     def with_start_chunk_id(self, chunk_id: int) -> "ChunkingContextBuilder":
-        """Set starting chunk ID."""
+        """Set starting chunk ID (deprecated, use with_start_sequence_id)."""
         self._context.start_chunk_id = chunk_id
+        self._context.start_sequence_id = (
+            chunk_id  # Also set new field for compatibility
+        )
+        return self
+
+    def with_source_id(self, source_id: str) -> "ChunkingContextBuilder":
+        """Set unique source identifier for deterministic ID generation."""
+        self._context.source_id = source_id
+        return self
+
+    def with_location_id(self, location_id: str) -> "ChunkingContextBuilder":
+        """Set location within source for deterministic ID generation."""
+        self._context.location_id = location_id
+        return self
+
+    def with_start_sequence_id(self, sequence_id: int) -> "ChunkingContextBuilder":
+        """Set starting sequence number for deterministic ID generation."""
+        self._context.start_sequence_id = sequence_id
         return self
 
     def with_custom_metadata(
@@ -378,6 +559,33 @@ class ChunkingContextBuilder:
         """Build the ChunkingContext object."""
         return self._context
 
+    # Convenience methods for common patterns
+    def for_document_with_page(
+        self, source_id: str, page: int
+    ) -> "ChunkingContextBuilder":
+        """Set up for document chunking with page number and source ID."""
+        return (
+            self.for_document()
+            .with_source_id(source_id)
+            .with_page(page)
+            .with_location_id(f"page_{page}")
+        )
+
+    def for_email_with_id(
+        self, email_id: str, subject: str, sender: str
+    ) -> "ChunkingContextBuilder":
+        """Set up for email chunking with email ID and metadata."""
+        return (
+            self.for_email()
+            .with_source_id(f"email_{email_id}")
+            .with_email_info(subject, sender)
+            .with_location_id(f"msg_{email_id}")
+        )
+
+    def for_text_with_source(self, source_id: str) -> "ChunkingContextBuilder":
+        """Set up for text chunking with source ID."""
+        return self.for_text().with_source_id(source_id)
+
 
 class ChunkingStrategy(ABC):
     """Abstract base class for different chunking strategies."""
@@ -390,6 +598,84 @@ class ChunkingStrategy(ABC):
     def chunk(self, text: str, context: ChunkingContext) -> List[DataChunk]:
         """Chunk text using the specific strategy."""
         pass
+
+    def _create_chunk_with_id(
+        self,
+        text: str,
+        start_idx: int,
+        end_idx: int,
+        chunk_idx: int,
+        context: ChunkingContext,
+    ) -> DataChunk:
+        """Create a DataChunk with deterministic ID generation.
+
+        Args:
+            text: The chunk text content
+            start_idx: Start index in original text
+            end_idx: End index in original text
+            chunk_idx: Index of this chunk in the sequence
+            context: Chunking context with metadata
+
+        Returns:
+            DataChunk with deterministic chunk_id
+        """
+        # Generate deterministic chunk ID
+        chunk_id = ChunkIdGenerator.generate_chunk_id(
+            content_type=context.chunk_type,
+            source_id=self._get_source_id(context),
+            location_id=self._get_location_id(context),
+            sequence_id=context.start_sequence_id,
+            chunk_idx=chunk_idx,
+        )
+
+        return DataChunk(
+            text=text,
+            start_idx=start_idx,
+            end_idx=end_idx,
+            chunk_id=chunk_id,
+            metadata=ChunkMetadata(
+                chunk_idx=chunk_idx,
+                chunk_size=len(text),
+                total_chunks=0,  # Will be updated after all chunks
+                source_document=context.source_document,
+                page_number=context.page_number,
+                section_title=context.section_title,
+                chunk_type=context.chunk_type,
+                created_at=context.created_at,
+                email_subject=context.email_subject,
+                email_sender=context.email_sender,
+                email_recipient=context.email_recipient,
+                email_date=context.email_date,
+                email_id=context.email_id,
+                email_folder=context.email_folder,
+            ),
+            chunk_type=context.chunk_type,
+            source_document=context.source_document,
+        )
+
+    def _get_source_id(self, context: ChunkingContext) -> str:
+        """Get source ID for chunk ID generation."""
+        if context.source_id:
+            return context.source_id
+        elif context.source_document:
+            return context.source_document
+        elif context.email_id:
+            return f"email_{context.email_id}"
+        else:
+            return "unknown"
+
+    def _get_location_id(self, context: ChunkingContext) -> str:
+        """Get location ID for chunk ID generation."""
+        if context.location_id:
+            return context.location_id
+        elif context.chunk_type == "document" and context.page_number:
+            return f"page_{context.page_number}"
+        elif context.chunk_type == "email" and context.email_id:
+            return f"msg_{context.email_id}"
+        elif context.section_title:
+            return f"sec_{context.section_title[:10]}"
+        else:
+            return "0"
 
 
 class TextChunkingStrategy(ChunkingStrategy):
@@ -409,7 +695,7 @@ class TextChunkingStrategy(ChunkingStrategy):
 
         chunks = []
         start_idx = 0
-        chunk_id = context.start_chunk_id
+        chunk_idx = 0  # Start at 0, sequence_id is handled in ID generation
 
         while start_idx < len(text):
             # Calculate end index for this chunk
@@ -418,33 +704,17 @@ class TextChunkingStrategy(ChunkingStrategy):
             # Extract chunk text
             chunk_text = text[start_idx:end_idx]
 
-            # Create chunk with metadata
-            chunk = DataChunk(
+            # Create chunk with deterministic ID
+            chunk = self._create_chunk_with_id(
                 text=chunk_text,
                 start_idx=start_idx,
                 end_idx=end_idx,
-                metadata=ChunkMetadata(
-                    chunk_id=chunk_id,
-                    chunk_size=len(chunk_text),
-                    total_chunks=0,  # Will be updated after all chunks
-                    source_document=context.source_document,
-                    page_number=context.page_number,
-                    section_title=context.section_title,
-                    chunk_type=context.chunk_type,
-                    created_at=context.created_at,
-                    email_subject=context.email_subject,
-                    email_sender=context.email_sender,
-                    email_recipient=context.email_recipient,
-                    email_date=context.email_date,
-                    email_id=context.email_id,
-                    email_folder=context.email_folder,
-                ),
-                chunk_type=context.chunk_type,
-                source_document=context.source_document,
+                chunk_idx=chunk_idx,
+                context=context,
             )
 
             chunks.append(chunk)
-            chunk_id += 1
+            chunk_idx += 1
 
             # Move start index for next chunk with overlap
             # Ensure we make progress to avoid infinite loop
@@ -478,7 +748,7 @@ class DocumentChunkingStrategy(ChunkingStrategy):
 
         chunks = []
         start_idx = 0
-        chunk_id = context.start_chunk_id
+        chunk_idx = 0  # Start at 0, sequence_id is handled in ID generation
 
         while start_idx < len(text):
             # Calculate end index for this chunk
@@ -487,33 +757,17 @@ class DocumentChunkingStrategy(ChunkingStrategy):
             # Extract chunk text
             chunk_text = text[start_idx:end_idx]
 
-            # Create chunk with metadata
-            chunk = DataChunk(
+            # Create chunk with deterministic ID
+            chunk = self._create_chunk_with_id(
                 text=chunk_text,
                 start_idx=start_idx,
                 end_idx=end_idx,
-                metadata=ChunkMetadata(
-                    chunk_id=chunk_id,
-                    chunk_size=len(chunk_text),
-                    total_chunks=0,  # Will be updated after all chunks
-                    source_document=context.source_document,
-                    page_number=context.page_number,
-                    section_title=context.section_title,
-                    chunk_type=context.chunk_type,
-                    created_at=context.created_at,
-                    email_subject=context.email_subject,
-                    email_sender=context.email_sender,
-                    email_recipient=context.email_recipient,
-                    email_date=context.email_date,
-                    email_id=context.email_id,
-                    email_folder=context.email_folder,
-                ),
-                chunk_type=context.chunk_type,
-                source_document=context.source_document,
+                chunk_idx=chunk_idx,
+                context=context,
             )
 
             chunks.append(chunk)
-            chunk_id += 1
+            chunk_idx += 1
 
             # Move start index for next chunk with overlap
             # Ensure we make progress to avoid infinite loop
@@ -547,7 +801,7 @@ class EmailChunkingStrategy(ChunkingStrategy):
 
         chunks = []
         start_idx = 0
-        chunk_id = context.start_chunk_id
+        chunk_idx = 0  # Start at 0, sequence_id is handled in ID generation
 
         while start_idx < len(text):
             # Calculate end index for this chunk
@@ -556,33 +810,17 @@ class EmailChunkingStrategy(ChunkingStrategy):
             # Extract chunk text
             chunk_text = text[start_idx:end_idx]
 
-            # Create chunk with metadata
-            chunk = DataChunk(
+            # Create chunk with deterministic ID
+            chunk = self._create_chunk_with_id(
                 text=chunk_text,
                 start_idx=start_idx,
                 end_idx=end_idx,
-                metadata=ChunkMetadata(
-                    chunk_id=chunk_id,
-                    chunk_size=len(chunk_text),
-                    total_chunks=0,  # Will be updated after all chunks
-                    source_document=context.source_document,
-                    page_number=context.page_number,
-                    section_title=context.section_title,
-                    chunk_type=context.chunk_type,
-                    created_at=context.created_at,
-                    email_subject=context.email_subject,
-                    email_sender=context.email_sender,
-                    email_recipient=context.email_recipient,
-                    email_date=context.email_date,
-                    email_id=context.email_id,
-                    email_folder=context.email_folder,
-                ),
-                chunk_type=context.chunk_type,
-                source_document=context.source_document,
+                chunk_idx=chunk_idx,
+                context=context,
             )
 
             chunks.append(chunk)
-            chunk_id += 1
+            chunk_idx += 1
 
             # Move start index for next chunk with overlap
             # Ensure we make progress to avoid infinite loop

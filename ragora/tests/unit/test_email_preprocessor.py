@@ -59,10 +59,22 @@ class TestEmailPreprocessor:
         """Test preprocessing a single email."""
         from ragora.core.chunking import ChunkMetadata
 
-        mock_metadata = ChunkMetadata(chunk_id=0, chunk_size=10, total_chunks=2)
+        mock_metadata = ChunkMetadata(chunk_idx=0, chunk_size=10, total_chunks=2)
         mock_chunks = [
-            DataChunk(text="chunk1", start_idx=0, end_idx=10, metadata=mock_metadata),
-            DataChunk(text="chunk2", start_idx=11, end_idx=20, metadata=mock_metadata),
+            DataChunk(
+                text="chunk1",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="email:test:0:0000",
+                metadata=mock_metadata,
+            ),
+            DataChunk(
+                text="chunk2",
+                start_idx=11,
+                end_idx=20,
+                chunk_id="email:test:0:0001",
+                metadata=mock_metadata,
+            ),
         ]
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
@@ -78,9 +90,15 @@ class TestEmailPreprocessor:
         """Test preprocessing email with start_chunk_id."""
         from ragora.core.chunking import ChunkMetadata
 
-        mock_metadata = ChunkMetadata(chunk_id=5, chunk_size=10, total_chunks=1)
+        mock_metadata = ChunkMetadata(chunk_idx=5, chunk_size=10, total_chunks=1)
         mock_chunks = [
-            DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
+            DataChunk(
+                text="chunk",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="email:test:0:0000",
+                metadata=mock_metadata,
+            )
         ]
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
@@ -96,9 +114,15 @@ class TestEmailPreprocessor:
         """Test preprocessing multiple emails."""
         from ragora.core.chunking import ChunkMetadata
 
-        mock_metadata = ChunkMetadata(chunk_id=0, chunk_size=10, total_chunks=1)
+        mock_metadata = ChunkMetadata(chunk_idx=0, chunk_size=10, total_chunks=1)
         mock_chunks = [
-            DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
+            DataChunk(
+                text="chunk",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="email:test:0:0000",
+                metadata=mock_metadata,
+            )
         ]
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
@@ -119,9 +143,15 @@ class TestEmailPreprocessor:
         """Test preprocessing emails with start_chunk_id."""
         from ragora.core.chunking import ChunkMetadata
 
-        mock_metadata = ChunkMetadata(chunk_id=10, chunk_size=10, total_chunks=1)
+        mock_metadata = ChunkMetadata(chunk_idx=10, chunk_size=10, total_chunks=1)
         mock_chunks = [
-            DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
+            DataChunk(
+                text="chunk",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="email:test:0:0000",
+                metadata=mock_metadata,
+            )
         ]
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
@@ -139,9 +169,15 @@ class TestEmailPreprocessor:
         """Test chunking context creation with email metadata."""
         from ragora.core.chunking import ChunkMetadata
 
-        mock_metadata = ChunkMetadata(chunk_id=0, chunk_size=10, total_chunks=1)
+        mock_metadata = ChunkMetadata(chunk_idx=0, chunk_size=10, total_chunks=1)
         mock_chunks = [
-            DataChunk(text="chunk", start_idx=0, end_idx=10, metadata=mock_metadata)
+            DataChunk(
+                text="chunk",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="email:test:0:0000",
+                metadata=mock_metadata,
+            )
         ]
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 

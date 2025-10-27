@@ -64,7 +64,7 @@ class TestKnowledgeBaseManager:
                 start_idx=0,
                 end_idx=15,
                 metadata=ChunkMetadata(
-                    chunk_id=1,
+                    chunk_idx=1,
                     chunk_size=15,
                     total_chunks=2,
                     source_document="test.tex",
@@ -80,7 +80,7 @@ class TestKnowledgeBaseManager:
                 start_idx=16,
                 end_idx=31,
                 metadata=ChunkMetadata(
-                    chunk_id=2,
+                    chunk_idx=2,
                     chunk_size=15,
                     total_chunks=2,
                     source_document="test.tex",
@@ -365,12 +365,12 @@ class TestKnowledgeBaseManager:
         kbm.vector_store = mock_components["vector_store"]
 
         # Test
-        result = kbm.get_chunk("test_001")
+        result = kbm.get_chunk("test_001", "Document")
 
         # Assertions
         assert result == mock_chunk_data
         mock_components["vector_store"].get_chunk_by_id.assert_called_once_with(
-            "test_001"
+            "test_001", class_name="Document"
         )
 
     def test_delete_chunk_delegation(self, mock_components):
@@ -382,11 +382,13 @@ class TestKnowledgeBaseManager:
         kbm.vector_store = mock_components["vector_store"]
 
         # Test
-        result = kbm.delete_chunk("test_001")
+        result = kbm.delete_chunk("test_001", "Document")
 
         # Assertions
         assert result is True
-        mock_components["vector_store"].delete_chunk.assert_called_once_with("test_001")
+        mock_components["vector_store"].delete_chunk.assert_called_once_with(
+            "test_001", class_name="Document"
+        )
 
     def test_get_system_stats_success(self, mock_components):
         """Test successful system statistics retrieval."""
@@ -426,7 +428,7 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        stats = kbm.get_system_stats()
+        stats = kbm.get_system_stats("Document")
 
         # Assertions
         assert stats["system_initialized"] is True
@@ -460,7 +462,7 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         with pytest.raises(Exception, match="Stats failed"):
-            kbm.get_system_stats()
+            kbm.get_system_stats("Document")
 
     def test_clear_database_success(self, mock_components):
         """Test successful database clearing."""
@@ -470,7 +472,7 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        kbm.clear_database()
+        kbm.clear_database("Document")
 
         # Assertions
         mock_components["vector_store"].clear_all.assert_called_once()
@@ -483,7 +485,7 @@ class TestKnowledgeBaseManager:
         with pytest.raises(
             RuntimeError, match="Knowledge base manager not initialized"
         ):
-            kbm.clear_database()
+            kbm.clear_database("Document")
 
     def test_close_success(self, mock_components):
         """Test successful system closure."""

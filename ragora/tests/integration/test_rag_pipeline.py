@@ -69,7 +69,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
                 start_idx=0,
                 end_idx=100,
                 metadata=ChunkMetadata(
-                    chunk_id=1,
+                    chunk_idx=1,
                     chunk_size=100,
                     total_chunks=3,
                     source_document="test_document.tex",
@@ -86,7 +86,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
                 start_idx=101,
                 end_idx=150,
                 metadata=ChunkMetadata(
-                    chunk_id=2,
+                    chunk_idx=2,
                     chunk_size=49,
                     total_chunks=3,
                     source_document="test_document.tex",
@@ -103,7 +103,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
                 start_idx=151,
                 end_idx=250,
                 metadata=ChunkMetadata(
-                    chunk_id=3,
+                    chunk_idx=3,
                     chunk_size=99,
                     total_chunks=3,
                     source_document="test_document.tex",
@@ -310,7 +310,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         kbm = KnowledgeBaseManager()
 
         # Test system statistics
-        stats = kbm.get_system_stats()
+        stats = kbm.get_system_stats("Document")
 
         # Assertions
         assert stats["system_initialized"] is True

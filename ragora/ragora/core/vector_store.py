@@ -326,11 +326,15 @@ class VectorStore:
         if not chunk.text or not chunk.text.strip():
             raise ValueError("Chunk text cannot be empty")
 
+        if not chunk.chunk_id or not chunk.chunk_id.strip():
+            raise ValueError("Chunk ID cannot be empty")
+
         return {
             "content": chunk.text,
             "source_document": chunk.source_document,
             "chunk_type": chunk.chunk_type,
-            "metadata_chunk_id": chunk.metadata.chunk_id,
+            "chunk_id": chunk.chunk_id,
+            "metadata_chunk_idx": chunk.metadata.chunk_idx,
             "metadata_chunk_size": chunk.metadata.chunk_size,
             "metadata_total_chunks": chunk.metadata.total_chunks,
             "metadata_created_at": (chunk.metadata.created_at or ""),
@@ -339,12 +343,12 @@ class VectorStore:
         }
 
     def get_chunk_by_id(
-        self, chunk_id: int, class_name: str
+        self, chunk_idx: int, class_name: str
     ) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
-            chunk_id: Unique identifier of the chunk
+            chunk_idx: Index of the chunk in the document
             class_name: Name of the Weaviate class for document storage
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
@@ -358,7 +362,7 @@ class VectorStore:
 
             # Query using V4 API
             result = collection.query.fetch_objects(
-                filters=Filter.by_property("metadata_chunk_id").equal(chunk_id),
+                filters=Filter.by_property("metadata_chunk_idx").equal(chunk_idx),
                 limit=1,
                 return_metadata=MetadataQuery(distance=True, score=True),
             )
@@ -369,7 +373,8 @@ class VectorStore:
                     "content": obj.properties.get("content", ""),
                     "source_document": obj.properties.get("source_document", ""),
                     "chunk_type": obj.properties.get("chunk_type", ""),
-                    "metadata_chunk_id": obj.properties.get("metadata_chunk_id", 0),
+                    "chunk_id": obj.properties.get("chunk_id", ""),
+                    "metadata_chunk_idx": obj.properties.get("metadata_chunk_idx", 0),
                     "metadata_chunk_size": obj.properties.get("metadata_chunk_size", 0),
                     "metadata_total_chunks": obj.properties.get(
                         "metadata_total_chunks", 0
@@ -384,14 +389,14 @@ class VectorStore:
             return None
 
         except WeaviateBaseError as e:
-            self.logger.error(f"Failed to retrieve chunk {chunk_id}: {str(e)}")
+            self.logger.error(f"Failed to retrieve chunk {chunk_idx}: {str(e)}")
             raise
 
-    def delete_chunk(self, chunk_id: int, class_name: str) -> bool:
+    def delete_chunk(self, chunk_idx: int, class_name: str) -> bool:
         """Delete a chunk by its chunk_id using V4 API.
 
         Args:
-            chunk_id: Unique identifier of the chunk to delete
+            chunk_idx: Index of the chunk in the document to delete
             class_name: Name of the Weaviate class for document storage
         Returns:
             bool: True if deletion was successful, False otherwise
@@ -405,18 +410,19 @@ class VectorStore:
 
             # First, find the object by chunk_id
             result = collection.query.fetch_objects(
-                filters=Filter.by_property("metadata_chunk_id").equal(chunk_id), limit=1
+                filters=Filter.by_property("metadata_chunk_idx").equal(chunk_idx),
+                limit=1,
             )
 
             if result.objects:
                 # Delete using V4 API
                 collection.data.delete_by_id(result.objects[0].uuid)
-                self.logger.debug(f"Successfully deleted chunk: {chunk_id}")
+                self.logger.debug(f"Successfully deleted chunk: {chunk_idx}")
                 return True
             return False
 
         except WeaviateBaseError as e:
-            self.logger.error(f"Failed to delete chunk {chunk_id}: {str(e)}")
+            self.logger.error(f"Failed to delete chunk {chunk_idx}: {str(e)}")
             raise
 
     def get_stats(self, class_name: str) -> Dict[str, Any]:
