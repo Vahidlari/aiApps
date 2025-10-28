@@ -5,19 +5,18 @@ Retriever, and VectorStore components work together correctly in the
 three-layer architecture design.
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from ragora.core.chunking import ChunkMetadata, DataChunk
 from ragora.core.database_manager import DatabaseManager
-from ragora.core.embedding_engine import EmbeddingEngine
 from ragora.core.retriever import Retriever
 from ragora.core.vector_store import VectorStore
 
 
 class TestDatabaseManagerRetrieverVectorStoreIntegration:
-    """Integration tests for DatabaseManager, Retriever, and VectorStore components."""
+    """Integration tests for DatabaseManager, Retriever, and VectorStore."""
 
     @pytest.fixture
     def mock_weaviate_client(self):
@@ -45,7 +44,8 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
             section_title="Machine Learning",
         )
         return DataChunk(
-            text="This is a test document about machine learning algorithms and neural networks.",
+            text="This is a test document about machine learning algorithms "
+            "and neural networks.",
             start_idx=0,
             end_idx=89,
             metadata=metadata,
@@ -59,7 +59,8 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
         """Create a mock search result for integration testing."""
         obj = Mock()
         obj.properties = {
-            "content": "This is a test document about machine learning algorithms and neural networks.",
+            "content": "This is a test document about machine learning algorithms "
+            "and neural networks.",
             "chunk_id": "test_chunk_1",
             "source_document": "ml_document.pdf",
             "chunk_type": "text",
@@ -83,34 +84,40 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
             with patch(
                 "ragora.core.database_manager.WeaviateClient"
             ) as mock_client_class:
-                mock_client_class.return_value = mock_weaviate_client
+                with patch("ragora.core.vector_store.generate_uuid5") as mock_uuid:
+                    mock_client_class.return_value = mock_weaviate_client
+                    mock_uuid.return_value = "test_uuid"
 
-                # Create DatabaseManager
-                db_manager = DatabaseManager(url="http://localhost:8080")
-                db_manager.client = mock_weaviate_client
+                    # Create DatabaseManager
+                    db_manager = DatabaseManager(url="http://localhost:8080")
+                    db_manager.client = mock_weaviate_client
 
-                # Create VectorStore with DatabaseManager
-                vector_store = VectorStore(
-                    db_manager=db_manager, class_name="TestDocument"
-                )
+                    # Create VectorStore with DatabaseManager
+                    vector_store = VectorStore(
+                        db_manager=db_manager, class_name="TestDocument"
+                    )
 
-                # Test schema creation
-                mock_weaviate_client.collections.list_all.return_value = {}
-                mock_weaviate_client.collections.create.return_value = mock_collection
+                    # Test schema creation
+                    mock_weaviate_client.collections.list_all.return_value = {}
+                    mock_weaviate_client.collections.create.return_value = (
+                        mock_collection
+                    )
 
-                vector_store.create_schema("TestDocument")
+                    vector_store.create_schema("TestDocument")
 
-                # Verify DatabaseManager methods were called
-                mock_weaviate_client.collections.create.assert_called_once()
+                    # Verify DatabaseManager methods were called
+                    mock_weaviate_client.collections.create.assert_called_once()
 
-                # Test chunk storage
-                mock_weaviate_client.collections.get.return_value = mock_collection
-                mock_collection.data.insert.return_value = "test_uuid"
+                    # Test chunk storage
+                    mock_weaviate_client.collections.get.return_value = mock_collection
+                    mock_collection.data.insert.return_value = "test_uuid"
 
-                result = vector_store.store_chunk(sample_chunk, "TestDocument")
+                    result = vector_store.store_chunk(sample_chunk, "TestDocument")
 
-                assert result == "test_uuid"
-                mock_weaviate_client.collections.get.assert_called_with("TestDocument")
+                    assert result == "test_uuid"
+                    mock_weaviate_client.collections.get.assert_called_with(
+                        "TestDocument"
+                    )
 
     def test_database_manager_retriever_integration(
         self, mock_weaviate_client, mock_collection, mock_search_result
@@ -162,53 +169,57 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
             with patch(
                 "ragora.core.database_manager.WeaviateClient"
             ) as mock_client_class:
-                mock_client_class.return_value = mock_weaviate_client
+                with patch("ragora.core.vector_store.generate_uuid5") as mock_uuid:
+                    mock_client_class.return_value = mock_weaviate_client
+                    mock_uuid.return_value = "test_uuid"
 
-                # Create DatabaseManager
-                db_manager = DatabaseManager(url="http://localhost:8080")
-                db_manager.client = mock_weaviate_client
+                    # Create DatabaseManager
+                    db_manager = DatabaseManager(url="http://localhost:8080")
+                    db_manager.client = mock_weaviate_client
 
-                # Create VectorStore and Retriever with same DatabaseManager
-                vector_store = VectorStore(
-                    db_manager=db_manager, class_name="TestDocument"
-                )
+                    # Create VectorStore and Retriever with same DatabaseManager
+                    vector_store = VectorStore(
+                        db_manager=db_manager, class_name="TestDocument"
+                    )
 
-                retriever = Retriever(db_manager=db_manager)
+                    retriever = Retriever(db_manager=db_manager)
 
-                # Test complete workflow
+                    # Test complete workflow
 
-                # 1. Create schema
-                mock_weaviate_client.collections.list_all.return_value = {}
-                mock_weaviate_client.collections.create.return_value = mock_collection
-                vector_store.create_schema("TestDocument")
+                    # 1. Create schema
+                    mock_weaviate_client.collections.list_all.return_value = {}
+                    mock_weaviate_client.collections.create.return_value = (
+                        mock_collection
+                    )
+                    vector_store.create_schema("TestDocument")
 
-                # 2. Store document
-                mock_weaviate_client.collections.get.return_value = mock_collection
-                mock_collection.data.insert.return_value = "test_uuid"
-                uuid = vector_store.store_chunk(sample_chunk, "TestDocument")
-                assert uuid == "test_uuid"
+                    # 2. Store document
+                    mock_weaviate_client.collections.get.return_value = mock_collection
+                    mock_collection.data.insert.return_value = "test_uuid"
+                    uuid = vector_store.store_chunk(sample_chunk, "TestDocument")
+                    assert uuid == "test_uuid"
 
-                # 3. Search for document
-                mock_result = Mock()
-                mock_result.objects = [mock_search_result]
-                mock_collection.query.near_text.return_value = mock_result
+                    # 3. Search for document
+                    mock_result = Mock()
+                    mock_result.objects = [mock_search_result]
+                    mock_collection.query.near_text.return_value = mock_result
 
-                with patch.object(
-                    retriever, "_preprocess_query", return_value="machine learning"
-                ):
                     with patch.object(
-                        retriever, "_process_vector_results"
-                    ) as mock_process:
-                        mock_process.return_value = [
-                            {"content": "test", "similarity_score": 0.8}
-                        ]
+                        retriever, "_preprocess_query", return_value="machine learning"
+                    ):
+                        with patch.object(
+                            retriever, "_process_vector_results"
+                        ) as mock_process:
+                            mock_process.return_value = [
+                                {"content": "test", "similarity_score": 0.8}
+                            ]
 
-                        results = retriever.search_similar(
-                            "machine learning", class_name="TestDocument"
-                        )
+                            results = retriever.search_similar(
+                                "machine learning", class_name="TestDocument"
+                            )
 
-                        assert len(results) == 1
-                        assert results[0]["similarity_score"] == 0.8
+                            assert len(results) == 1
+                            assert results[0]["similarity_score"] == 0.8
 
     def test_multiple_search_methods_integration(
         self, mock_weaviate_client, mock_collection, mock_search_result

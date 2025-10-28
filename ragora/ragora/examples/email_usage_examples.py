@@ -331,6 +331,12 @@ def example_email_database_creation():
 
         # Process emails from inbox and store in knowledge base
         print("\nProcessing emails from INBOX...")
+        print(
+            "Note: Email chunks will include full metadata (subject, sender, recipient, etc.)"
+        )
+        print(
+            "      and support custom metadata for enhanced filtering and organization."
+        )
         stored_ids = kbm.process_email_account(
             email_provider=provider, folder="INBOX", class_name="Email"
         )

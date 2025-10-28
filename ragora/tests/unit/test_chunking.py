@@ -273,7 +273,7 @@ class TestDataChunker:
     def test_chunk_small_text_no_overlap_needed(self):
         """Test chunking small text that fits in one chunk."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_chunk_idx=0)
+        context = ChunkingContext(chunk_type="text", start_sequence_idx=0)
         text = "This is a small text that fits in one chunk."
 
         result = chunker.chunk(text, context)
@@ -378,6 +378,44 @@ class TestDataChunker:
             assert chunk.metadata.email_recipient == "recipient@example.com"
             assert chunk.metadata.email_id == "msg123"
             assert chunk.metadata.email_date == "2024-01-01T10:00:00Z"
+
+    def test_chunk_with_custom_metadata(self):
+        """Test chunking with custom metadata."""
+        chunker = DataChunker()
+        context = ChunkingContext(
+            chunk_type="document",
+            source_document="test.pdf",
+            page_number=1,
+            section_title="Introduction",
+            start_sequence_idx=0,
+            custom_metadata={
+                "language": "en",
+                "domain": "scientific",
+                "confidence": 0.95,
+                "tags": ["physics", "relativity"],
+                "priority": 5,
+                "content_category": "research_paper",
+                "author": "Einstein",
+                "year": 1905,
+            },
+        )
+        text = "This is a scientific document about relativity."
+
+        result = chunker.chunk(text, context)
+
+        assert len(result) >= 1
+        for chunk in result:
+            assert chunk.metadata.custom_metadata is not None
+            assert chunk.metadata.custom_metadata["language"] == "en"
+            assert chunk.metadata.custom_metadata["domain"] == "scientific"
+            assert chunk.metadata.custom_metadata["confidence"] == 0.95
+            assert chunk.metadata.custom_metadata["tags"] == ["physics", "relativity"]
+            assert chunk.metadata.custom_metadata["priority"] == 5
+            assert (
+                chunk.metadata.custom_metadata["content_category"] == "research_paper"
+            )
+            assert chunk.metadata.custom_metadata["author"] == "Einstein"
+            assert chunk.metadata.custom_metadata["year"] == 1905
 
     def test_register_custom_strategy(self):
         """Test registering a custom strategy."""

@@ -190,8 +190,130 @@ def main():
         karl_popper_chunks = chunker.chunk(karl_popper_document, karl_popper_context)
         sample_chunks.extend(karl_popper_chunks)
 
+        # Add comprehensive examples with custom metadata and email support
+        logger.info("📧 Adding email and custom metadata examples...")
+
+        # Email example with full metadata
+        email_content = """
+        Hi Team,
+
+        I wanted to update everyone on our project progress. We've completed the initial 
+        research phase and are now moving into the development phase. The timeline looks 
+        good and we should be able to deliver on schedule.
+
+        Key points:
+        - Research phase completed ahead of schedule
+        - Development phase starting next week
+        - Budget is on track
+        - Team morale is high
+
+        Let me know if you have any questions.
+
+        Best regards,
+        Project Manager
+        """
+
+        email_context = (
+            ChunkingContextBuilder()
+            .for_email()
+            .with_email_info(
+                subject="Project Update - Q1 Progress",
+                sender="project.manager@company.com",
+                recipient="team@company.com",
+                email_id="msg_2024_001",
+                email_date="2024-01-15T14:30:00Z",
+                email_folder="work/projects",
+            )
+            .with_custom_metadata(
+                {
+                    "language": "en",
+                    "domain": "business",
+                    "confidence": 0.92,
+                    "tags": ["project", "update", "progress", "team"],
+                    "priority": 3,
+                    "content_category": "project_communication",
+                    "department": "engineering",
+                    "project_id": "PROJ-2024-001",
+                }
+            )
+            .with_start_sequence_idx(len(sample_chunks))
+            .build()
+        )
+        email_chunks = chunker.chunk(email_content, email_context)
+        sample_chunks.extend(email_chunks)
+
+        # Document with rich custom metadata
+        legal_document = """
+        This agreement ("Agreement") is entered into between Company A and Company B 
+        for the provision of software development services. The terms and conditions 
+        outlined herein shall govern the relationship between the parties.
+        """
+
+        legal_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("service_agreement.pdf")
+            .with_page(1)
+            .with_section("Terms and Conditions")
+            .with_created_at("2024-01-10T09:00:00Z")
+            .with_custom_metadata(
+                {
+                    "language": "en",
+                    "domain": "legal",
+                    "confidence": 0.98,
+                    "tags": ["contract", "agreement", "legal", "services"],
+                    "priority": 5,
+                    "content_category": "legal_document",
+                    "document_type": "service_agreement",
+                    "jurisdiction": "US",
+                    "effective_date": "2024-01-10",
+                    "parties": ["Company A", "Company B"],
+                }
+            )
+            .with_start_sequence_idx(len(sample_chunks))
+            .build()
+        )
+        legal_chunks = chunker.chunk(legal_document, legal_context)
+        sample_chunks.extend(legal_chunks)
+
+        # Mixed content with different metadata patterns
+        code_document = """
+        def calculate_fibonacci(n):
+            if n <= 1:
+                return n
+            return calculate_fibonacci(n-1) + calculate_fibonacci(n-2)
+        
+        This is a recursive implementation of the Fibonacci sequence.
+        """
+
+        code_context = (
+            ChunkingContextBuilder()
+            .for_document()
+            .with_source("algorithms.py")
+            .with_page(1)
+            .with_section("Mathematical Algorithms")
+            .with_created_at("2024-01-12T16:45:00Z")
+            .with_custom_metadata(
+                {
+                    "language": "en",
+                    "domain": "technical",
+                    "confidence": 0.95,
+                    "tags": ["python", "algorithm", "fibonacci", "recursion"],
+                    "priority": 4,
+                    "content_category": "code_example",
+                    "programming_language": "python",
+                    "complexity": "exponential",
+                    "difficulty": "intermediate",
+                }
+            )
+            .with_start_sequence_idx(len(sample_chunks))
+            .build()
+        )
+        code_chunks = chunker.chunk(code_document, code_context)
+        sample_chunks.extend(code_chunks)
+
         logger.info(
-            f"Created {len(sample_chunks)} chunks using modern chunking approach"
+            f"Created {len(sample_chunks)} chunks using modern chunking approach with custom metadata"
         )
 
         # Demonstrate different chunking strategies
@@ -266,6 +388,16 @@ def main():
         for i, result in enumerate(similar_results, 1):
             logger.info(f"   {i}. Score: {result.get('similarity_score', 'N/A'):.3f}")
             logger.info(f"      Content: {result['content'][:60]}...")
+            # Show metadata if available
+            metadata = result.get("metadata", {})
+            if metadata.get("language"):
+                logger.info(
+                    f"      Language: {metadata['language']}, Domain: {metadata['domain']}"
+                )
+            if metadata.get("email_subject"):
+                logger.info(
+                    f"      Email: {metadata['email_subject']} from {metadata['email_sender']}"
+                )
 
         # 2. Hybrid search
         logger.info("\n2️⃣ Hybrid Search:")
@@ -278,6 +410,16 @@ def main():
         for i, result in enumerate(hybrid_results, 1):
             logger.info(f"   {i}. Score: {result.get('hybrid_score', 'N/A'):.3f}")
             logger.info(f"      Content: {result['content'][:60]}...")
+            # Show metadata if available
+            metadata = result.get("metadata", {})
+            if metadata.get("language"):
+                logger.info(
+                    f"      Language: {metadata['language']}, Domain: {metadata['domain']}"
+                )
+            if metadata.get("email_subject"):
+                logger.info(
+                    f"      Email: {metadata['email_subject']} from {metadata['email_sender']}"
+                )
 
         # 3. Unified query with different search types
         logger.info("\n3️⃣ Unified Queries:")

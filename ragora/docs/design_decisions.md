@@ -34,6 +34,63 @@ This document explains the key design decisions made in building Ragora and the 
 - Tighter coupling to Weaviate (acceptable for our use case)
 - Would require more work to support other vector databases (not a current requirement)
 
+## 🗄️ Vector Store Schema Design
+
+### Hybrid Metadata Approach
+
+**Decision:** Implement a hybrid approach combining dedicated fields with JSON blob for custom metadata
+
+**Rationale:**
+- **Query Performance:** Dedicated fields enable efficient filtering and indexing
+- **Flexibility:** JSON blob supports arbitrary custom metadata without schema changes
+- **Type Safety:** Dedicated fields provide compile-time validation for common use cases
+- **Future-Proof:** New content types can be added without breaking existing data
+- **Industry Standard:** 24 fields is well within production RAG system norms (typically 30-80+ fields)
+
+**Schema Organization:**
+
+**Core Fields (6):** Essential fields present in all chunk types
+- `content`, `chunk_id`, `chunk_key`, `source_document`, `chunk_type`, `created_at`
+
+**Content-Type Specific Fields (12):** 
+- **Document fields (6):** `metadata_*`, `page_number`, `section_title`
+- **Email fields (6):** `email_*` fields for sender, recipient, subject, etc.
+
+**Custom Metadata Fields (7):**
+- **JSON blob:** `custom_metadata` for arbitrary data
+- **Common fields:** `language`, `domain`, `confidence`, `tags`, `priority`, `content_category`
+
+**Design Benefits:**
+- **Sparse Storage:** Unused fields don't consume significant space
+- **Efficient Filtering:** Common queries use indexed dedicated fields
+- **Extensibility:** New chunk types don't require schema changes
+- **Backward Compatibility:** Sensible defaults prevent breaking changes
+
+**Alternatives Considered:**
+- **Pure JSON approach:** Would lose query performance benefits
+- **Fully normalized:** Would require complex joins and lose simplicity
+- **Separate collections:** Would complicate cross-type queries
+
+### Content-Type Agnostic Design
+
+**Decision:** Single collection supporting multiple content types rather than separate collections
+
+**Rationale:**
+- **Unified Search:** Enable cross-type queries (e.g., search emails and documents together)
+- **Simplified Management:** Single schema to maintain and backup
+- **Consistent API:** Same methods work for all content types
+- **Resource Efficiency:** Shared vectorizer and indexing infrastructure
+
+**Trade-offs:**
+- **Schema Size:** 24 fields vs. smaller per-type schemas
+- **Query Complexity:** Some fields irrelevant for certain content types
+- **Storage:** Sparse fields still consume some space
+
+**Mitigation Strategies:**
+- Sensible defaults (empty strings, 0, null) minimize storage impact
+- Weaviate handles sparse fields efficiently
+- Clear field organization makes schema understandable
+
 ## 📄 Document Processing Strategy
 
 ### LaTeX Handling
