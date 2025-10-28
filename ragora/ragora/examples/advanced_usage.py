@@ -104,7 +104,7 @@ def main():
         The halting problem is a fundamental problem in computer science.
         """
 
-        van_neumann_document = """
+        von_neumann_document = """
         John von Neumann was a Hungarian-American mathematician and computer scientist.
         He is known for his contributions to the development of the modern computer.
         He is also known for his contributions to the development of the theory of computation.
