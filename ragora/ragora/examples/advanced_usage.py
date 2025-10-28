@@ -164,18 +164,18 @@ def main():
         )
         sample_chunks.extend(computer_science_chunks)
 
-        van_neumann_context = (
+        von_neumann_context = (
             ChunkingContextBuilder()
             .for_document()
-            .with_source("van_neumann.tex")
+            .with_source("von_neumann.tex")
             .with_page(1)
-            .with_section("Van Neumann")
+            .with_section("Von Neumann")
             .with_created_at(datetime.now().isoformat())
             .with_start_chunk_id(len(computer_science_chunks))
             .build()
         )
-        van_neumann_chunks = chunker.chunk(van_neumann_document, van_neumann_context)
-        sample_chunks.extend(van_neumann_chunks)
+        von_neumann_chunks = chunker.chunk(von_neumann_document, von_neumann_context)
+        sample_chunks.extend(von_neumann_chunks)
 
         karl_popper_context = (
             ChunkingContextBuilder()
@@ -184,7 +184,7 @@ def main():
             .with_page(1)
             .with_section("Karl Popper")
             .with_created_at(datetime.now().isoformat())
-            .with_start_chunk_id(len(van_neumann_chunks))
+            .with_start_chunk_id(len(von_neumann_chunks))
             .build()
         )
         karl_popper_chunks = chunker.chunk(karl_popper_document, karl_popper_context)
@@ -247,7 +247,7 @@ def main():
 
         logger.info(f"Total chunks created: {len(sample_chunks)}")
         logger.info(
-            f"  - Document chunks: {len(physics_chunks + quantum_chunks + computer_science_chunks + van_neumann_chunks + karl_popper_chunks)}"
+            f"  - Document chunks: {len(physics_chunks + quantum_chunks + computer_science_chunks + von_neumann_chunks + karl_popper_chunks)}"
         )
         # Store all chunks
         stored_uuids = kbm.vector_store.store_chunks(

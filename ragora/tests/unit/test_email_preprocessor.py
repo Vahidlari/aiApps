@@ -87,7 +87,7 @@ class TestEmailPreprocessor:
     def test_preprocess_email_with_start_id(
         self, email_preprocessor_with_chunker, mock_email
     ):
-        """Test preprocessing email with start_chunk_id."""
+        """Test preprocessing email with start_sequence_idx."""
         from ragora.core.chunking import ChunkMetadata
 
         mock_metadata = ChunkMetadata(chunk_idx=5, chunk_size=10, total_chunks=1)
@@ -103,11 +103,11 @@ class TestEmailPreprocessor:
         email_preprocessor_with_chunker.chunker.chunk.return_value = mock_chunks
 
         result = email_preprocessor_with_chunker.preprocess_email(
-            mock_email, start_chunk_id=5
+            mock_email, start_sequence_idx=5
         )
 
         assert len(result) == 1
-        # Verify context was created with correct start_chunk_id
+        # Verify context was created with correct start_sequence_idx
         email_preprocessor_with_chunker.chunker.chunk.assert_called_once()
 
     def test_preprocess_emails(self, email_preprocessor_with_chunker, mock_email):
@@ -140,7 +140,7 @@ class TestEmailPreprocessor:
     def test_preprocess_emails_with_start_id(
         self, email_preprocessor_with_chunker, mock_email
     ):
-        """Test preprocessing emails with start_chunk_id."""
+        """Test preprocessing emails with start_sequence_idx."""
         from ragora.core.chunking import ChunkMetadata
 
         mock_metadata = ChunkMetadata(chunk_idx=10, chunk_size=10, total_chunks=1)
@@ -157,7 +157,7 @@ class TestEmailPreprocessor:
 
         emails = [mock_email, mock_email]
         result = email_preprocessor_with_chunker.preprocess_emails(
-            emails, start_chunk_id=10
+            emails, start_sequence_idx=10
         )
 
         assert len(result) == 2

@@ -136,19 +136,19 @@ chunks = chunker.chunk(code_text, context)
 Control chunk ID generation for consistent results:
 
 ```python
-# Start chunking from ID 100
+# Start chunking from sequence index 100
 context = (ChunkingContextBuilder()
           .for_document()
-          .with_start_chunk_id(100)
+          .with_start_sequence_idx(100)
           .build())
 
 chunks = chunker.chunk(text, context)
-# First chunk will have ID 100, second chunk ID 101, etc.
+# First chunk will have sequence number 100, second chunk 101, etc.
 
 # Continue chunking from where you left off
 next_context = (ChunkingContextBuilder()
                .for_document()
-               .with_start_chunk_id(100 + len(chunks))
+               .with_start_sequence_idx(100 + len(chunks))
                .build())
 more_chunks = chunker.chunk(more_text, next_context)
 ```
@@ -161,18 +161,18 @@ Process multiple documents while maintaining unique chunk IDs:
 def process_documents(documents):
     chunker = DataChunker()
     all_chunks = []
-    chunk_id_counter = 0
+    sequence_idx_counter = 0
 
     for doc in documents:
         context = (ChunkingContextBuilder()
                   .for_document()
                   .with_source(doc.filename)
-                  .with_start_chunk_id(chunk_id_counter)
+                  .with_start_sequence_idx(sequence_idx_counter)
                   .build())
 
         chunks = chunker.chunk(doc.content, context)
         all_chunks.extend(chunks)
-        chunk_id_counter += len(chunks)
+        sequence_idx_counter += len(chunks)
 
     return all_chunks
 ```
@@ -459,9 +459,7 @@ class ChunkingContext:
     # ID generation parameters
     source_id: Optional[str] = None  # Unique source identifier for ID generation
     location_id: Optional[str] = None  # Location within source (page, section, etc.)
-    start_sequence_id: int = 0  # Starting sequence number for deterministic IDs
-    # Legacy configuration (deprecated, use start_sequence_id)
-    start_chunk_id: int = 0
+    start_sequence_idx: int = 0  # Starting sequence index for deterministic IDs
     # Future extensions
     custom_metadata: Optional[Dict[str, Any]] = None
 
@@ -525,14 +523,6 @@ class ChunkingContextBuilder:
         self._context.email_folder = email_folder
         return self
 
-    def with_start_chunk_id(self, chunk_id: int) -> "ChunkingContextBuilder":
-        """Set starting chunk ID (deprecated, use with_start_sequence_id)."""
-        self._context.start_chunk_id = chunk_id
-        self._context.start_sequence_id = (
-            chunk_id  # Also set new field for compatibility
-        )
-        return self
-
     def with_source_id(self, source_id: str) -> "ChunkingContextBuilder":
         """Set unique source identifier for deterministic ID generation."""
         self._context.source_id = source_id
@@ -543,9 +533,9 @@ class ChunkingContextBuilder:
         self._context.location_id = location_id
         return self
 
-    def with_start_sequence_id(self, sequence_id: int) -> "ChunkingContextBuilder":
-        """Set starting sequence number for deterministic ID generation."""
-        self._context.start_sequence_id = sequence_id
+    def with_start_sequence_idx(self, sequence_idx: int) -> "ChunkingContextBuilder":
+        """Set starting sequence index for deterministic ID generation."""
+        self._context.start_sequence_idx = sequence_idx
         return self
 
     def with_custom_metadata(
@@ -624,7 +614,7 @@ class ChunkingStrategy(ABC):
             content_type=context.chunk_type,
             source_id=self._get_source_id(context),
             location_id=self._get_location_id(context),
-            sequence_id=context.start_sequence_id,
+            sequence_id=context.start_sequence_idx,
             chunk_idx=chunk_idx,
         )
 

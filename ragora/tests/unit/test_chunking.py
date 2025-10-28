@@ -25,7 +25,7 @@ class TestChunkingContext:
         context = ChunkingContext()
         assert context.chunk_type == "text"
         assert context.source_document is None
-        assert context.start_chunk_id == 0
+        assert context.start_sequence_idx == 0
 
     def test_chunking_context_with_values(self):
         """Test ChunkingContext creation with values."""
@@ -34,13 +34,13 @@ class TestChunkingContext:
             source_document="test.pdf",
             page_number=1,
             section_title="Introduction",
-            start_chunk_id=100,
+            start_sequence_idx=100,
         )
         assert context.chunk_type == "document"
         assert context.source_document == "test.pdf"
         assert context.page_number == 1
         assert context.section_title == "Introduction"
-        assert context.start_chunk_id == 100
+        assert context.start_sequence_idx == 100
 
     def test_chunking_context_email_fields(self):
         """Test ChunkingContext with email fields."""
@@ -85,7 +85,7 @@ class TestChunkingContextBuilder:
             .with_email_info(
                 "Test Subject", "sender@example.com", "recipient@example.com"
             )
-            .with_start_chunk_id(50)
+            .with_start_sequence_idx(50)
             .build()
         )
 
@@ -93,7 +93,7 @@ class TestChunkingContextBuilder:
         assert context.email_subject == "Test Subject"
         assert context.email_sender == "sender@example.com"
         assert context.email_recipient == "recipient@example.com"
-        assert context.start_chunk_id == 50
+        assert context.start_sequence_idx == 50
 
     def test_builder_fluent_api(self):
         """Test builder fluent API chaining."""
@@ -103,7 +103,7 @@ class TestChunkingContextBuilder:
             .with_source("document.txt")
             .with_section("Chapter 1")
             .with_created_at("2024-01-01")
-            .with_start_chunk_id(10)
+            .with_start_sequence_idx(10)
             .build()
         )
 
@@ -111,7 +111,7 @@ class TestChunkingContextBuilder:
         assert context.source_document == "document.txt"
         assert context.section_title == "Chapter 1"
         assert context.created_at == "2024-01-01"
-        assert context.start_chunk_id == 10
+        assert context.start_sequence_idx == 10
 
 
 class TestChunkingStrategies:
@@ -120,7 +120,7 @@ class TestChunkingStrategies:
     def test_text_chunking_strategy(self):
         """Test TextChunkingStrategy."""
         strategy = TextChunkingStrategy(chunk_size=10, overlap_size=2)
-        context = ChunkingContext(chunk_type="text", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="text", start_sequence_idx=0)
         text = "1234567890abcdefghij"
 
         chunks = strategy.chunk(text, context)
@@ -136,7 +136,7 @@ class TestChunkingStrategies:
     def test_document_chunking_strategy(self):
         """Test DocumentChunkingStrategy."""
         strategy = DocumentChunkingStrategy(chunk_size=5, overlap_size=1)
-        context = ChunkingContext(chunk_type="document", start_sequence_id=10)
+        context = ChunkingContext(chunk_type="document", start_sequence_idx=10)
         text = "1234567890"
 
         chunks = strategy.chunk(text, context)
@@ -149,7 +149,7 @@ class TestChunkingStrategies:
     def test_email_chunking_strategy(self):
         """Test EmailChunkingStrategy."""
         strategy = EmailChunkingStrategy(chunk_size=8, overlap_size=2)
-        context = ChunkingContext(chunk_type="email", start_sequence_id=5)
+        context = ChunkingContext(chunk_type="email", start_sequence_idx=5)
         text = "1234567890abcdefgh"
 
         chunks = strategy.chunk(text, context)
@@ -258,7 +258,7 @@ class TestDataChunker:
     def test_chunk_single_character(self):
         """Test chunking single character text."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="text", start_sequence_idx=0)
 
         result = chunker.chunk("a", context)
 
@@ -273,7 +273,7 @@ class TestDataChunker:
     def test_chunk_small_text_no_overlap_needed(self):
         """Test chunking small text that fits in one chunk."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="text", start_chunk_idx=0)
         text = "This is a small text that fits in one chunk."
 
         result = chunker.chunk(text, context)
@@ -289,7 +289,7 @@ class TestDataChunker:
     def test_chunk_text_requires_multiple_chunks(self):
         """Test chunking text that requires multiple chunks."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="text", start_sequence_idx=0)
         text = "1234567890"  # 10 characters, should create multiple chunks with default size
 
         result = chunker.chunk(text, context)
@@ -305,15 +305,15 @@ class TestDataChunker:
         text = "1234567890abcdefghij"
 
         # Test text strategy
-        text_context = ChunkingContext(chunk_type="text", start_chunk_id=0)
+        text_context = ChunkingContext(chunk_type="text", start_sequence_idx=0)
         text_chunks = chunker.chunk(text, text_context)
 
         # Test document strategy
-        doc_context = ChunkingContext(chunk_type="document", start_chunk_id=0)
+        doc_context = ChunkingContext(chunk_type="document", start_sequence_idx=0)
         doc_chunks = chunker.chunk(text, doc_context)
 
         # Test email strategy
-        email_context = ChunkingContext(chunk_type="email", start_chunk_id=0)
+        email_context = ChunkingContext(chunk_type="email", start_sequence_idx=0)
         email_chunks = chunker.chunk(text, email_context)
 
         # All should produce chunks (may be different due to different chunk sizes)
@@ -324,7 +324,7 @@ class TestDataChunker:
     def test_chunk_with_custom_start_id(self):
         """Test chunking with custom start chunk ID."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="text", start_sequence_id=100)
+        context = ChunkingContext(chunk_type="text", start_sequence_idx=100)
         text = "1234567890"
 
         result = chunker.chunk(text, context)
@@ -342,7 +342,7 @@ class TestDataChunker:
             source_document="test.pdf",
             page_number=1,
             section_title="Introduction",
-            start_chunk_id=0,
+            start_sequence_idx=0,
         )
         text = "This is a test document."
 
@@ -365,7 +365,7 @@ class TestDataChunker:
             email_recipient="recipient@example.com",
             email_id="msg123",
             email_date="2024-01-01T10:00:00Z",
-            start_chunk_id=0,
+            start_sequence_idx=0,
         )
         text = "This is a test email."
 
@@ -394,12 +394,12 @@ class TestDataChunker:
                         start_idx=i,
                         end_idx=i + 1,
                         metadata=ChunkMetadata(
-                            chunk_idx=context.start_chunk_id + i,
+                            chunk_idx=context.start_sequence_idx + i,
                             chunk_size=1,
                             total_chunks=len(text),
                             chunk_type=context.chunk_type,
                         ),
-                        chunk_id=f"custom:unknown:0:{context.start_chunk_id + i:04d}",
+                        chunk_id=f"custom:unknown:0:{context.start_sequence_idx + i:04d}",
                         chunk_type=context.chunk_type,
                     )
                     chunks.append(chunk)
@@ -409,7 +409,7 @@ class TestDataChunker:
         chunker.register_strategy("custom", CustomStrategy())
 
         # Test using the custom strategy
-        context = ChunkingContext(chunk_type="custom", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="custom", start_sequence_idx=0)
         text = "abc"
         result = chunker.chunk(text, context)
 
@@ -421,7 +421,7 @@ class TestDataChunker:
     def test_strategy_fallback_to_default(self):
         """Test that unknown strategy types fall back to default strategy."""
         chunker = DataChunker()
-        context = ChunkingContext(chunk_type="unknown_type", start_chunk_id=0)
+        context = ChunkingContext(chunk_type="unknown_type", start_sequence_idx=0)
         text = "test"
 
         result = chunker.chunk(text, context)
