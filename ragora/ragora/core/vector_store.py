@@ -88,8 +88,12 @@ class VectorStore:
         """Create the Weaviate collection for document storage using V4 API.
 
         Args:
+            class_name: Name of the Weaviate class for document storage
             force_recreate: If True, delete existing collection before
                 creating new one
+
+        Returns:
+            None
 
         Raises:
             WeaviateBaseError: If collection creation fails
@@ -200,12 +204,12 @@ class VectorStore:
 
         Args:
             chunk: DataChunk object to store
-
+            class_name: Name of the Weaviate class for document storage
         Returns:
-            None
+            str: UUID of the stored chunk
 
         Raises:
-            ValueError: If chunk is invalid
+            ValueError: If chunk is None or empty
             WeaviateBaseError: If storage operation fails
         """
         if chunk is None:
@@ -421,7 +425,10 @@ class VectorStore:
             properties: Properties to update
             class_name: Name of the Weaviate class for document storage
         Returns:
-            None
+            bool: True if update was successful, False otherwise
+
+        Raises:
+            WeaviateBaseError: If update operation fails
         """
 
         try:
@@ -448,6 +455,9 @@ class VectorStore:
             class_name: Name of the Weaviate class for document storage
         Returns:
             bool: True if chunk exists, False otherwise
+
+        Raises:
+            WeaviateBaseError: If check operation fails
         """
         try:
             # Get the collection
@@ -461,6 +471,9 @@ class VectorStore:
 
     def get_stats(self, class_name: str) -> Dict[str, Any]:
         """Get statistics about the vector store using V4 API.
+
+        Args:
+            class_name: Name of the Weaviate class for document storage
 
         Returns:
             Dict[str, Any]: Statistics including total objects, collection
@@ -500,6 +513,12 @@ class VectorStore:
     def clear_all(self, class_name: str) -> None:
         """Clear all objects from the vector store using V4 API.
 
+        Args:
+            class_name: Name of the Weaviate class for document storage
+
+        Returns:
+            None
+
         Raises:
             WeaviateBaseError: If clearing operation fails
         """
@@ -514,7 +533,14 @@ class VectorStore:
             raise
 
     def close(self) -> None:
-        """Close the connection to Weaviate."""
+        """Close the connection to Weaviate.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If closing operation fails
+        """
         try:
             if hasattr(self, "db_manager") and self.db_manager:
                 self.db_manager.close()
