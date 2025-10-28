@@ -115,7 +115,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} similar results for: " f"'{query}'"
+                f"Found {len(processed_results)} similar results for: '{query}'"
             )
             return processed_results
 
@@ -178,7 +178,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} hybrid results for: " f"'{query}'"
+                f"Found {len(processed_results)} hybrid results for: '{query}'"
             )
             return processed_results
 
@@ -251,7 +251,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} keyword results for: " f"'{query}'"
+                f"Found {len(processed_results)} keyword results for: '{query}'"
             )
             return processed_results
 
@@ -294,6 +294,21 @@ class Retriever:
                         "page_number": obj.properties.get("page_number", 0),
                         "section_title": obj.properties.get("section_title", ""),
                         "chunk_type": obj.properties.get("chunk_type", ""),
+                        # Email-specific fields
+                        "email_subject": obj.properties.get("email_subject", ""),
+                        "email_sender": obj.properties.get("email_sender", ""),
+                        "email_recipient": obj.properties.get("email_recipient", ""),
+                        "email_date": obj.properties.get("email_date", ""),
+                        "email_id": obj.properties.get("email_id", ""),
+                        "email_folder": obj.properties.get("email_folder", ""),
+                        # Custom metadata fields
+                        "custom_metadata": obj.properties.get("custom_metadata", ""),
+                        "language": obj.properties.get("language", ""),
+                        "domain": obj.properties.get("domain", ""),
+                        "confidence": obj.properties.get("confidence", 0.0),
+                        "tags": obj.properties.get("tags", ""),
+                        "priority": obj.properties.get("priority", 0),
+                        "content_category": obj.properties.get("content_category", ""),
                     },
                     "page_number": obj.properties.get("page_number", 0),
                     "section_title": obj.properties.get("section_title", ""),
@@ -342,6 +357,21 @@ class Retriever:
                         "page_number": obj.properties.get("page_number", 0),
                         "section_title": obj.properties.get("section_title", ""),
                         "chunk_type": obj.properties.get("chunk_type", ""),
+                        # Email-specific fields
+                        "email_subject": obj.properties.get("email_subject", ""),
+                        "email_sender": obj.properties.get("email_sender", ""),
+                        "email_recipient": obj.properties.get("email_recipient", ""),
+                        "email_date": obj.properties.get("email_date", ""),
+                        "email_id": obj.properties.get("email_id", ""),
+                        "email_folder": obj.properties.get("email_folder", ""),
+                        # Custom metadata fields
+                        "custom_metadata": obj.properties.get("custom_metadata", ""),
+                        "language": obj.properties.get("language", ""),
+                        "domain": obj.properties.get("domain", ""),
+                        "confidence": obj.properties.get("confidence", 0.0),
+                        "tags": obj.properties.get("tags", ""),
+                        "priority": obj.properties.get("priority", 0),
+                        "content_category": obj.properties.get("content_category", ""),
                     },
                     "page_number": obj.properties.get("page_number", 0),
                     "section_title": obj.properties.get("section_title", ""),
@@ -390,6 +420,21 @@ class Retriever:
                         "page_number": obj.properties.get("page_number", 0),
                         "section_title": obj.properties.get("section_title", ""),
                         "chunk_type": obj.properties.get("chunk_type", ""),
+                        # Email-specific fields
+                        "email_subject": obj.properties.get("email_subject", ""),
+                        "email_sender": obj.properties.get("email_sender", ""),
+                        "email_recipient": obj.properties.get("email_recipient", ""),
+                        "email_date": obj.properties.get("email_date", ""),
+                        "email_id": obj.properties.get("email_id", ""),
+                        "email_folder": obj.properties.get("email_folder", ""),
+                        # Custom metadata fields
+                        "custom_metadata": obj.properties.get("custom_metadata", ""),
+                        "language": obj.properties.get("language", ""),
+                        "domain": obj.properties.get("domain", ""),
+                        "confidence": obj.properties.get("confidence", 0.0),
+                        "tags": obj.properties.get("tags", ""),
+                        "priority": obj.properties.get("priority", 0),
+                        "content_category": obj.properties.get("content_category", ""),
                     },
                     "page_number": obj.properties.get("page_number", 0),
                     "section_title": obj.properties.get("section_title", ""),

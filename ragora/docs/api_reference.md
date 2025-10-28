@@ -50,7 +50,7 @@ db_manager = DatabaseManager(url: str)
 
 #### `ragora.core.VectorStore`
 
-Document storage operations.
+Document storage operations with support for multiple content types and flexible metadata.
 
 ```python
 from ragora.core import VectorStore
@@ -61,12 +61,112 @@ vector_store = VectorStore(
 )
 ```
 
+**Schema Fields:**
+
+The vector store supports 24 fields organized into categories:
+
+**Core Fields (6):**
+- `content` - The actual chunk content
+- `chunk_id` - Deterministic chunk identifier
+- `chunk_key` - UUID5 for Weaviate operations
+- `source_document` - Source file/document name
+- `chunk_type` - Content type (text, document, email, etc.)
+- `created_at` - Creation timestamp
+
+**Document-Specific Fields (6):**
+- `metadata_chunk_idx` - Chunk index in sequence
+- `metadata_chunk_size` - Chunk size in characters
+- `metadata_total_chunks` - Total chunks in document
+- `metadata_created_at` - Created at timestamp from metadata
+- `page_number` - Page number in source document
+- `section_title` - Section or chapter title
+
+**Email-Specific Fields (6):**
+- `email_subject` - Email subject line
+- `email_sender` - Email sender address
+- `email_recipient` - Email recipient address
+- `email_date` - Email timestamp
+- `email_id` - Unique email identifier
+- `email_folder` - Email folder/path
+
+**Custom Metadata Fields (7):**
+- `custom_metadata` - Custom metadata as JSON string
+- `language` - Content language (e.g., en, es, fr)
+- `domain` - Content domain (e.g., scientific, legal, medical)
+- `confidence` - Processing confidence score (0.0-1.0)
+- `tags` - Comma-separated tags/categories
+- `priority` - Content priority/importance level
+- `content_category` - Fine-grained content categorization
+
 **Key Methods:**
 - `store_chunks(chunks: List[Chunk]) -> List[str]` - Store document chunks
 - `get_chunk(chunk_id: str) -> Optional[Chunk]` - Retrieve a chunk
 - `update_chunk(chunk_id: str, data: Dict) -> None` - Update chunk
 - `delete_chunk(chunk_id: str) -> None` - Delete chunk
 - `get_stats() -> Dict` - Get storage statistics
+- `create_schema(class_name: str, force_recreate: bool) -> None` - Create collection schema
+
+### Custom Metadata Support
+
+The vector store supports flexible metadata through a hybrid approach:
+- **JSON blob**: Store any custom metadata as JSON string in `custom_metadata` field
+- **Common fields**: Extract frequently-queried fields for efficient filtering
+
+**Example Usage:**
+
+```python
+from ragora import ChunkingContextBuilder, DataChunker
+
+# Create chunker
+chunker = DataChunker()
+
+# Document with custom metadata
+context = (ChunkingContextBuilder()
+    .for_document()
+    .with_source("research_paper.pdf")
+    .with_custom_metadata({
+        "language": "en",
+        "domain": "scientific",
+        "confidence": 0.95,
+        "tags": ["physics", "relativity"],
+        "priority": 5,
+        "content_category": "research_paper",
+        "author": "Einstein",
+        "year": 1905
+    })
+    .build())
+
+chunks = chunker.chunk(document_text, context)
+
+# Store chunks - custom metadata will be automatically handled
+vector_store.store_chunks(chunks, "Documents")
+```
+
+**Email Example:**
+
+```python
+# Email with full metadata
+context = (ChunkingContextBuilder()
+    .for_email()
+    .with_email_info(
+        subject="Project Update",
+        sender="manager@company.com",
+        recipient="team@company.com",
+        email_id="msg_12345",
+        email_date="2024-01-15T14:30:00Z",
+        email_folder="work"
+    )
+    .with_custom_metadata({
+        "language": "en",
+        "domain": "business",
+        "priority": 3,
+        "tags": ["project", "update"]
+    })
+    .build())
+
+chunks = chunker.chunk(email_body, context)
+vector_store.store_chunks(chunks, "Emails")
+```
 
 #### `ragora.core.Retriever`
 

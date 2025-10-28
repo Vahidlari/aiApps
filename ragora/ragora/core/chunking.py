@@ -422,6 +422,7 @@ class ChunkMetadata:
     email_date: Optional[str] = None  # Email date of the chunk
     email_id: Optional[str] = None  # Email id of the chunk
     email_folder: Optional[str] = None  # Email folder of the chunk
+    custom_metadata: Optional[Dict[str, Any]] = None  # Custom metadata dictionary
 
 
 @dataclass
@@ -638,6 +639,7 @@ class ChunkingStrategy(ABC):
                 email_date=context.email_date,
                 email_id=context.email_id,
                 email_folder=context.email_folder,
+                custom_metadata=context.custom_metadata,
             ),
             chunk_type=context.chunk_type,
             source_document=context.source_document,

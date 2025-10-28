@@ -1,5 +1,6 @@
 """Unit tests for refactored VectorStore class."""
 
+import json
 from unittest.mock import Mock, patch
 
 import pytest
@@ -53,6 +54,20 @@ class TestVectorStoreRefactored:
             created_at="2023-01-01T00:00:00",
             page_number=1,
             section_title="Test Section",
+            email_subject="Test Email Subject",
+            email_sender="test@example.com",
+            email_recipient="recipient@example.com",
+            email_date="2023-01-01T10:00:00Z",
+            email_id="msg123",
+            email_folder="inbox",
+            custom_metadata={
+                "language": "en",
+                "domain": "test",
+                "confidence": 0.95,
+                "tags": ["test", "example"],
+                "priority": 3,
+                "content_category": "demo",
+            },
         )
         return DataChunk(
             text="This is a test chunk",
@@ -221,17 +236,35 @@ class TestVectorStoreRefactored:
         result = vector_store.prepare_data_object(sample_chunk)
 
         expected = {
+            # Core fields
             "content": "This is a test chunk",
             "chunk_id": "test_chunk_1",
             "chunk_key": "test_chunk_key_uuid",  # This will be generated
             "source_document": "test_doc.pdf",
             "chunk_type": "text",
+            "created_at": "2023-01-01T00:00:00",
+            # Document-specific fields
             "metadata_chunk_idx": 1,
             "metadata_chunk_size": 100,
             "metadata_total_chunks": 5,
             "metadata_created_at": "2023-01-01T00:00:00",
             "page_number": 1,
             "section_title": "Test Section",
+            # Email-specific fields
+            "email_subject": "Test Email Subject",
+            "email_sender": "test@example.com",
+            "email_recipient": "recipient@example.com",
+            "email_date": "2023-01-01T10:00:00Z",
+            "email_id": "msg123",
+            "email_folder": "inbox",
+            # Custom metadata fields
+            "custom_metadata": '{"language": "en", "domain": "test", "confidence": 0.95, "tags": ["test", "example"], "priority": 3, "content_category": "demo"}',
+            "language": "en",
+            "domain": "test",
+            "confidence": 0.95,
+            "tags": "test,example",
+            "priority": 3,
+            "content_category": "demo",
         }
 
         # Check all fields except chunk_key which is generated
@@ -262,6 +295,118 @@ class TestVectorStoreRefactored:
 
         with pytest.raises(ValueError, match="Chunk ID cannot be empty"):
             vector_store.prepare_data_object(sample_chunk)
+
+    def test_prepare_data_object_with_email_fields(self, vector_store):
+        """Test prepare_data_object with email metadata."""
+        metadata = ChunkMetadata(
+            chunk_idx=1,
+            chunk_size=50,
+            total_chunks=1,
+            email_subject="Meeting Notes",
+            email_sender="manager@company.com",
+            email_recipient="team@company.com",
+            email_date="2024-01-15T14:30:00Z",
+            email_id="msg_456",
+            email_folder="work",
+        )
+        chunk = DataChunk(
+            text="Meeting discussion about project timeline",
+            start_idx=0,
+            end_idx=50,
+            metadata=metadata,
+            chunk_id="email_chunk_001",
+            source_document="email_001",
+            chunk_type="email",
+        )
+
+        result = vector_store.prepare_data_object(chunk)
+
+        # Check email fields
+        assert result["email_subject"] == "Meeting Notes"
+        assert result["email_sender"] == "manager@company.com"
+        assert result["email_recipient"] == "team@company.com"
+        assert result["email_date"] == "2024-01-15T14:30:00Z"
+        assert result["email_id"] == "msg_456"
+        assert result["email_folder"] == "work"
+        assert result["chunk_type"] == "email"
+
+    def test_prepare_data_object_with_custom_metadata(self, vector_store):
+        """Test prepare_data_object with custom metadata JSON serialization."""
+        metadata = ChunkMetadata(
+            chunk_idx=1,
+            chunk_size=50,
+            total_chunks=1,
+            custom_metadata={
+                "language": "es",
+                "domain": "legal",
+                "confidence": 0.88,
+                "tags": ["contract", "agreement"],
+                "priority": 5,
+                "content_category": "legal_document",
+                "custom_field": "special_value",
+            },
+        )
+        chunk = DataChunk(
+            text="Contrato de servicios profesionales",
+            start_idx=0,
+            end_idx=50,
+            metadata=metadata,
+            chunk_id="custom_chunk_001",
+            source_document="contract.pdf",
+            chunk_type="document",
+        )
+
+        result = vector_store.prepare_data_object(chunk)
+
+        custom_meta = json.loads(result["custom_metadata"])
+        assert custom_meta["language"] == "es"
+        assert custom_meta["domain"] == "legal"
+        assert custom_meta["confidence"] == 0.88
+        assert custom_meta["tags"] == ["contract", "agreement"]
+        assert custom_meta["priority"] == 5
+        assert custom_meta["content_category"] == "legal_document"
+        assert custom_meta["custom_field"] == "special_value"
+
+        # Check extracted common fields
+        assert result["language"] == "es"
+        assert result["domain"] == "legal"
+        assert result["confidence"] == 0.88
+        assert result["tags"] == "contract,agreement"
+        assert result["priority"] == 5
+        assert result["content_category"] == "legal_document"
+
+    def test_prepare_data_object_with_custom_metadata_extraction(self, vector_store):
+        """Test prepare_data_object with custom metadata extraction edge cases."""
+        # Test with empty custom metadata
+        metadata = ChunkMetadata(
+            chunk_idx=1, chunk_size=50, total_chunks=1, custom_metadata={}
+        )
+        chunk = DataChunk(
+            text="Simple text",
+            start_idx=0,
+            end_idx=50,
+            metadata=metadata,
+            chunk_id="empty_custom_001",
+            source_document="simple.txt",
+            chunk_type="text",
+        )
+
+        result = vector_store.prepare_data_object(chunk)
+
+        # Check defaults
+        assert result["custom_metadata"] == ""
+        assert result["language"] == ""
+        assert result["domain"] == ""
+        assert result["confidence"] == 0.0
+        assert result["tags"] == ""
+        assert result["priority"] == 0
+        assert result["content_category"] == ""
+
+        # Test with None custom metadata
+        metadata.custom_metadata = None
+        result = vector_store.prepare_data_object(chunk)
+        assert result["custom_metadata"] == ""
+        assert result["language"] == ""
 
     def test_get_chunk_by_id_success(
         self, vector_store, mock_db_manager, mock_collection
