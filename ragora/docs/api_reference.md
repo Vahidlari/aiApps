@@ -113,8 +113,8 @@ preprocessor = EmailPreprocessor()
 ```
 
 **Key Methods:**
-- `preprocess_email(email: EmailMessage, start_chunk_id: int = 0) -> List[DataChunk]` - Process single email
-- `preprocess_emails(emails: List[EmailMessage], start_chunk_id: int = 0) -> List[DataChunk]` - Process multiple emails
+- `preprocess_email(email: EmailMessage, start_sequence_idx: int = 0) -> List[DataChunk]` - Process single email
+- `preprocess_emails(emails: List[EmailMessage], start_sequence_idx: int = 0) -> List[DataChunk]` - Process multiple emails
 
 #### `ragora.core.DataChunker`
 

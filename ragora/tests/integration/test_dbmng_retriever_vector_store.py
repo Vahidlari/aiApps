@@ -37,7 +37,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
     def sample_chunk(self):
         """Create a sample DataChunk for integration testing."""
         metadata = ChunkMetadata(
-            chunk_id=1,
+            chunk_idx=1,
             chunk_size=100,
             total_chunks=5,
             created_at="2023-01-01T00:00:00",
@@ -63,7 +63,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
             "chunk_id": "test_chunk_1",
             "source_document": "ml_document.pdf",
             "chunk_type": "text",
-            "metadata_chunk_id": 1,
+            "metadata_chunk_idx": 1,
             "metadata_chunk_size": 100,
             "metadata_total_chunks": 5,
             "metadata_created_at": "2023-01-01T00:00:00",

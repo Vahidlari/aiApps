@@ -79,6 +79,7 @@ class TestDocumentPreprocessor:
                 text="Test content",
                 start_idx=0,
                 end_idx=12,
+                chunk_id="document:test_doc:0:0000",
                 metadata={"source": "test.tex"},
             )
         ]
@@ -151,6 +152,7 @@ class TestDocumentPreprocessor:
                 text="Doc 1 content",
                 start_idx=0,
                 end_idx=16,
+                chunk_id="document:doc1:0:0000",
                 metadata={"source": "doc1"},
             )
         ]
@@ -159,6 +161,7 @@ class TestDocumentPreprocessor:
                 text="Doc 2 content",
                 start_idx=0,
                 end_idx=16,
+                chunk_id="document:doc2:0:0000",
                 metadata={"source": "doc2"},
             )
         ]
@@ -239,6 +242,7 @@ class TestDocumentPreprocessor:
                 text="Folder doc 1 content",
                 start_idx=0,
                 end_idx=20,
+                chunk_id="document:folder1:0:0000",
                 metadata={"source": "folder1"},
             )
         ]
@@ -247,6 +251,7 @@ class TestDocumentPreprocessor:
                 text="Folder doc 2 content",
                 start_idx=0,
                 end_idx=20,
+                chunk_id="document:folder2:0:0000",
                 metadata={"source": "folder2"},
             )
         ]
@@ -570,7 +575,8 @@ class TestDocumentPreprocessor:
                 text="First paragraph contentSecond paragraph content",
                 start_idx=0,
                 end_idx=47,
-                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 1},
+                chunk_id="document:test_doc:0:0000",
+                metadata={"chunk_idx": 1, "chunk_size": 768, "total_chunks": 1},
             )
         ]
 
@@ -625,13 +631,15 @@ class TestDocumentPreprocessor:
                 text="# Chapter 1Chapter 1 paragraph 1Chapter 1 paragraph 2",
                 start_idx=0,
                 end_idx=58,
-                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0000",
+                metadata={"chunk_idx": 1, "chunk_size": 768, "total_chunks": 2},
             ),
             DataChunk(
                 text="# Chapter 2Chapter 2 paragraph",
                 start_idx=0,
                 end_idx=30,
-                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0001",
+                metadata={"chunk_idx": 2, "chunk_size": 768, "total_chunks": 2},
             ),
         ]
 
@@ -705,19 +713,22 @@ class TestDocumentPreprocessor:
                 text="# Chapter 1Chapter paragraph",
                 start_idx=0,
                 end_idx=27,
-                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 3},
+                chunk_id="document:test_doc:0:0000",
+                metadata={"chunk_idx": 1, "chunk_size": 768, "total_chunks": 3},
             ),
             DataChunk(
                 text="## Section 1.1Section 1.1 paragraph 1Section 1.1 paragraph 2",
                 start_idx=0,
                 end_idx=59,
-                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 3},
+                chunk_id="document:test_doc:0:0001",
+                metadata={"chunk_idx": 2, "chunk_size": 768, "total_chunks": 3},
             ),
             DataChunk(
                 text="## Section 1.2Section 1.2 paragraph",
                 start_idx=0,
                 end_idx=33,
-                metadata={"chunk_id": 3, "chunk_size": 768, "total_chunks": 3},
+                chunk_id="document:test_doc:0:0002",
+                metadata={"chunk_idx": 3, "chunk_size": 768, "total_chunks": 3},
             ),
         ]
 
@@ -788,13 +799,15 @@ class TestDocumentPreprocessor:
                 text="## Standalone Section 1Standalone section 1 paragraph 1Standalone section 1 paragraph 2",
                 start_idx=0,
                 end_idx=78,
-                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0000",
+                metadata={"chunk_idx": 1, "chunk_size": 768, "total_chunks": 2},
             ),
             DataChunk(
                 text="## Standalone Section 2Standalone section 2 paragraph",
                 start_idx=0,
                 end_idx=47,
-                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0001",
+                metadata={"chunk_idx": 2, "chunk_size": 768, "total_chunks": 2},
             ),
         ]
 
@@ -867,13 +880,15 @@ class TestDocumentPreprocessor:
                 text="Table: Table 1\nHeader 1 | Header 2\nRow 1 Col 1 | Row 1 Col 2",
                 start_idx=0,
                 end_idx=60,
-                metadata={"chunk_id": 1, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0000",
+                metadata={"chunk_idx": 1, "chunk_size": 768, "total_chunks": 2},
             ),
             DataChunk(
                 text="Table: Table 2\nA | B\n1 | 2",
                 start_idx=0,
                 end_idx=25,
-                metadata={"chunk_id": 2, "chunk_size": 768, "total_chunks": 2},
+                chunk_id="document:test_doc:0:0001",
+                metadata={"chunk_idx": 2, "chunk_size": 768, "total_chunks": 2},
             ),
         ]
 
@@ -957,30 +972,38 @@ class TestDocumentPreprocessor:
         # Create mock chunks
         expected_chunks = [
             DataChunk(
-                text="Standalone paragraph", start_idx=0, end_idx=19, metadata={}
+                text="Standalone paragraph",
+                start_idx=0,
+                end_idx=19,
+                chunk_id="document:test_doc:0:0000",
+                metadata={},
             ),
             DataChunk(
                 text="# Main ChapterChapter paragraph",
                 start_idx=0,
                 end_idx=32,
+                chunk_id="document:test_doc:0:0001",
                 metadata={},
             ),
             DataChunk(
                 text="## Chapter SectionChapter section paragraph",
                 start_idx=0,
                 end_idx=42,
+                chunk_id="document:test_doc:0:0002",
                 metadata={},
             ),
             DataChunk(
                 text="## Standalone SectionStandalone section paragraph",
                 start_idx=0,
                 end_idx=51,
+                chunk_id="document:test_doc:0:0003",
                 metadata={},
             ),
             DataChunk(
                 text="Table: Data Table\nX | Y\n1 | 2\n3 | 4",
                 start_idx=0,
                 end_idx=35,
+                chunk_id="document:test_doc:0:0004",
                 metadata={},
             ),
         ]

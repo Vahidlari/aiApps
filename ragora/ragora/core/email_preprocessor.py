@@ -43,7 +43,7 @@ class EmailPreprocessor:
             self.chunker = DataChunker()
 
     def preprocess_emails(
-        self, emails: List[EmailMessage], start_chunk_id: int = 0
+        self, emails: List[EmailMessage], start_sequence_idx: int = 0
     ) -> List[DataChunk]:
         """Preprocess multiple emails into data chunks.
 
@@ -52,23 +52,23 @@ class EmailPreprocessor:
 
         Args:
             emails: List of EmailMessage objects to preprocess
-            start_chunk_id: Starting chunk ID for the emails
+            start_sequence_idx: Starting sequence index for the emails
 
         Returns:
             List of DataChunks containing the email messages
         """
         all_chunks = []
-        chunk_id_counter = start_chunk_id
+        chunk_idx_counter = start_sequence_idx
 
         for email in emails:
-            chunks = self._email_to_chunks(email, chunk_id_counter)
+            chunks = self._email_to_chunks(email, chunk_idx_counter)
             all_chunks.extend(chunks)
-            chunk_id_counter += len(chunks)
+            chunk_idx_counter += len(chunks)
 
         return all_chunks
 
     def preprocess_email(
-        self, email: EmailMessage, start_chunk_id: int = 0
+        self, email: EmailMessage, start_sequence_idx: int = 0
     ) -> List[DataChunk]:
         """Preprocess a single email into data chunks.
 
@@ -77,21 +77,21 @@ class EmailPreprocessor:
 
         Args:
             email: EmailMessage object to preprocess
-            start_chunk_id: Starting chunk ID for this email
+            start_sequence_idx: Starting sequence index for this email
 
         Returns:
             List of DataChunks containing the email message
         """
-        return self._email_to_chunks(email, start_chunk_id)
+        return self._email_to_chunks(email, start_sequence_idx)
 
     def _email_to_chunks(
-        self, email: EmailMessage, start_chunk_id: int
+        self, email: EmailMessage, start_sequence_idx: int
     ) -> List[DataChunk]:
         """Convert an EmailMessage to data chunks.
 
         Args:
             email: EmailMessage object to convert
-            start_chunk_id: Starting chunk ID for this email
+            start_sequence_idx: Starting sequence index for this email
 
         Returns:
             List of DataChunks for this email
@@ -114,7 +114,7 @@ class EmailPreprocessor:
                 email_id=email.message_id or "",
                 email_date=(email.date_sent.isoformat() if email.date_sent else ""),
             )
-            .with_start_chunk_id(start_chunk_id)
+            .with_start_sequence_idx(start_sequence_idx)
             .build()
         )
 

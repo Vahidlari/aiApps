@@ -91,9 +91,13 @@ class TestEmbeddingEngine:
             mock_st.return_value = mock_model
 
             engine = EmbeddingEngine()
-            metadata = ChunkMetadata(chunk_id=1, chunk_size=10, total_chunks=1)
+            metadata = ChunkMetadata(chunk_idx=1, chunk_size=10, total_chunks=1)
             chunk = DataChunk(
-                text="test chunk", start_idx=0, end_idx=10, metadata=metadata
+                text="test chunk",
+                start_idx=0,
+                end_idx=10,
+                chunk_id="test:chunk:0:0001",
+                metadata=metadata,
             )
 
             result = engine.embed_chunk(chunk)
@@ -128,8 +132,20 @@ class TestEmbeddingEngine:
 
             engine = EmbeddingEngine()
             chunks = [
-                DataChunk(text="chunk 1", start_idx=0, end_idx=7, metadata={}),
-                DataChunk(text="chunk 2", start_idx=8, end_idx=15, metadata={}),
+                DataChunk(
+                    text="chunk 1",
+                    start_idx=0,
+                    end_idx=7,
+                    chunk_id="test:chunk1:0:0000",
+                    metadata={},
+                ),
+                DataChunk(
+                    text="chunk 2",
+                    start_idx=8,
+                    end_idx=15,
+                    chunk_id="test:chunk2:0:0001",
+                    metadata={},
+                ),
             ]
 
             result = engine.embed_chunks(chunks)

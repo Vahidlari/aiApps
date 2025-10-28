@@ -1,6 +1,6 @@
 """Unit tests for refactored VectorStore class."""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from weaviate.exceptions import WeaviateBaseError
@@ -47,7 +47,7 @@ class TestVectorStoreRefactored:
     def sample_chunk(self):
         """Create a sample DataChunk for testing."""
         metadata = ChunkMetadata(
-            chunk_id=1,
+            chunk_idx=1,
             chunk_size=100,
             total_chunks=5,
             created_at="2023-01-01T00:00:00",
@@ -157,7 +157,9 @@ class TestVectorStoreRefactored:
         with patch.object(vector_store, "create_schema"):
             result = vector_store.store_chunk(sample_chunk, "TestDocument")
 
-        assert result == "test_uuid"
+        # The method now returns the chunk_key (generated UUID)
+        assert isinstance(result, str)
+        assert len(result) > 0
         mock_db_manager.get_collection.assert_called_once_with("TestDocument")
         mock_collection.data.insert.assert_called_once()
 
@@ -195,8 +197,11 @@ class TestVectorStoreRefactored:
         with patch.object(vector_store, "create_schema"):
             result = vector_store.store_chunks(chunks, "TestDocument", batch_size=1)
 
+        # The method now returns a list of chunk_keys (generated UUIDs)
         assert len(result) == 2
-        assert all(uuid == "test_uuid" for uuid in result)
+        assert all(isinstance(uuid, str) and len(uuid) > 0 for uuid in result)
+        mock_db_manager.get_collection.assert_called_once_with("TestDocument")
+        assert mock_collection.data.insert.call_count == 2
 
     def test_store_chunks_empty_list(self, vector_store):
         """Test store_chunks with empty list."""
@@ -218,9 +223,10 @@ class TestVectorStoreRefactored:
         expected = {
             "content": "This is a test chunk",
             "chunk_id": "test_chunk_1",
+            "chunk_key": "test_chunk_key_uuid",  # This will be generated
             "source_document": "test_doc.pdf",
             "chunk_type": "text",
-            "metadata_chunk_id": 1,
+            "metadata_chunk_idx": 1,
             "metadata_chunk_size": 100,
             "metadata_total_chunks": 5,
             "metadata_created_at": "2023-01-01T00:00:00",
@@ -228,7 +234,15 @@ class TestVectorStoreRefactored:
             "section_title": "Test Section",
         }
 
-        assert result == expected
+        # Check all fields except chunk_key which is generated
+        for key, value in expected.items():
+            if key != "chunk_key":
+                assert result[key] == value
+
+        # Check that chunk_key is present and is a string
+        assert "chunk_key" in result
+        assert isinstance(result["chunk_key"], str)
+        assert len(result["chunk_key"]) > 0
 
     def test_prepare_data_object_none_chunk(self, vector_store):
         """Test prepare_data_object with None chunk."""
@@ -259,7 +273,7 @@ class TestVectorStoreRefactored:
             "chunk_id": "test_chunk_1",
             "source_document": "test_doc.pdf",
             "chunk_type": "text",
-            "metadata_chunk_id": 1,
+            "metadata_chunk_idx": 1,
             "metadata_chunk_size": 100,
             "metadata_total_chunks": 5,
             "metadata_created_at": "2023-01-01T00:00:00",
@@ -267,9 +281,7 @@ class TestVectorStoreRefactored:
             "section_title": "Test Section",
         }
 
-        mock_result = Mock()
-        mock_result.objects = [mock_obj]
-        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_collection.query.fetch_object_by_id.return_value = mock_obj
         mock_db_manager.get_collection.return_value = mock_collection
 
         result = vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
@@ -282,9 +294,7 @@ class TestVectorStoreRefactored:
         self, vector_store, mock_db_manager, mock_collection
     ):
         """Test chunk retrieval when chunk not found."""
-        mock_result = Mock()
-        mock_result.objects = []
-        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_collection.query.fetch_object_by_id.return_value = None
         mock_db_manager.get_collection.return_value = mock_collection
 
         result = vector_store.get_chunk_by_id("nonexistent_chunk", "TestDocument")
@@ -295,7 +305,7 @@ class TestVectorStoreRefactored:
         self, vector_store, mock_db_manager, mock_collection
     ):
         """Test chunk retrieval failure."""
-        mock_collection.query.fetch_objects.side_effect = WeaviateBaseError(
+        mock_collection.query.fetch_object_by_id.side_effect = WeaviateBaseError(
             "Query failed"
         )
         mock_db_manager.get_collection.return_value = mock_collection
@@ -305,35 +315,27 @@ class TestVectorStoreRefactored:
 
     def test_delete_chunk_success(self, vector_store, mock_db_manager, mock_collection):
         """Test successful chunk deletion."""
-        mock_obj = Mock()
-        mock_obj.uuid = "test_uuid"
-        mock_result = Mock()
-        mock_result.objects = [mock_obj]
-        mock_collection.query.fetch_objects.return_value = mock_result
         mock_db_manager.get_collection.return_value = mock_collection
 
         result = vector_store.delete_chunk("test_chunk_1", "TestDocument")
 
         assert result is True
-        mock_collection.data.delete_by_id.assert_called_once_with("test_uuid")
+        mock_collection.data.delete_by_id.assert_called_once()
 
     def test_delete_chunk_not_found(
         self, vector_store, mock_db_manager, mock_collection
     ):
         """Test chunk deletion when chunk not found."""
-        mock_result = Mock()
-        mock_result.objects = []
-        mock_collection.query.fetch_objects.return_value = mock_result
+        mock_collection.data.delete_by_id.side_effect = WeaviateBaseError("Not found")
         mock_db_manager.get_collection.return_value = mock_collection
 
-        result = vector_store.delete_chunk("nonexistent_chunk", "TestDocument")
-
-        assert result is False
+        with pytest.raises(WeaviateBaseError):
+            vector_store.delete_chunk("nonexistent_chunk", "TestDocument")
 
     def test_delete_chunk_failure(self, vector_store, mock_db_manager, mock_collection):
         """Test chunk deletion failure."""
-        mock_collection.query.fetch_objects.side_effect = WeaviateBaseError(
-            "Query failed"
+        mock_collection.data.delete_by_id.side_effect = WeaviateBaseError(
+            "Delete failed"
         )
         mock_db_manager.get_collection.return_value = mock_collection
 
@@ -400,3 +402,66 @@ class TestVectorStoreRefactored:
 
         # close should be called when exiting context
         mock_db_manager.close.assert_called_once()
+
+    def test_update_chunk_success(self, vector_store, mock_db_manager, mock_collection):
+        """Test successful chunk update."""
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        properties = {"content": "Updated content"}
+        result = vector_store.update_chunk("test_chunk_1", properties, "TestDocument")
+
+        assert result is True
+        mock_collection.data.update_by_id.assert_called_once()
+
+    def test_update_chunk_not_found(
+        self, vector_store, mock_db_manager, mock_collection
+    ):
+        """Test chunk update when chunk not found."""
+        mock_collection.data.update_by_id.side_effect = WeaviateBaseError("Not found")
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        properties = {"content": "Updated content"}
+        with pytest.raises(WeaviateBaseError):
+            vector_store.update_chunk("nonexistent_chunk", properties, "TestDocument")
+
+    def test_update_chunk_failure(self, vector_store, mock_db_manager, mock_collection):
+        """Test chunk update failure."""
+        mock_collection.data.update_by_id.side_effect = WeaviateBaseError(
+            "Update failed"
+        )
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        properties = {"content": "Updated content"}
+        with pytest.raises(WeaviateBaseError):
+            vector_store.update_chunk("test_chunk_1", properties, "TestDocument")
+
+    def test_chunk_exists_success(self, vector_store, mock_db_manager, mock_collection):
+        """Test successful chunk existence check."""
+        mock_collection.data.exists.return_value = True
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        result = vector_store.chunk_exists("test_chunk_1", "TestDocument")
+
+        assert result is True
+        mock_collection.data.exists.assert_called_once()
+
+    def test_chunk_exists_not_found(
+        self, vector_store, mock_db_manager, mock_collection
+    ):
+        """Test chunk existence check when chunk not found."""
+        mock_collection.data.exists.return_value = False
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        result = vector_store.chunk_exists("nonexistent_chunk", "TestDocument")
+
+        assert result is False
+
+    def test_chunk_exists_failure(self, vector_store, mock_db_manager, mock_collection):
+        """Test chunk existence check failure."""
+        mock_collection.data.exists.side_effect = WeaviateBaseError(
+            "Exists check failed"
+        )
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with pytest.raises(WeaviateBaseError):
+            vector_store.chunk_exists("test_chunk_1", "TestDocument")
