@@ -1,5 +1,6 @@
 """Unit tests for refactored VectorStore class."""
 
+import json
 from unittest.mock import Mock, patch
 
 import pytest
@@ -356,9 +357,6 @@ class TestVectorStoreRefactored:
         )
 
         result = vector_store.prepare_data_object(chunk)
-
-        # Check JSON serialization
-        import json
 
         custom_meta = json.loads(result["custom_metadata"])
         assert custom_meta["language"] == "es"

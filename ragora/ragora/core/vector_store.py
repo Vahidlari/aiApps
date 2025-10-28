@@ -16,6 +16,7 @@ The vector store uses Weaviate's built-in text2vec-transformers module for
 consistent embedding generation and supports rich metadata filtering.
 """
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -431,11 +432,14 @@ class VectorStore:
         if not chunk.chunk_id or not chunk.chunk_id.strip():
             raise ValueError("Chunk ID cannot be empty")
 
-        # Handle custom metadata JSON serialization
-        import json
-
         custom_meta = chunk.metadata.custom_metadata or {}
         custom_metadata_json = json.dumps(custom_meta) if custom_meta else ""
+
+        # Extract tags value to avoid redundant dictionary lookups
+        tags_value = custom_meta.get("tags", [])
+        tags_string = (
+            ",".join(tags_value) if isinstance(tags_value, list) else str(tags_value)
+        )
 
         return {
             # Core fields
@@ -464,11 +468,7 @@ class VectorStore:
             "language": custom_meta.get("language", ""),
             "domain": custom_meta.get("domain", ""),
             "confidence": custom_meta.get("confidence", 0.0),
-            "tags": (
-                ",".join(custom_meta.get("tags", []))
-                if isinstance(custom_meta.get("tags"), list)
-                else custom_meta.get("tags", "")
-            ),
+            "tags": tags_string,
             "priority": custom_meta.get("priority", 0),
             "content_category": custom_meta.get("content_category", ""),
         }
