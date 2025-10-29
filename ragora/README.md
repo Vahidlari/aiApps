@@ -31,9 +31,7 @@ from ragora import KnowledgeBaseManager
 
 # Initialize the knowledge base manager
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    collection="Documents",
-    embedding_model="all-mpnet-base-v2"
+    weaviate_url="http://localhost:8080"
 )
 
 # Process documents
@@ -204,10 +202,9 @@ filtered = retriever.search_with_filter(
 
 ## 💡 Examples
 
-Check out the [`examples/`](../examples/) directory for more detailed examples:
+Check out the [`ragora/examples/`](ragora/examples/) directory for more detailed examples:
 
-- **`latex_loading_example.py`**: LaTeX document processing and loading
-- **`latex_retriever_example.py`**: Document retrieval and search
+- **`basic_usage.py`**: Basic usage examples and getting started
 - **`advanced_usage.py`**: Advanced features and custom pipelines
 - **`email_usage_examples.py`**: Email integration examples
 

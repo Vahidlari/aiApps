@@ -19,9 +19,7 @@ Quick Start:
 
     # Initialize the system with three-layer architecture
     kbm = KnowledgeBaseManager(
-        weaviate_url="http://localhost:8080",
-        collection="Document",
-        embedding_model="all-mpnet-base-v2"
+        weaviate_url="http://localhost:8080"
     )
 
     # Process documents

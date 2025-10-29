@@ -95,8 +95,8 @@ results = kbm.search("neural networks", strategy=SearchStrategy.HYBRID, alpha=0.
 - **[Getting Started Guide](https://github.com/vahidlari/aiapps/blob/main/ragora/docs/getting_started.md)**: Detailed installation and setup guide
 - **[API Reference](https://github.com/vahidlari/aiapps/blob/main/ragora/docs/api_reference.md)**: Complete API documentation
 - **[Examples Directory](https://github.com/vahidlari/aiapps/tree/main/ragora/ragora/examples)**: Working code examples
+  - `basic_usage.py`: Basic usage examples and getting started
   - `advanced_usage.py`: Advanced features and custom pipelines
-  - `basic_usage.py`: Basic usage examples
   - `email_usage_examples.py`: Email integration examples
 
 ## 📊 Requirements

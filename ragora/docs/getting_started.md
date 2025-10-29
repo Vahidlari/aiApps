@@ -111,11 +111,7 @@ from ragora import KnowledgeBaseManager
 
 # Initialize the knowledge base manager
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    collection="Documents",
-    embedding_model="all-mpnet-base-v2",
-    chunk_size=768,
-    chunk_overlap=100
+    weaviate_url="http://localhost:8080"
 )
 
 # Process documents
@@ -182,7 +178,7 @@ db_manager = DatabaseManager(url="http://localhost:8080")
 # Create retriever
 retriever = Retriever(
     db_manager=db_manager,
-    collection="Documents"
+    collection="Document"
 )
 
 # Semantic search
@@ -227,20 +223,17 @@ Ragora supports multiple embedding models. Choose based on your needs:
 ```python
 # Recommended: Best quality
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    embedding_model="all-mpnet-base-v2"
+    weaviate_url="http://localhost:8080"
 )
 
 # Faster, smaller
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    embedding_model="all-MiniLM-L6-v2"
+    weaviate_url="http://localhost:8080"
 )
 
 # Optimized for Q&A
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    embedding_model="multi-qa-MiniLM-L6-v2"
+    weaviate_url="http://localhost:8080"
 )
 ```
 
@@ -318,7 +311,7 @@ from ragora import KnowledgeBaseManager
 # Initialize
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    collection="Documentation"
+    collection="Document"
 )
 
 # Process all documents in a directory
