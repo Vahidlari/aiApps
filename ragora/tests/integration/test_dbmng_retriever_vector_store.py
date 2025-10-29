@@ -94,7 +94,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
 
                     # Create VectorStore with DatabaseManager
                     vector_store = VectorStore(
-                        db_manager=db_manager, class_name="TestDocument"
+                        db_manager=db_manager, collection="TestDocument"
                     )
 
                     # Test schema creation
@@ -153,7 +153,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                         ]
 
                         results = retriever.search_similar(
-                            "machine learning", class_name="TestDocument"
+                            "machine learning", collection="TestDocument"
                         )
 
                         assert len(results) == 1
@@ -179,7 +179,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
 
                     # Create VectorStore and Retriever with same DatabaseManager
                     vector_store = VectorStore(
-                        db_manager=db_manager, class_name="TestDocument"
+                        db_manager=db_manager, collection="TestDocument"
                     )
 
                     retriever = Retriever(db_manager=db_manager)
@@ -215,7 +215,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                             ]
 
                             results = retriever.search_similar(
-                                "machine learning", class_name="TestDocument"
+                                "machine learning", collection="TestDocument"
                             )
 
                             assert len(results) == 1
@@ -251,7 +251,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                     ) as mock_process:
                         mock_process.return_value = [{"similarity_score": 0.8}]
                         vector_results = retriever.search_similar(
-                            "machine learning", class_name="TestDocument"
+                            "machine learning", collection="TestDocument"
                         )
                         assert len(vector_results) == 1
 
@@ -262,7 +262,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                     ) as mock_process:
                         mock_process.return_value = [{"hybrid_score": 0.8}]
                         hybrid_results = retriever.search_hybrid(
-                            "machine learning", class_name="TestDocument", alpha=0.5
+                            "machine learning", collection="TestDocument", alpha=0.5
                         )
                         assert len(hybrid_results) == 1
 
@@ -273,7 +273,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                     ) as mock_process:
                         mock_process.return_value = [{"bm25_score": 0.8}]
                         keyword_results = retriever.search_keyword(
-                            "machine learning", class_name="TestDocument"
+                            "machine learning", collection="TestDocument"
                         )
                         assert len(keyword_results) == 1
 
@@ -320,9 +320,9 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
 
                 # Test VectorStore context manager
                 with VectorStore(
-                    db_manager=db_manager, class_name="TestDocument"
+                    db_manager=db_manager, collection="TestDocument"
                 ) as vector_store:
-                    assert vector_store.class_name == "TestDocument"
+                    assert vector_store.collection == "TestDocument"
 
                 # Verify close methods were called
                 assert db_manager.is_connected is False
@@ -340,7 +340,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
 
                 # Test VectorStore stats
                 vector_store = VectorStore(
-                    db_manager=db_manager, class_name="TestDocument"
+                    db_manager=db_manager, collection="TestDocument"
                 )
                 mock_weaviate_client.collections.get.return_value = mock_collection
 
@@ -354,7 +354,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
 
                 vector_stats = vector_store.get_stats("TestDocument")
                 assert vector_stats["total_objects"] == 100
-                assert vector_stats["class_name"] == "TestDocument"
+                assert vector_stats["collection"] == mock_collection
 
                 # Test Retriever stats
                 retriever = Retriever(db_manager=db_manager)
@@ -363,7 +363,7 @@ class TestDatabaseManagerRetrieverVectorStoreIntegration:
                 }
 
                 retriever_stats = retriever.get_retrieval_stats(
-                    class_name="TestDocument"
+                    collection="TestDocument"
                 )
                 assert "database_stats" in retriever_stats
                 assert "retrieval_methods" in retriever_stats

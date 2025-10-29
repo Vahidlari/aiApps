@@ -39,7 +39,7 @@ class VectorStore:
 
     Attributes:
         db_manager: DatabaseManager instance for database operations
-        class_name: Name of the Weaviate class for document storage
+        collection: Name of the Weaviate class for document storage
         embedding_engine: EmbeddingEngine instance for generating embeddings
         logger: Logger instance for debugging and monitoring
     """
@@ -47,14 +47,14 @@ class VectorStore:
     def __init__(
         self,
         db_manager: DatabaseManager,
-        class_name: str = "Document",
+        collection: str = "Document",
         embedding_engine: Optional[EmbeddingEngine] = None,
     ):
         """Initialize the VectorStore with DatabaseManager.
 
         Args:
             db_manager: DatabaseManager instance for database operations
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
             embedding_engine: EmbeddingEngine instance (optional, will create
                 default if not provided)
 
@@ -65,7 +65,7 @@ class VectorStore:
             raise ValueError("DatabaseManager cannot be None")
 
         self.db_manager = db_manager
-        self.class_name = class_name
+        self.collection = collection
 
         # Set up logging
         self.logger = logging.getLogger(__name__)
@@ -84,11 +84,11 @@ class VectorStore:
         """
         return self.db_manager.is_connected
 
-    def create_schema(self, class_name: str, force_recreate: bool = False) -> None:
+    def create_schema(self, collection: str, force_recreate: bool = False) -> None:
         """Create the Weaviate collection for document storage using V4 API.
 
         Args:
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the collection for document storage
             force_recreate: If True, delete existing collection before
                 creating new one
 
@@ -100,19 +100,19 @@ class VectorStore:
         """
         try:
             # Check if collection already exists
-            collection_exists = self.db_manager.collection_exists(class_name)
+            collection_exists = self.db_manager.collection_exists(collection)
 
             if collection_exists:
                 if force_recreate:
-                    self.logger.info(f"Deleting existing collection: {class_name}")
-                    self.db_manager.delete_collection(class_name)
+                    self.logger.info(f"Deleting existing collection: {collection}")
+                    self.db_manager.delete_collection(collection)
                 else:
                     self.logger.info(
-                        f"Collection {class_name} already exists returning without creating new one"
+                        f"Collection {collection} already exists returning without creating new one"
                     )
                     return
             else:
-                self.logger.info(f"Creating new collection: {class_name}")
+                self.logger.info(f"Creating new collection: {collection}")
             # Define schema properties
             properties = [
                 # Core fields
@@ -271,28 +271,28 @@ class VectorStore:
                 ),
             ]
 
-            self.logger.info(f"Creating collection: {class_name}")
+            self.logger.info(f"Creating collection: {collection}")
 
             # Create the collection using DatabaseManager
             self.db_manager.create_collection(
-                name=class_name,
+                name=collection,
                 description="Document chunks with embeddings for RAG system",
                 vectorizer_config=Configure.Vectorizer.text2vec_transformers(),
                 properties=properties,
             )
 
-            self.logger.info(f"Successfully created collection: {class_name}")
+            self.logger.info(f"Successfully created collection: {collection}")
 
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to create collection: {str(e)}")
             raise
 
-    def store_chunk(self, chunk: DataChunk, class_name: str) -> str:
+    def store_chunk(self, chunk: DataChunk, collection: str) -> str:
         """Store a single DataChunk in the vector store using V4 API.
 
         Args:
             chunk: DataChunk object to store
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
         Returns:
             str: UUID of the stored chunk
 
@@ -308,10 +308,10 @@ class VectorStore:
 
         try:
             # Ensure collection exists before storing chunks
-            self.create_schema(class_name)
+            self.create_schema(collection)
 
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Prepare the object data
             object_data = self.prepare_data_object(chunk)
@@ -334,13 +334,13 @@ class VectorStore:
             raise
 
     def store_chunks(
-        self, chunks: List[DataChunk], class_name: str, batch_size: int = 100
+        self, chunks: List[DataChunk], collection: str, batch_size: int = 100
     ) -> List[str]:
         """Store multiple DataChunks in the vector store using V4 API.
 
         Args:
             chunks: List of DataChunk objects to store
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
             batch_size: Number of chunks to process in each batch
 
         Returns:
@@ -368,10 +368,10 @@ class VectorStore:
 
         try:
             # Ensure collection exists before storing chunks
-            self.create_schema(class_name)
+            self.create_schema(collection)
 
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             self.logger.info(
                 f"Storing {total_chunks} chunks in batches of {batch_size}"
@@ -474,13 +474,13 @@ class VectorStore:
         }
 
     def get_chunk_by_id(
-        self, chunk_id: str, class_name: str
+        self, chunk_id: str, collection: str
     ) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: ID of the chunk
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
 
@@ -489,7 +489,7 @@ class VectorStore:
         """
         try:
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Query using V4 API
             result = collection.query.fetch_object_by_id(
@@ -505,12 +505,12 @@ class VectorStore:
             self.logger.error(f"Failed to retrieve chunk {chunk_id}: {str(e)}")
             raise
 
-    def delete_chunk(self, chunk_id: str, class_name: str) -> bool:
+    def delete_chunk(self, chunk_id: str, collection: str) -> bool:
         """Delete a chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: ID of the chunk to delete
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
         Returns:
             bool: True if deletion was successful, False otherwise
 
@@ -519,7 +519,7 @@ class VectorStore:
         """
         try:
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Delete by ID
             collection.data.delete_by_id(uuid=generate_uuid5(chunk_id))
@@ -531,14 +531,14 @@ class VectorStore:
             raise
 
     def update_chunk(
-        self, chunk_id: str, properties: Dict[str, Any], class_name: str
+        self, chunk_id: str, properties: Dict[str, Any], collection: str
     ) -> bool:
         """Update a chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: ID of the chunk to update
             properties: Properties to update
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
         Returns:
             bool: True if update was successful, False otherwise
 
@@ -548,7 +548,7 @@ class VectorStore:
 
         try:
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Update by ID
             collection.data.update_by_id(
@@ -562,12 +562,12 @@ class VectorStore:
             self.logger.error(f"Failed to update chunk {chunk_id}: {str(e)}")
             raise
 
-    def chunk_exists(self, chunk_id: str, class_name: str) -> bool:
+    def chunk_exists(self, chunk_id: str, collection: str) -> bool:
         """Check if a chunk exists by its chunk_id using V4 API.
 
         Args:
             chunk_id: ID of the chunk to check
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
         Returns:
             bool: True if chunk exists, False otherwise
 
@@ -576,7 +576,7 @@ class VectorStore:
         """
         try:
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Check if chunk exists by ID
             return collection.data.exists(uuid=generate_uuid5(chunk_id))
@@ -584,11 +584,11 @@ class VectorStore:
             self.logger.error(f"Failed to check if chunk {chunk_id} exists: {str(e)}")
             raise
 
-    def get_stats(self, class_name: str) -> Dict[str, Any]:
+    def get_stats(self, collection: str) -> Dict[str, Any]:
         """Get statistics about the vector store using V4 API.
 
         Args:
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
 
         Returns:
             Dict[str, Any]: Statistics including total objects, collection
@@ -599,7 +599,7 @@ class VectorStore:
         """
         try:
             # Get the collection
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Get total object count using V4 API
             result = collection.aggregate.over_all(total_count=True)
@@ -615,7 +615,7 @@ class VectorStore:
 
             return {
                 "total_objects": total_objects,
-                "class_name": class_name,
+                "collection": collection,
                 "collection_info": collection_info,
                 "is_connected": self.is_connected(),
                 "db_manager_url": self.db_manager.url,
@@ -625,11 +625,11 @@ class VectorStore:
             self.logger.error(f"Failed to get stats: {str(e)}")
             raise
 
-    def clear_all(self, class_name: str) -> None:
+    def clear_all(self, collection: str) -> None:
         """Clear all objects from the vector store using V4 API.
 
         Args:
-            class_name: Name of the Weaviate class for document storage
+            collection: Name of the Weaviate class for document storage
 
         Returns:
             None
@@ -638,10 +638,10 @@ class VectorStore:
             WeaviateBaseError: If clearing operation fails
         """
         try:
-            self.logger.warning(f"Clearing all objects from collection: {class_name}")
-            self.db_manager.delete_collection(class_name)
+            self.logger.warning(f"Clearing all objects from collection: {collection}")
+            self.db_manager.delete_collection(collection)
             self.logger.info(
-                f"Successfully cleared all objects from collection: {class_name}"
+                f"Successfully cleared all objects from collection: {collection}"
             )
         except WeaviateBaseError as e:
             self.logger.error(f"Failed to clear all objects: {str(e)}")

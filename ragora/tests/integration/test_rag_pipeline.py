@@ -19,7 +19,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from ragora import ChunkMetadata, DataChunk, KnowledgeBaseManager
+from ragora import (
+    ChunkMetadata,
+    DataChunk,
+    KnowledgeBaseManager,
+    SearchResult,
+    SearchStrategy,
+)
 
 
 class TestKnowledgeBaseManagerPipeline:
@@ -138,7 +144,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Test
         kbm = KnowledgeBaseManager(
             weaviate_url="http://localhost:8080",
-            class_name="TestDocument",
         )
 
         # Assertions
@@ -201,7 +206,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
                 temp_path, "latex"
             )
             mock_vector_store.return_value.store_chunks.assert_called_once_with(
-                sample_chunks, class_name="Document"
+                sample_chunks, collection="Document"
             )
 
         finally:
@@ -254,26 +259,26 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         kbm = KnowledgeBaseManager()
 
         # Test query processing
-        result = kbm.query(
+        result = kbm.search(
             "What is Einstein's famous equation?",
-            search_type="hybrid",
+            strategy=SearchStrategy.HYBRID,
             top_k=5,
         )
 
         # Assertions
-        assert result["question"] == "What is Einstein's famous equation?"
-        assert result["search_type"] == "hybrid"
-        assert result["num_chunks"] == 2
-        assert result["retrieved_chunks"] == mock_search_results
-        assert "test_document.tex" in result["chunk_sources"]
-        assert "equation" in result["chunk_types"]
-        assert "citation" in result["chunk_types"]
-        assert abs(result["avg_similarity"] - 0.9) < 0.01  # (0.95 + 0.85) / 2
-        assert result["max_similarity"] == 0.95
+        assert result.query == "What is Einstein's famous equation?"
+        assert result.strategy == SearchStrategy.HYBRID
+        assert result.total_found == 2
+        assert result.results == mock_search_results
+        assert "test_document.tex" in result.metadata["chunk_sources"]
+        assert "equation" in result.metadata["chunk_types"]
+        assert "citation" in result.metadata["chunk_types"]
+        assert abs(result.metadata["avg_similarity"] - 0.9) < 0.01  # (0.95 + 0.85) / 2
+        assert result.metadata["max_similarity"] == 0.95
 
         # Verify retriever was called correctly
         mock_retriever.return_value.search_hybrid.assert_called_once_with(
-            "What is Einstein's famous equation?", class_name="Document", top_k=5
+            "What is Einstein's famous equation?", collection="Document", top_k=5
         )
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
@@ -297,7 +302,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Setup statistics mocks
         mock_vector_store.return_value.get_stats.return_value = {
             "total_objects": 150,
-            "class_name": "Document",
+            "collection": "Document",
             "is_connected": True,
         }
         mock_retriever.return_value.get_retrieval_stats.return_value = {
@@ -310,7 +315,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         kbm = KnowledgeBaseManager()
 
         # Test system statistics
-        stats = kbm.get_system_stats("Document")
+        stats = kbm.get_collection_stats("Document")
 
         # Assertions
         assert stats["system_initialized"] is True
@@ -352,7 +357,7 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         # Test error handling
         with pytest.raises(Exception, match="Search failed"):
-            kbm.search_similar("test query")
+            kbm.search("test query", strategy=SearchStrategy.SIMILAR)
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
     @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
@@ -467,7 +472,6 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         # Test with custom configuration
         kbm = KnowledgeBaseManager(
             weaviate_url="http://custom:8080",
-            class_name="CustomDocument",
         )
 
         # Assertions

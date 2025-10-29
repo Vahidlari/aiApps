@@ -70,7 +70,7 @@ class Retriever:
     def search_similar(
         self,
         query: str,
-        class_name: str,
+        collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
     ) -> List[Dict[str, Any]]:
@@ -100,7 +100,7 @@ class Retriever:
             processed_query = self._preprocess_query(query)
 
             # Get collection and execute search using Weaviate APIs
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Use Weaviate's native near_text API
             result = collection.query.near_text(
@@ -126,7 +126,7 @@ class Retriever:
     def search_hybrid(
         self,
         query: str,
-        class_name: str,
+        collection: str,
         top_k: int = 5,
         alpha: float = 0.5,
         score_threshold: float = 0.0,
@@ -162,7 +162,7 @@ class Retriever:
             processed_query = self._preprocess_query(query)
 
             # Get collection and execute hybrid search using Weaviate APIs
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Use Weaviate's native hybrid API
             result = collection.query.hybrid(
@@ -206,7 +206,7 @@ class Retriever:
     def search_keyword(
         self,
         query: str,
-        class_name: str,
+        collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
     ) -> List[Dict[str, Any]]:
@@ -236,7 +236,7 @@ class Retriever:
             processed_query = self._preprocess_query(query)
 
             # Get collection and execute keyword search using Weaviate APIs
-            collection = self.db_manager.get_collection(class_name)
+            collection = self.db_manager.get_collection(collection)
 
             # Use Weaviate's native BM25 API
             result = collection.query.bm25(
@@ -459,7 +459,7 @@ class Retriever:
 
         return datetime.now().isoformat()
 
-    def get_retrieval_stats(self, class_name: str) -> Dict[str, Any]:
+    def get_retrieval_stats(self, collection: str) -> Dict[str, Any]:
         """Get retrieval system statistics.
 
         Returns:
@@ -476,7 +476,7 @@ class Retriever:
             # Add retrieval-specific stats
             retrieval_stats = {
                 "database_stats": db_stats,
-                "class_name": class_name,
+                "collection": collection,
                 "embedding_model": self.embedding_engine.model_name,
                 "embedding_dimension": (self.embedding_engine.embedding_dimension),
                 "retrieval_methods": [

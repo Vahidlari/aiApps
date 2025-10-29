@@ -20,7 +20,7 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .knowledge_base_manager import KnowledgeBaseManager
+from .knowledge_base_manager import KnowledgeBaseManager, SearchResult, SearchStrategy
 from .retriever import Retriever
 from .vector_store import VectorStore
 
@@ -39,6 +39,8 @@ __all__ = [
     "EmailPreprocessor",
     "EmbeddingEngine",
     "KnowledgeBaseManager",
+    "SearchStrategy",
+    "SearchResult",
     "Retriever",
     "VectorStore",
 ]

@@ -32,7 +32,7 @@ from ragora import KnowledgeBaseManager
 # Initialize the knowledge base manager
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    class_name="Documents",
+    collection="Documents",
     embedding_model="all-mpnet-base-v2"
 )
 
@@ -42,15 +42,17 @@ chunk_ids = kbm.process_documents(document_paths)
 print(f"Processed {len(chunk_ids)} chunks")
 
 # Query the knowledge base
-results = kbm.query(
+from ragora import SearchStrategy
+
+results = kbm.search(
     "What is quantum entanglement?",
-    search_type="hybrid",
+    strategy=SearchStrategy.HYBRID,
     top_k=5
 )
 
 # Display results
-for result in results['chunks']:
-    print(f"Score: {result['similarity_score']:.3f}")
+for result in results.results:
+    print(f"Score: {result.get('similarity_score', 0):.3f}")
     print(f"Content: {result['content'][:200]}...\n")
 ```
 
@@ -87,14 +89,16 @@ This design provides flexibility, testability, and makes it easy to extend or sw
 Ragora supports three search strategies:
 
 ```python
+from ragora import SearchStrategy
+
 # Semantic search (best for conceptual queries)
-results = kbm.query("explain machine learning", search_type="similar")
+results = kbm.search("explain machine learning", strategy=SearchStrategy.SIMILAR)
 
 # Keyword search (best for exact terms)
-results = kbm.query("Schrödinger equation", search_type="keyword")
+results = kbm.search("Schrödinger equation", strategy=SearchStrategy.KEYWORD)
 
 # Hybrid search (recommended - combines both)
-results = kbm.query("neural networks", search_type="hybrid", alpha=0.7)
+results = kbm.search("neural networks", strategy=SearchStrategy.HYBRID, alpha=0.7)
 ```
 
 ### Document Processing
@@ -153,14 +157,14 @@ from ragora.core import (
 
 # Initialize components
 db_manager = DatabaseManager(url="http://localhost:8080")
-vector_store = VectorStore(db_manager, class_name="MyDocs")
-retriever = Retriever(db_manager, class_name="MyDocs")
+vector_store = VectorStore(db_manager, collection="MyDocs")
+retriever = Retriever(db_manager, collection="MyDocs")
 embedder = EmbeddingEngine(model_name="all-mpnet-base-v2")
 
 # Build custom workflow
 embeddings = embedder.embed_batch(texts)
 vector_store.store_chunks(chunks)
-results = retriever.search_hybrid(query, alpha=0.7, top_k=10)
+results = retriever.search_hybrid(query, collection="MyDocs", alpha=0.7, top_k=10)
 ```
 
 ### Multiple Search Strategies
@@ -171,18 +175,21 @@ Compare different search approaches:
 # Semantic search for conceptual similarity
 semantic = retriever.search_similar(
     "artificial intelligence applications",
+    collection="MyDocs",
     top_k=5
 )
 
 # Keyword search for exact matches
 keyword = retriever.search_keyword(
     "neural network architecture",
+    collection="MyDocs",
     top_k=5
 )
 
 # Hybrid search with custom weighting
 hybrid = retriever.search_hybrid(
     "deep learning models",
+    collection="MyDocs",
     alpha=0.7,  # 70% vector, 30% keyword
     top_k=5
 )

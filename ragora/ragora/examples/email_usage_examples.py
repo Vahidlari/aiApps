@@ -291,7 +291,7 @@ def example_email_database_creation():
     """Example of creating an email knowledge base using KnowledgeBaseManager."""
     print("=== Email Database Creation Example ===")
 
-    from ragora import KnowledgeBaseManager
+    from ragora import KnowledgeBaseManager, SearchStrategy
 
     # Get credentials
     try:
@@ -338,18 +338,16 @@ def example_email_database_creation():
             "      and support custom metadata for enhanced filtering and organization."
         )
         stored_ids = kbm.process_email_account(
-            email_provider=provider, folder="INBOX", class_name="Email"
+            email_provider=provider, folder="INBOX", collection="Email"
         )
         print(f"Stored {len(stored_ids)} email chunks in knowledge base")
 
         # Search for emails
         print("\nSearching for emails about 'meeting'...")
-        results = kbm.search_emails(
-            "meeting", top_k=3, class_name="Email", search_type="similar"
-        )
-        print(f"Found {len(results)} relevant emails")
+        results = kbm.search("meeting", collection="Email", top_k=3)
+        print(f"Found {results.total_found} relevant emails")
 
-        for i, result in enumerate(results, 1):
+        for i, result in enumerate(results.results, 1):
             print(f"\n{i}. {result.get('subject', 'No subject')}")
             print(f"   Sender: {result.get('sender', 'Unknown')}")
             print(f"   Content preview: {result.get('content', '')[:100]}...")
@@ -369,7 +367,7 @@ def example_email_database_creation():
                 email_ids=[
                     email["email_id"] for email in new_emails_info["emails"][:3]
                 ],
-                class_name="Email",
+                collection="Email",
             )
             print(f"Stored {len(new_stored)} new email chunks")
         else:
@@ -386,7 +384,7 @@ def example_email_answer_drafting_workflow():
     """Example workflow for LLM-based answer drafting using email knowledge base."""
     print("=== Email Answer Drafting Workflow Example ===")
 
-    from ragora import KnowledgeBaseManager
+    from ragora import KnowledgeBaseManager, SearchStrategy
 
     # Get credentials
     try:
@@ -435,12 +433,10 @@ def example_email_answer_drafting_workflow():
 
             # Search for relevant context in knowledge base
             query = email_data["subject"] + " " + email_data.get("body", "")[:100]
-            context_results = kbm.search_emails(
-                query=query, search_type="similar", top_k=2, class_name="Email"
-            )
+            context_results = kbm.search(query=query, collection="Email", top_k=2)
 
-            print(f"Found {len(context_results)} relevant context items")
-            for i, context in enumerate(context_results, 1):
+            print(f"Found {context_results.total_found} relevant context items")
+            for i, context in enumerate(context_results.results, 1):
                 print(f"  {i}. {context.get('subject', 'No subject')}")
 
             # In a real scenario, this would be passed to an LLM
@@ -455,7 +451,7 @@ def example_email_answer_drafting_workflow():
             email["email_id"] for email in new_emails_info["emails"][:3]
         ]
         stored_ids = kbm.process_new_emails(
-            email_provider=provider, email_ids=processed_email_ids, class_name="Email"
+            email_provider=provider, email_ids=processed_email_ids, collection="Email"
         )
         print(f"Indexed {len(stored_ids)} email chunks")
 
