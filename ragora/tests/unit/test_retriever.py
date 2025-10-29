@@ -122,7 +122,7 @@ class TestRetriever:
                 ]
 
                 result = retriever.search_similar(
-                    "machine learning", class_name="Document", top_k=5
+                    "machine learning", collection="Document", top_k=5
                 )
 
                 assert len(result) == 1
@@ -135,7 +135,7 @@ class TestRetriever:
     def test_search_similar_empty_query(self, retriever):
         """Test vector similarity search with empty query."""
         with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_similar("", class_name="Document")
+            retriever.search_similar("", collection="Document")
 
     def test_search_similar_failure(self, retriever, mock_db_manager, mock_collection):
         """Test vector similarity search failure."""
@@ -146,7 +146,7 @@ class TestRetriever:
             retriever, "_preprocess_query", return_value="machine learning"
         ):
             with pytest.raises(Exception, match="Search failed"):
-                retriever.search_similar("machine learning", class_name="Document")
+                retriever.search_similar("machine learning", collection="Document")
 
     def test_search_hybrid_success(
         self, retriever, mock_db_manager, mock_collection, mock_search_result
@@ -164,7 +164,7 @@ class TestRetriever:
                 mock_process.return_value = [{"content": "test", "hybrid_score": 0.8}]
 
                 result = retriever.search_hybrid(
-                    "machine learning", class_name="Document", alpha=0.7, top_k=5
+                    "machine learning", collection="Document", alpha=0.7, top_k=5
                 )
 
                 assert len(result) == 1
@@ -179,13 +179,13 @@ class TestRetriever:
         """Test hybrid search with invalid alpha value."""
         with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
             retriever.search_hybrid(
-                "machine learning", class_name="Document", alpha=1.5
+                "machine learning", collection="Document", alpha=1.5
             )
 
     def test_search_hybrid_empty_query(self, retriever):
         """Test hybrid search with empty query."""
         with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_hybrid("", class_name="Document")
+            retriever.search_hybrid("", collection="Document")
 
     def test_search_keyword_success(
         self, retriever, mock_db_manager, mock_collection, mock_search_result
@@ -203,7 +203,7 @@ class TestRetriever:
                 mock_process.return_value = [{"content": "test", "bm25_score": 0.8}]
 
                 result = retriever.search_keyword(
-                    "machine learning", class_name="Document", top_k=5
+                    "machine learning", collection="Document", top_k=5
                 )
 
                 assert len(result) == 1
@@ -216,7 +216,7 @@ class TestRetriever:
     def test_search_keyword_empty_query(self, retriever):
         """Test keyword search with empty query."""
         with pytest.raises(ValueError, match="Query cannot be empty"):
-            retriever.search_keyword("", class_name="Document")
+            retriever.search_keyword("", collection="Document")
 
     def test_process_vector_results(self, retriever, mock_search_result):
         """Test processing vector search results."""
@@ -280,7 +280,7 @@ class TestRetriever:
         self, retriever, mock_db_manager, mock_embedding_engine
     ):
         """Test successful retrieval stats."""
-        result = retriever.get_retrieval_stats(class_name="Document")
+        result = retriever.get_retrieval_stats(collection="Document")
 
         expected = {
             "database_stats": {
@@ -288,7 +288,7 @@ class TestRetriever:
                 "url": "http://localhost:8080",
                 "collections": ["Document"],
             },
-            "class_name": "Document",
+            "collection": "Document",
             "embedding_model": "test-model",
             "embedding_dimension": 768,
             "retrieval_methods": [
@@ -305,4 +305,4 @@ class TestRetriever:
         mock_db_manager.list_collections.side_effect = Exception("Stats failed")
 
         with pytest.raises(Exception, match="Stats failed"):
-            retriever.get_retrieval_stats(class_name="Document")
+            retriever.get_retrieval_stats(collection="Document")

@@ -27,6 +27,8 @@ from ragora import (
     EmbeddingEngine,
     KnowledgeBaseManager,
     Retriever,
+    SearchResult,
+    SearchStrategy,
     VectorStore,
 )
 
@@ -178,7 +180,7 @@ class TestKnowledgeBaseManager:
                 "document_preprocessor"
             ].preprocess_document.assert_called_once_with(temp_path, "latex")
             mock_components["vector_store"].store_chunks.assert_called_once_with(
-                sample_chunks, class_name="Document"
+                sample_chunks, collection="Document"
             )
         finally:
             os.unlink(temp_path)
@@ -209,8 +211,8 @@ class TestKnowledgeBaseManager:
         with pytest.raises(FileNotFoundError, match="File not found"):
             kbm.process_document("nonexistent.tex")
 
-    def test_query_similar_success(self, mock_components, sample_search_results):
-        """Test successful query with similar search."""
+    def test_search_similar_success(self, mock_components, sample_search_results):
+        """Test successful search with similar strategy."""
         mock_components["retriever"].search_similar.return_value = sample_search_results
 
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
@@ -219,25 +221,30 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        result = kbm.query("What is the test content?", search_type="similar", top_k=5)
-
-        # Assertions
-        assert result["question"] == "What is the test content?"
-        assert result["search_type"] == "similar"
-        assert result["num_chunks"] == 2
-        assert result["retrieved_chunks"] == sample_search_results
-        assert "test.tex" in result["chunk_sources"]
-        assert "text" in result["chunk_types"]
-        assert "equation" in result["chunk_types"]
-        assert result["avg_similarity"] == 0.8  # (0.85 + 0.75) / 2
-        assert result["max_similarity"] == 0.85
-
-        mock_components["retriever"].search_similar.assert_called_once_with(
-            "What is the test content?", top_k=5, class_name="Document"
+        result = kbm.search(
+            "What is the test content?", strategy=SearchStrategy.SIMILAR, top_k=5
         )
 
-    def test_query_hybrid_success(self, mock_components, sample_search_results):
-        """Test successful query with hybrid search."""
+        # Assertions
+        assert isinstance(result, SearchResult)
+        assert result.query == "What is the test content?"
+        assert result.strategy == SearchStrategy.SIMILAR
+        assert result.collection == "Document"
+        assert result.total_found == 2
+        assert result.results == sample_search_results
+        assert "test.tex" in result.metadata["chunk_sources"]
+        assert "text" in result.metadata["chunk_types"]
+        assert "equation" in result.metadata["chunk_types"]
+        assert result.metadata["avg_similarity"] == 0.8  # (0.85 + 0.75) / 2
+        assert result.metadata["max_similarity"] == 0.85
+        assert result.execution_time > 0
+
+        mock_components["retriever"].search_similar.assert_called_once_with(
+            "What is the test content?", collection="Document", top_k=5
+        )
+
+    def test_search_hybrid_success(self, mock_components, sample_search_results):
+        """Test successful search with hybrid strategy."""
         mock_components["retriever"].search_hybrid.return_value = sample_search_results
 
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
@@ -246,16 +253,19 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        result = kbm.query("What is the test content?", search_type="hybrid", top_k=3)
-
-        # Assertions
-        assert result["search_type"] == "hybrid"
-        mock_components["retriever"].search_hybrid.assert_called_once_with(
-            "What is the test content?", top_k=3, class_name="Document"
+        result = kbm.search(
+            "What is the test content?", strategy=SearchStrategy.HYBRID, top_k=3
         )
 
-    def test_query_keyword_success(self, mock_components, sample_search_results):
-        """Test successful query with keyword search."""
+        # Assertions
+        assert isinstance(result, SearchResult)
+        assert result.strategy == SearchStrategy.HYBRID
+        mock_components["retriever"].search_hybrid.assert_called_once_with(
+            "What is the test content?", collection="Document", top_k=3
+        )
+
+    def test_search_keyword_success(self, mock_components, sample_search_results):
+        """Test successful search with keyword strategy."""
         mock_components["retriever"].search_keyword.return_value = sample_search_results
 
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
@@ -264,131 +274,46 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        result = kbm.query(
-            "machine learning algorithms", search_type="keyword", top_k=3
+        result = kbm.search(
+            "machine learning algorithms", strategy=SearchStrategy.KEYWORD, top_k=3
         )
 
         # Assertions
-        assert result["search_type"] == "keyword"
+        assert isinstance(result, SearchResult)
+        assert result.strategy == SearchStrategy.KEYWORD
         mock_components["retriever"].search_keyword.assert_called_once_with(
-            "machine learning algorithms", top_k=3, class_name="Document"
+            "machine learning algorithms", collection="Document", top_k=3
         )
 
-    def test_query_invalid_search_type(self, mock_components):
-        """Test query with invalid search type."""
+    def test_search_invalid_strategy(self, mock_components):
+        """Test search with invalid strategy."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = True
         kbm.retriever = mock_components["retriever"]
         kbm.logger = Mock()
 
-        with pytest.raises(ValueError, match="Invalid search type: invalid"):
-            kbm.query("test", search_type="invalid")
+        with pytest.raises(ValueError, match="Invalid search strategy"):
+            kbm.search("test", strategy="invalid")
 
-    def test_query_empty_question(self, mock_components):
-        """Test query with empty question."""
+    def test_search_empty_query(self, mock_components):
+        """Test search with empty query."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = True
         kbm.retriever = mock_components["retriever"]
         kbm.logger = Mock()
 
-        with pytest.raises(ValueError, match="Question cannot be empty"):
-            kbm.query("")
+        with pytest.raises(ValueError, match="Query cannot be empty"):
+            kbm.search("")
 
-    def test_query_not_initialized(self):
-        """Test query when system not initialized."""
+    def test_search_not_initialized(self):
+        """Test search when system not initialized."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = False
 
         with pytest.raises(
             RuntimeError, match="Knowledge base manager not initialized"
         ):
-            kbm.query("test question")
-
-    def test_search_similar_delegation(self, mock_components, sample_search_results):
-        """Test that search_similar delegates to retriever."""
-        mock_components["retriever"].search_similar.return_value = sample_search_results
-
-        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
-        kbm.is_initialized = True
-        kbm.retriever = mock_components["retriever"]
-
-        # Test
-        result = kbm.search_similar("test query", top_k=5)
-
-        # Assertions
-        assert result == sample_search_results
-        mock_components["retriever"].search_similar.assert_called_once_with(
-            "test query", top_k=5, class_name="Document"
-        )
-
-    def test_search_hybrid_delegation(self, mock_components, sample_search_results):
-        """Test that search_hybrid delegates to retriever."""
-        mock_components["retriever"].search_hybrid.return_value = sample_search_results
-
-        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
-        kbm.is_initialized = True
-        kbm.retriever = mock_components["retriever"]
-
-        # Test
-        result = kbm.search_hybrid("test query", alpha=0.7, top_k=3)
-
-        # Assertions
-        assert result == sample_search_results
-        mock_components["retriever"].search_hybrid.assert_called_once_with(
-            "test query", alpha=0.7, top_k=3, class_name="Document"
-        )
-
-    def test_search_keyword_delegation(self, mock_components, sample_search_results):
-        """Test that search_keyword delegates to retriever."""
-        mock_components["retriever"].search_keyword.return_value = sample_search_results
-
-        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
-        kbm.is_initialized = True
-        kbm.retriever = mock_components["retriever"]
-
-        # Test
-        result = kbm.search_keyword("machine learning", top_k=3)
-
-        # Assertions
-        assert result == sample_search_results
-        mock_components["retriever"].search_keyword.assert_called_once_with(
-            "machine learning", top_k=3, class_name="Document"
-        )
-
-    def test_get_chunk_delegation(self, mock_components):
-        """Test that get_chunk delegates to vector_store."""
-        mock_chunk_data = {"chunk_id": "test_001", "content": "test content"}
-        mock_components["vector_store"].get_chunk_by_id.return_value = mock_chunk_data
-
-        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
-        kbm.is_initialized = True
-        kbm.vector_store = mock_components["vector_store"]
-
-        # Test
-        result = kbm.get_chunk("test_001", "Document")
-
-        # Assertions
-        assert result == mock_chunk_data
-        mock_components["vector_store"].get_chunk_by_id.assert_called_once_with(
-            "test_001", class_name="Document"
-        )
-
-    def test_delete_chunk_delegation(self, mock_components):
-        """Test that delete_chunk delegates to vector_store."""
-        mock_components["vector_store"].delete_chunk.return_value = True
-
-        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
-        kbm.is_initialized = True
-        kbm.vector_store = mock_components["vector_store"]
-
-        # Test
-        result = kbm.delete_chunk("test_001", "Document")
-
-        # Assertions
-        assert result is True
-        mock_components["vector_store"].delete_chunk.assert_called_once_with(
-            "test_001", class_name="Document"
-        )
+            kbm.search("test question")
 
     def test_get_system_stats_success(self, mock_components):
         """Test successful system statistics retrieval."""
@@ -428,10 +353,10 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        stats = kbm.get_system_stats("Document")
+        stats = kbm.get_collection_stats("Document")
 
         # Assertions
-        assert stats["system_initialized"] is True
+        assert stats["collection"] == "Document"
         assert stats["database_manager"]["url"] == "http://localhost:8080"
         assert stats["database_manager"]["is_connected"] is True
         assert stats["database_manager"]["collections"] == ["Document"]
@@ -446,7 +371,7 @@ class TestKnowledgeBaseManager:
             == "Three-Layer (DatabaseManager -> VectorStore -> Retriever)"
         )
 
-    def test_get_system_stats_error_handling(self, mock_components):
+    def test_get_collection_stats_error_handling(self, mock_components):
         """Test error handling in get_system_stats."""
         mock_components["vector_store"].get_stats.side_effect = Exception(
             "Stats failed"
@@ -462,9 +387,9 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         with pytest.raises(Exception, match="Stats failed"):
-            kbm.get_system_stats("Document")
+            kbm.get_collection_stats("Document")
 
-    def test_clear_database_success(self, mock_components):
+    def test_clear_collection_success(self, mock_components):
         """Test successful database clearing."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = True
@@ -472,20 +397,22 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        kbm.clear_database("Document")
+        kbm.clear_collection("Document")
 
         # Assertions
-        mock_components["vector_store"].clear_all.assert_called_once()
+        mock_components["vector_store"].clear_all.assert_called_once_with(
+            collection="Document"
+        )
 
-    def test_clear_database_not_initialized(self):
-        """Test database clearing when system not initialized."""
+    def test_clear_collection_not_initialized(self):
+        """Test collection clearing when system not initialized."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = False
 
         with pytest.raises(
             RuntimeError, match="Knowledge base manager not initialized"
         ):
-            kbm.clear_database("Document")
+            kbm.clear_collection("Document")
 
     def test_close_success(self, mock_components):
         """Test successful system closure."""
@@ -567,12 +494,13 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        result = kbm.query("test question")
+        result = kbm.search("test question", strategy=SearchStrategy.SIMILAR)
 
         # Assertions
-        assert "avg_similarity" not in result
-        assert "max_similarity" not in result
-        assert result["num_chunks"] == 2
+        assert isinstance(result, SearchResult)
+        assert "avg_similarity" not in result.metadata
+        assert "max_similarity" not in result.metadata
+        assert result.total_found == 2
 
     def test_query_with_mixed_similarity_scores(self, mock_components):
         """Test query with mixed similarity scores."""
@@ -588,12 +516,13 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Test
-        result = kbm.query("test question")
+        result = kbm.search("test question", strategy=SearchStrategy.SIMILAR)
 
         # Assertions
-        assert result["avg_similarity"] == 0.4  # (0.8 + 0) / 2
-        assert result["max_similarity"] == 0.8
-        assert result["num_chunks"] == 2
+        assert isinstance(result, SearchResult)
+        assert result.metadata["avg_similarity"] == 0.4  # (0.8 + 0) / 2
+        assert result.metadata["max_similarity"] == 0.8
+        assert result.total_found == 2
 
     # Email processing tests
 
@@ -684,32 +613,86 @@ class TestKnowledgeBaseManager:
         mock_email_preprocessor.preprocess_emails.assert_called_once()
         mock_components["vector_store"].store_chunks.assert_called_once()
 
-    def test_search_emails_success(self, mock_components):
-        """Test searching emails."""
-        mock_search_results = [{"content": "email content", "subject": "Test"}]
-        mock_components["retriever"].search_similar.return_value = mock_search_results
+    def test_list_collections(self, mock_components):
+        """Test list_collections method."""
+        mock_components["db_manager"].list_collections.return_value = [
+            "Document",
+            "Email",
+        ]
 
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = True
-        kbm.retriever = mock_components["retriever"]
-        kbm.logger = Mock()
+        kbm.db_manager = mock_components["db_manager"]
 
         # Test
-        result = kbm.search_emails("test query", class_name="Email")
+        collections = kbm.list_collections()
 
         # Assertions
-        assert result == mock_search_results
-        mock_components["retriever"].search_similar.assert_called_once_with(
-            "test query", top_k=5, class_name="Email"
-        )
+        assert collections == ["Document", "Email"]
+        mock_components["db_manager"].list_collections.assert_called_once()
 
-    def test_search_emails_invalid_type(self, mock_components):
-        """Test search_emails with invalid search type."""
+    def test_create_collection_success(self, mock_components):
+        """Test successful collection creation."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
         kbm.is_initialized = True
-        kbm.retriever = mock_components["retriever"]
+        kbm.vector_store = mock_components["vector_store"]
         kbm.logger = Mock()
 
         # Test
-        with pytest.raises(ValueError, match="Invalid search type"):
-            kbm.search_emails("query", search_type="invalid")
+        result = kbm.create_collection("TestCollection")
+
+        # Assertions
+        assert result is True
+        mock_components["vector_store"].create_schema.assert_called_once_with(
+            "TestCollection", force_recreate=False
+        )
+
+    def test_create_collection_failure(self, mock_components):
+        """Test collection creation failure."""
+        mock_components["vector_store"].create_schema.side_effect = Exception(
+            "Creation failed"
+        )
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.create_collection("TestCollection")
+
+        # Assertions
+        assert result is False
+
+    def test_delete_collection_success(self, mock_components):
+        """Test successful collection deletion."""
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.delete_collection("TestCollection")
+
+        # Assertions
+        assert result is True
+        mock_components["vector_store"].clear_all.assert_called_once_with(
+            collection="TestCollection"
+        )
+
+    def test_delete_collection_failure(self, mock_components):
+        """Test collection deletion failure."""
+        mock_components["vector_store"].clear_all.side_effect = Exception(
+            "Deletion failed"
+        )
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.delete_collection("TestCollection")
+
+        # Assertions
+        assert result is False

@@ -70,14 +70,16 @@ chunks = chunker.chunk(document.content, context)
 Ragora supports three search strategies:
 
 ```python
+from ragora import SearchStrategy
+
 # Semantic search (best for conceptual queries)
-results = kbm.query("explain machine learning", search_type="similar")
+results = kbm.search("explain machine learning", strategy=SearchStrategy.SIMILAR)
 
 # Keyword search (best for exact terms)
-results = kbm.query("Schrödinger equation", search_type="keyword")
+results = kbm.search("Schrödinger equation", strategy=SearchStrategy.KEYWORD)
 
 # Hybrid search (recommended - combines both)
-results = kbm.query("neural networks", search_type="hybrid", alpha=0.7)
+results = kbm.search("neural networks", strategy=SearchStrategy.HYBRID, alpha=0.7)
 ```
 
 ## 🎯 Use Cases

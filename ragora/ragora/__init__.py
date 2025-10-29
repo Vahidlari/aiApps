@@ -15,22 +15,22 @@ Main Components (Three-Layer Architecture):
 - EmbeddingEngine: Vector embeddings using Sentence Transformers
 
 Quick Start:
-    from ragora import KnowledgeBaseManager
+    from ragora import KnowledgeBaseManager, SearchStrategy
 
     # Initialize the system with three-layer architecture
     kbm = KnowledgeBaseManager(
         weaviate_url="http://localhost:8080",
-        class_name="Document",
+        collection="Document",
         embedding_model="all-mpnet-base-v2"
     )
 
     # Process documents
     chunk_ids = kbm.process_documents(["document.tex"])
 
-    # Query the knowledge base with different search types
-    response = kbm.query("What is the main topic?", search_type="similar")
-    hybrid_response = kbm.query("machine learning", search_type="hybrid")
-    keyword_response = kbm.query("neural networks", search_type="keyword")
+    # Query the knowledge base with different search strategies
+    response = kbm.search("What is the main topic?", strategy=SearchStrategy.SIMILAR)
+    hybrid_response = kbm.search("machine learning", strategy=SearchStrategy.HYBRID)
+    keyword_response = kbm.search("neural networks", strategy=SearchStrategy.KEYWORD)
 """
 
 # Configuration classes
@@ -55,7 +55,11 @@ from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
 from .core.email_preprocessor import EmailPreprocessor
 from .core.embedding_engine import EmbeddingEngine
-from .core.knowledge_base_manager import KnowledgeBaseManager
+from .core.knowledge_base_manager import (
+    KnowledgeBaseManager,
+    SearchResult,
+    SearchStrategy,
+)
 from .core.retriever import Retriever
 from .core.vector_store import VectorStore
 from .exceptions import (
@@ -75,6 +79,8 @@ __version__ = __version__
 __all__ = [
     # Main system
     "KnowledgeBaseManager",
+    "SearchStrategy",
+    "SearchResult",
     # Core components
     "DataChunk",
     "DataChunker",

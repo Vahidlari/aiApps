@@ -30,7 +30,7 @@ kbm = KnowledgeBaseManager(
 - `check_new_emails(email_provider, folder=None, include_body=True, limit=50) -> Dict` - Check for new emails
 - `process_new_emails(email_provider, email_ids, class_name="Email") -> List[str]` - Process specific emails
 - `process_email_account(email_provider, folder=None, unread_only=False, class_name="Email") -> List[str]` - Bulk email processing
-- `search_emails(query, search_type="similar", top_k=5, class_name="Email") -> List[Dict]` - Search emails
+- `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, **kwargs) -> SearchResult` - Unified search interface
 
 #### `ragora.core.DatabaseManager`
 
@@ -343,7 +343,7 @@ email_ids = [email["email_id"] for email in new_emails["emails"][:5]]
 stored_ids = kbm.process_new_emails(email_provider, email_ids)
 
 # Search emails
-results = kbm.search_emails("meeting notes", top_k=5)
+results = kbm.search("meeting notes", collection="Email", top_k=5)
 ```
 
 ### Example 3: Custom Component Usage

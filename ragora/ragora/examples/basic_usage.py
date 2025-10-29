@@ -14,7 +14,7 @@ Prerequisites:
 
 import logging
 
-from ragora import KnowledgeBaseManager
+from ragora import KnowledgeBaseManager, SearchStrategy
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +30,7 @@ def main():
 
         # Create schema
         logger.info("📊 Creating vector store schema...")
-        kbm.vector_store.create_schema(force_recreate=True)
+        kbm.vector_store.create_schema("Document", force_recreate=True)
 
         # Example: Process a document (uncomment if you have a LaTeX file)
         # logger.info("📄 Processing LaTeX document...")
@@ -97,23 +97,25 @@ def main():
         ]
 
         # Store chunks
-        stored_uuids = kbm.vector_store.store_chunks(sample_chunks)
+        stored_uuids = kbm.vector_store.store_chunks(sample_chunks, "Document")
         logger.info(f"✅ Stored {len(stored_uuids)} sample chunks with custom metadata")
 
         # Query the knowledge base
         logger.info("🔍 Querying the knowledge base...")
-        response = kbm.query(
+        response = kbm.search(
             "What is the relationship between mass and energy?",
-            search_type="hybrid",
+            strategy=SearchStrategy.HYBRID,
             top_k=3,
         )
 
         # Display results
-        logger.info("📋 Query Results:")
-        logger.info(f"   Question: {response['question']}")
-        logger.info(f"   Retrieved {response['num_chunks']} chunks:")
+        logger.info("📋 Search Results:")
+        logger.info(f"   Query: {response.query}")
+        logger.info(f"   Strategy: {response.strategy.value}")
+        logger.info(f"   Retrieved {response.total_found} chunks:")
+        logger.info(f"   Execution time: {response.execution_time:.3f}s")
 
-        for i, chunk in enumerate(response["retrieved_chunks"], 1):
+        for i, chunk in enumerate(response.results, 1):
             logger.info(f"   {i}. {chunk['content'][:80]}...")
             # Show custom metadata if available
             if chunk.get("metadata", {}).get("language"):
@@ -123,7 +125,7 @@ def main():
 
         # Get system statistics
         logger.info("📊 System Statistics:")
-        stats = kbm.get_system_stats()
+        stats = kbm.get_collection_stats("Document")
         logger.info(f"   Total objects: {stats['vector_store']['total_objects']}")
         logger.info(f"   Embedding model: {stats['embedding_engine']['model_name']}")
 

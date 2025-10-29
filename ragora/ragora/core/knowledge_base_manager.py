@@ -16,6 +16,9 @@ of concerns between storage, retrieval, and generation layers.
 """
 
 import logging
+import time
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from ..config import KnowledgeBaseManagerConfig
@@ -27,6 +30,28 @@ from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .retriever import Retriever
 from .vector_store import VectorStore
+
+
+class SearchStrategy(Enum):
+    """Search strategy enumeration."""
+
+    SIMILAR = "similar"  # Vector similarity only
+    KEYWORD = "keyword"  # BM25 keyword search only
+    HYBRID = "hybrid"  # Combined vector + keyword
+    AUTO = "auto"  # Automatically choose best strategy
+
+
+@dataclass
+class SearchResult:
+    """Search result dataclass."""
+
+    query: str
+    strategy: SearchStrategy
+    collection: str
+    results: List[Dict[str, Any]]
+    total_found: int
+    execution_time: float
+    metadata: Dict[str, Any]
 
 
 class KnowledgeBaseManager:
@@ -51,14 +76,12 @@ class KnowledgeBaseManager:
         self,
         config: Optional[KnowledgeBaseManagerConfig] = None,
         weaviate_url: str = "http://localhost:8080",
-        class_name: str = "Document",
     ):
         """Initialize the knowledge base manager.
 
         Args:
             config: RagoraConfig object with system configuration (optional)
             weaviate_url: Weaviate server URL (used if config not provided)
-            class_name: Name of the Weaviate class for document storage (used if config not provided)
 
         Raises:
             ConnectionError: If unable to connect to Weaviate
@@ -144,13 +167,14 @@ class KnowledgeBaseManager:
         self,
         document_paths: List[str],
         document_type: str = "latex",
-        class_name: str = "Document",
+        collection: str = "Document",
     ) -> List[str]:
         """Process a list of documents and store them in the vector database.
 
         Args:
             document_paths: List of paths to the LaTeX documents
             document_type: Type of document to process ("latex", "pdf", "txt")
+            collection: Collection name to store the documents
         Returns:
             List[str]: List of chunk IDs that were stored
         """
@@ -163,7 +187,7 @@ class KnowledgeBaseManager:
                 document_paths, document_type
             )
             self.logger.info(f"Storing {len(chunks)} chunks in vector database")
-            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+            stored_uuids = self.vector_store.store_chunks(chunks, collection=collection)
             self.logger.info(f"Successfully processed {len(document_paths)} documents")
             self.logger.info(f"Stored {len(stored_uuids)} chunks")
             return stored_uuids
@@ -175,13 +199,14 @@ class KnowledgeBaseManager:
         self,
         document_path: str,
         document_type: str = "latex",
-        class_name: str = "Document",
+        collection: str = "Document",
     ) -> List[str]:
         """Process a LaTeX document and store it in the vector database.
 
         Args:
             document_path: Path to the LaTeX document file
             document_type: Type of document to process ("latex", "pdf", "txt")
+            collection: Collection name to store the document
         Returns:
             List[str]: List of chunk IDs that were stored
 
@@ -205,7 +230,7 @@ class KnowledgeBaseManager:
             self.logger.debug(
                 f"Step 2: Storing {len(chunks)} chunks in vector database"
             )
-            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+            stored_uuids = self.vector_store.store_chunks(chunks, collection=collection)
 
             self.logger.info(f"Successfully processed document: {document_path}")
             self.logger.info(f"Stored {len(stored_uuids)} chunks")
@@ -216,179 +241,204 @@ class KnowledgeBaseManager:
             self.logger.error(f"Failed to process document {document_path}: {str(e)}")
             raise
 
-    def query(
+    def search(
         self,
-        question: str,
-        search_type: str = "similar",
+        query: str,
+        collection: str = "Document",
+        strategy: SearchStrategy = SearchStrategy.HYBRID,
         top_k: int = 5,
-        class_name: str = "Document",
-    ) -> Dict[str, Any]:
-        """Query the knowledge base with a question.
+        **strategy_kwargs,
+    ) -> SearchResult:
+        """Unified search interface for all data types and strategies.
 
         Args:
-            question: The question to ask
-            search_type: Type of search ("similar", "hybrid", "citations", "equations")
-            top_k: Number of relevant chunks to retrieve
+            query: Search query text
+            collection: Collection name to search in
+            strategy: Search strategy to use
+            top_k: Number of results to return
+            **strategy_kwargs: Strategy-specific parameters (alpha, score_threshold, etc.)
 
         Returns:
-            Dict[str, Any]: Query results with retrieved chunks and metadata
+            SearchResult: Structured search results with metadata
 
         Raises:
             RuntimeError: If system not initialized
-            ValueError: If invalid search type or empty question
+            ValueError: If invalid strategy or empty query
         """
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")
 
-        if not question or not question.strip():
-            raise ValueError("Question cannot be empty")
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
+
+        start_time = time.time()
 
         try:
-            self.logger.info(f"Processing query: '{question}' (type: {search_type})")
+            self.logger.info(
+                f"Processing search: '{query}' "
+                f"(strategy: {strategy.value if hasattr(strategy, 'value') else strategy}, collection: {collection})"
+            )
 
-            # Step 1: Retrieve relevant chunks
-            self.logger.debug("Step 1: Retrieving relevant chunks")
-            if search_type == "similar":
-                chunks = self.retriever.search_similar(
-                    question, top_k=top_k, class_name=class_name
+            # Execute search based on strategy
+            if strategy == SearchStrategy.SIMILAR:
+                results = self.retriever.search_similar(
+                    query, collection=collection, top_k=top_k, **strategy_kwargs
                 )
-            elif search_type == "hybrid":
-                chunks = self.retriever.search_hybrid(
-                    question, top_k=top_k, class_name=class_name
+            elif strategy == SearchStrategy.KEYWORD:
+                results = self.retriever.search_keyword(
+                    query, collection=collection, top_k=top_k, **strategy_kwargs
                 )
-            elif search_type == "keyword":
-                chunks = self.retriever.search_keyword(
-                    question, top_k=top_k, class_name=class_name
+            elif strategy == SearchStrategy.HYBRID:
+                results = self.retriever.search_hybrid(
+                    query, collection=collection, top_k=top_k, **strategy_kwargs
+                )
+            elif strategy == SearchStrategy.AUTO:
+                # For now, default to hybrid. Could be enhanced with automatic strategy selection
+                results = self.retriever.search_hybrid(
+                    query, collection=collection, top_k=top_k, **strategy_kwargs
                 )
             else:
-                raise ValueError(
-                    f"Invalid search type: {search_type}. "
-                    f"Supported types: 'similar', 'hybrid', 'keyword'"
-                )
+                raise ValueError(f"Invalid search strategy: {strategy}")
 
-            # Step 2: Prepare response
-            self.logger.debug(f"Step 2: Preparing response with {len(chunks)} chunks")
-            response = {
-                "question": question,
-                "search_type": search_type,
-                "retrieved_chunks": chunks,
-                "num_chunks": len(chunks),
+            execution_time = time.time() - start_time
+
+            # Prepare metadata
+            metadata = {
                 "chunk_sources": list(
-                    set(chunk.get("source_document", "") for chunk in chunks)
+                    set(result.get("source_document", "") for result in results)
                 ),
                 "chunk_types": list(
-                    set(chunk.get("chunk_type", "") for chunk in chunks)
+                    set(result.get("chunk_type", "") for result in results)
                 ),
             }
 
             # Add similarity scores if available
-            if chunks and "similarity_score" in chunks[0]:
-                response["avg_similarity"] = sum(
-                    chunk.get("similarity_score", 0) for chunk in chunks
-                ) / len(chunks)
-                response["max_similarity"] = max(
-                    chunk.get("similarity_score", 0) for chunk in chunks
+            if results and "similarity_score" in results[0]:
+                metadata["avg_similarity"] = sum(
+                    result.get("similarity_score", 0) for result in results
+                ) / len(results)
+                metadata["max_similarity"] = max(
+                    result.get("similarity_score", 0) for result in results
                 )
 
-            self.logger.info(f"Query completed: {len(chunks)} chunks retrieved")
-            return response
+            self.logger.info(
+                f"Search completed: {len(results)} results in {execution_time:.3f}s"
+            )
+
+            return SearchResult(
+                query=query,
+                strategy=strategy,
+                collection=collection,
+                results=results,
+                total_found=len(results),
+                execution_time=execution_time,
+                metadata=metadata,
+            )
 
         except Exception as e:
-            self.logger.error(f"Query failed: {str(e)}")
+            self.logger.error(f"Search failed: {str(e)}")
             raise
 
-    def search_similar(
-        self, query: str, top_k: int = 5, class_name: str = "Document"
-    ) -> List[Dict[str, Any]]:
-        """Search for similar documents using vector similarity.
-
-        Args:
-            query: Search query text
-            top_k: Number of results to return
-            class_name: Name of the Weaviate class for document storage
-
-        Returns:
-            List[Dict[str, Any]]: List of search results with metadata
-        """
-        return self.retriever.search_similar(query, top_k=top_k, class_name=class_name)
-
-    def search_hybrid(
-        self,
-        query: str,
-        alpha: float = 0.5,
-        top_k: int = 5,
-        class_name: str = "Document",
-    ) -> List[Dict[str, Any]]:
-        """Perform hybrid search combining vector and keyword search.
-
-        Args:
-            query: Search query text
-            alpha: Weight for vector search (0.0 = keyword only, 1.0 = vector only)
-            top_k: Number of results to return
-            class_name: Name of the Weaviate class for document storage
-
-        Returns:
-            List[Dict[str, Any]]: List of search results with metadata
-        """
-        return self.retriever.search_hybrid(
-            query, alpha=alpha, top_k=top_k, class_name=class_name
-        )
-
-    def search_keyword(
-        self,
-        query: str,
-        top_k: int = 5,
-        class_name: str = "Document",
-    ) -> List[Dict[str, Any]]:
-        """Perform keyword search.
-
-        Args:
-            query: Search query text
-            top_k: Number of results to return
-            filters: Optional filters to apply to the search
-
-        Returns:
-            List[Dict[str, Any]]: List of search results with metadata
-        """
-        return self.retriever.search_keyword(query, top_k=top_k, class_name=class_name)
-
-    def get_chunk(self, chunk_id: str, class_name: str) -> Optional[Dict[str, Any]]:
+    def get_chunk(self, chunk_id: str, collection: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific chunk by its ID.
 
         Args:
             chunk_id: Unique identifier of the chunk
-            class_name: Name of the Weaviate class for document storage
+            collection: Collection name
         Returns:
             Optional[Dict[str, Any]]: Chunk data if found, None otherwise
         """
-        return self.vector_store.get_chunk_by_id(chunk_id, class_name=class_name)
+        return self.vector_store.get_chunk_by_id(chunk_id, collection=collection)
 
-    def delete_chunk(self, chunk_id: str, class_name: str) -> bool:
+    def delete_chunk(self, chunk_id: str, collection: str) -> bool:
         """Delete a chunk by its ID.
 
         Args:
             chunk_id: Unique identifier of the chunk to delete
-            class_name: Name of the Weaviate class for document storage
+            collection: Collection name
         Returns:
             bool: True if deletion was successful, False otherwise
         """
-        return self.vector_store.delete_chunk(chunk_id, class_name=class_name)
+        return self.vector_store.delete_chunk(chunk_id, collection=collection)
 
-    def get_system_stats(self, class_name: str) -> Dict[str, Any]:
-        """Get comprehensive system statistics.
-
-        Args:
-            class_name: Name of the Weaviate class for document storage
+    def list_collections(self) -> List[str]:
+        """List all available collections.
 
         Returns:
-            Dict[str, Any]: System statistics including storage, retrieval, and configuration info
+            List[str]: List of collection names
+        """
+        return self.db_manager.list_collections()
+
+    def create_collection(self, name: str, force_recreate: bool = False) -> bool:
+        """Create a new collection.
+
+        Args:
+            name: Collection name
+            force_recreate: Whether to recreate if collection exists
+
+        Returns:
+            bool: True if creation was successful, False otherwise
+        """
+        try:
+            self.vector_store.create_schema(name, force_recreate=force_recreate)
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to create collection {name}: {e}")
+            return False
+
+    def delete_collection(self, name: str) -> bool:
+        """Delete a collection and all its data.
+
+        Args:
+            name: Collection name
+
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        try:
+            self.vector_store.clear_all(collection=name)
+            # Note: Weaviate doesn't have direct collection deletion
+            # This clears all data, effectively "deleting" the collection
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to delete collection {name}: {e}")
+            return False
+
+    def clear_collection(self, collection: str) -> None:
+        """Clear all data from a collection.
+
+        Args:
+            collection: Collection name
+
+        Raises:
+            RuntimeError: If system not initialized
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        try:
+            self.logger.warning(f"Clearing all data from collection: {collection}")
+            self.vector_store.clear_all(collection=collection)
+            self.logger.info(f"Collection {collection} cleared successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to clear collection {collection}: {str(e)}")
+            raise
+
+    def get_collection_stats(self, collection: str) -> Dict[str, Any]:
+        """Get statistics for a specific collection.
+
+        Args:
+            collection: Collection name
+
+        Returns:
+            Dict[str, Any]: Collection statistics
         """
         try:
             # Get vector store stats
-            vector_stats = self.vector_store.get_stats(class_name=class_name)
+            vector_stats = self.vector_store.get_stats(collection=collection)
 
             # Get retrieval stats
-            retrieval_stats = self.retriever.get_retrieval_stats(class_name=class_name)
+            retrieval_stats = self.retriever.get_retrieval_stats(collection=collection)
 
             # Get embedding engine info
             embedding_info = (
@@ -413,6 +463,7 @@ class KnowledgeBaseManager:
             )
 
             return {
+                "collection": collection,
                 "system_initialized": self.is_initialized,
                 "database_manager": {
                     "url": self.db_manager.url,
@@ -434,27 +485,7 @@ class KnowledgeBaseManager:
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to get system stats: {str(e)}")
-            raise
-
-    def clear_database(self, class_name: str) -> None:
-        """Clear all data from the vector database.
-
-        Args:
-            class_name: Name of the Weaviate class for document storage
-
-        Raises:
-            RuntimeError: If system not initialized
-        """
-        if not self.is_initialized:
-            raise RuntimeError("Knowledge base manager not initialized")
-
-        try:
-            self.logger.warning("Clearing all data from vector database")
-            self.vector_store.clear_all(class_name=class_name)
-            self.logger.info("Database cleared successfully")
-        except Exception as e:
-            self.logger.error(f"Failed to clear database: {str(e)}")
+            self.logger.error(f"Failed to get collection stats: {str(e)}")
             raise
 
     def close(self) -> None:
@@ -541,7 +572,7 @@ class KnowledgeBaseManager:
         self,
         email_provider: EmailProvider,
         email_ids: List[str],
-        class_name: str = "Email",
+        collection: str = "Email",
     ) -> List[str]:
         """Process and store specific emails by their IDs.
 
@@ -551,7 +582,7 @@ class KnowledgeBaseManager:
         Args:
             email_provider: Email provider instance
             email_ids: List of email IDs to process (required)
-            class_name: Vector store collection name
+            collection: Collection name to store the emails
 
         Returns:
             List of stored chunk IDs
@@ -586,7 +617,7 @@ class KnowledgeBaseManager:
 
             # Store chunks
             self.logger.info(f"Storing {len(chunks)} chunks")
-            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+            stored_uuids = self.vector_store.store_chunks(chunks, collection=collection)
 
             self.logger.info(f"Successfully processed {len(emails)} emails")
             return stored_uuids
@@ -600,7 +631,7 @@ class KnowledgeBaseManager:
         email_provider: EmailProvider,
         folder: Optional[str] = None,
         unread_only: bool = False,
-        class_name: str = "Email",
+        collection: str = "Email",
     ) -> List[str]:
         """Process emails from an email account.
 
@@ -608,7 +639,7 @@ class KnowledgeBaseManager:
             email_provider: Email provider instance
             folder: Optional folder to process (None = all folders)
             unread_only: If True, only process unread emails
-            class_name: Vector store collection name
+            collection: Collection name to store the emails
 
         Returns:
             List of stored chunk IDs
@@ -635,7 +666,7 @@ class KnowledgeBaseManager:
 
             # Store chunks
             self.logger.info(f"Storing {len(chunks)} chunks")
-            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+            stored_uuids = self.vector_store.store_chunks(chunks, collection=collection)
 
             self.logger.info(f"Successfully processed {len(emails)} emails")
             return stored_uuids
@@ -648,14 +679,14 @@ class KnowledgeBaseManager:
         self,
         email_provider: EmailProvider,
         email_ids: List[str],
-        class_name: str = "Email",
+        collection: str = "Email",
     ) -> List[str]:
         """Process specific emails by their IDs.
 
         Args:
             email_provider: Email provider instance
             email_ids: List of email IDs to process
-            class_name: Vector store collection name
+            collection: Collection name to store the emails
 
         Returns:
             List of stored chunk IDs
@@ -684,7 +715,7 @@ class KnowledgeBaseManager:
 
             # Store chunks
             self.logger.info(f"Storing {len(chunks)} chunks")
-            stored_uuids = self.vector_store.store_chunks(chunks, class_name=class_name)
+            stored_uuids = self.vector_store.store_chunks(chunks, collection=collection)
 
             self.logger.info(f"Successfully processed {len(emails)} emails")
             return stored_uuids
@@ -692,43 +723,6 @@ class KnowledgeBaseManager:
         except Exception as e:
             self.logger.error(f"Failed to process emails: {str(e)}")
             raise
-
-    def search_emails(
-        self,
-        query: str,
-        search_type: str = "similar",
-        top_k: int = 5,
-        class_name: str = "Email",
-    ) -> List[Dict[str, Any]]:
-        """Search emails in the knowledge base.
-
-        Args:
-            query: Search query text
-            search_type: Type of search ("similar", "hybrid", "keyword")
-            top_k: Number of results to return
-            class_name: Vector store collection name
-
-        Returns:
-            List of search results with metadata
-        """
-        if not self.is_initialized:
-            raise RuntimeError("Knowledge base manager not initialized")
-
-        # Use existing retriever methods with class_name
-        if search_type == "similar":
-            return self.retriever.search_similar(
-                query, top_k=top_k, class_name=class_name
-            )
-        elif search_type == "hybrid":
-            return self.retriever.search_hybrid(
-                query, top_k=top_k, class_name=class_name
-            )
-        elif search_type == "keyword":
-            return self.retriever.search_keyword(
-                query, top_k=top_k, class_name=class_name
-            )
-        else:
-            raise ValueError(f"Invalid search type: {search_type}")
 
     def __enter__(self):
         """Context manager entry."""

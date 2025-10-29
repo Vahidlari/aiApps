@@ -31,6 +31,8 @@ from ragora import (
     EmbeddingConfig,
     KnowledgeBaseManager,
     KnowledgeBaseManagerConfig,
+    SearchResult,
+    SearchStrategy,
 )
 
 # Set up logging
@@ -76,7 +78,7 @@ def main():
 
         # Create schema
         logger.info("📊 Creating vector store schema...")
-        kbm.vector_store.create_schema(force_recreate=True, class_name=collection_name)
+        kbm.vector_store.create_schema(force_recreate=True, collection=collection_name)
 
         # Add comprehensive sample data using modern chunking approach
         logger.info("📝 Adding comprehensive sample data using modern chunking...")
@@ -373,7 +375,7 @@ def main():
         )
         # Store all chunks
         stored_uuids = kbm.vector_store.store_chunks(
-            sample_chunks, class_name=collection_name
+            sample_chunks, collection=collection_name
         )
         logger.info(f"✅ Stored {len(stored_uuids)} chunks")
 
@@ -383,7 +385,7 @@ def main():
         # 1. Vector similarity search
         logger.info("\n1️⃣ Vector Similarity Search:")
         similar_results = kbm.search_similar(
-            "computer science and quantum physics", top_k=3, class_name=collection_name
+            "computer science and quantum physics", top_k=3, collection=collection_name
         )
         for i, result in enumerate(similar_results, 1):
             logger.info(f"   {i}. Score: {result.get('similarity_score', 'N/A'):.3f}")
@@ -405,7 +407,7 @@ def main():
             "computer science and quantum physics",
             alpha=0.7,
             top_k=3,
-            class_name=collection_name,
+            collection=collection_name,
         )
         for i, result in enumerate(hybrid_results, 1):
             logger.info(f"   {i}. Score: {result.get('hybrid_score', 'N/A'):.3f}")
@@ -433,16 +435,19 @@ def main():
             logger.info(f"\n   Question: {question}")
             logger.info(f"   Search type: {search_type}")
 
-            response = kbm.query(
-                question, search_type=search_type, top_k=2, class_name=collection_name
+            response = kbm.search(
+                question,
+                strategy=SearchStrategy(search_type),
+                top_k=2,
+                collection=collection_name,
             )
 
-            for i, chunk in enumerate(response["retrieved_chunks"], 1):
+            for i, chunk in enumerate(response.results, 1):
                 logger.info(f"   {i}. {chunk['content'][:50]}...")
 
         # System statistics and monitoring
         logger.info("\n📊 System Statistics:")
-        stats = kbm.get_system_stats(class_name=collection_name)
+        stats = kbm.get_collection_stats(collection=collection_name)
 
         logger.info(f"   System initialized: {stats['system_initialized']}")
         logger.info(f"   Total objects: {stats['vector_store']['total_objects']}")
@@ -456,7 +461,7 @@ def main():
         # Direct access to specific chunk (using first chunk's ID)
         if sample_chunks:
             first_chunk_id = sample_chunks[0].chunk_id
-            chunk_data = kbm.get_chunk(first_chunk_id, class_name=collection_name)
+            chunk_data = kbm.get_chunk(first_chunk_id, collection=collection_name)
             if chunk_data:
                 logger.info(
                     f"   Retrieved specific chunk: {chunk_data['content'][:50]}..."
@@ -465,12 +470,12 @@ def main():
         # Test chunk deletion (using second chunk's ID if available)
         if len(sample_chunks) > 1:
             second_chunk_id = sample_chunks[1].chunk_id
-            deleted = kbm.delete_chunk(second_chunk_id, class_name=collection_name)
+            deleted = kbm.delete_chunk(second_chunk_id, collection=collection_name)
             if deleted:
                 logger.info(f"   Successfully deleted chunk {second_chunk_id}")
 
         # Updated statistics
-        updated_stats = kbm.get_system_stats(class_name=collection_name)
+        updated_stats = kbm.get_system_stats(collection=collection_name)
         logger.info(
             f"   Updated total objects: {updated_stats['vector_store']['total_objects']}"
         )

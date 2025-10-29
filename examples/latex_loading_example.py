@@ -34,6 +34,7 @@ from ragora import (
     EmbeddingConfig,
     KnowledgeBaseManager,
     KnowledgeBaseManagerConfig,
+    SearchStrategy,
 )
 
 # Configure logging with more detailed formatting
@@ -172,14 +173,23 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
         print("   " + "─" * 40)
 
         try:
-            # Execute the query
-            response = kbm.query(query_info["query"])
+            # Execute the search
+            response = kbm.search(query_info["query"], strategy=SearchStrategy.HYBRID)
 
             # Format the response nicely
             print("   📝 Answer:")
-            if isinstance(response, str):
+            print(f"   Strategy: {response.strategy.value}")
+            print(
+                f"   Found {response.total_found} chunks in {response.execution_time:.3f}s"
+            )
+
+            if response.results:
+                # Show the first result as the answer
+                first_result = response.results[0]
+                content = first_result.get("content", "")
+
                 # Split long responses into readable chunks
-                words = response.split()
+                words = content.split()
                 lines = []
                 current_line = ""
 
@@ -196,8 +206,12 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
 
                 for line in lines:
                     print(f"      {line}")
+
+                # Show source information
+                if first_result.get("source_document"):
+                    print(f"   📄 Source: {first_result['source_document']}")
             else:
-                print(f"      {response}")
+                print("      No relevant results found.")
 
         except Exception as e:
             print(f"   ❌ Error executing query: {e}")

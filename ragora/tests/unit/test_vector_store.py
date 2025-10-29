@@ -40,7 +40,7 @@ class TestVectorStoreRefactored:
         """Create a VectorStore instance with mocked dependencies."""
         return VectorStore(
             db_manager=mock_db_manager,
-            class_name="TestDocument",
+            collection="TestDocument",
             embedding_engine=mock_embedding_engine,
         )
 
@@ -83,12 +83,12 @@ class TestVectorStoreRefactored:
         """Test successful initialization of VectorStore."""
         vector_store = VectorStore(
             db_manager=mock_db_manager,
-            class_name="TestDocument",
+            collection="TestDocument",
             embedding_engine=mock_embedding_engine,
         )
 
         assert vector_store.db_manager == mock_db_manager
-        assert vector_store.class_name == "TestDocument"
+        assert vector_store.collection == "TestDocument"
         assert vector_store.embedding_engine == mock_embedding_engine
 
     def test_init_with_default_embedding_engine(self, mock_db_manager):
@@ -99,7 +99,7 @@ class TestVectorStoreRefactored:
 
             vector_store = VectorStore(
                 db_manager=mock_db_manager,
-                class_name="TestDocument",
+                collection="TestDocument",
             )
 
             assert vector_store.embedding_engine == mock_engine
@@ -501,7 +501,7 @@ class TestVectorStoreRefactored:
         result = vector_store.get_stats("TestDocument")
 
         assert result["total_objects"] == 100
-        assert result["class_name"] == "TestDocument"
+        assert result["collection"] == mock_collection
         assert result["is_connected"] is True
         assert result["db_manager_url"] == "http://localhost:8080"
 
@@ -540,10 +540,10 @@ class TestVectorStoreRefactored:
         """Test VectorStore as context manager."""
         with VectorStore(
             db_manager=mock_db_manager,
-            class_name="TestDocument",
+            collection="TestDocument",
             embedding_engine=mock_embedding_engine,
         ) as vector_store:
-            assert vector_store.class_name == "TestDocument"
+            assert vector_store.collection == "TestDocument"
 
         # close should be called when exiting context
         mock_db_manager.close.assert_called_once()

@@ -112,7 +112,7 @@ from ragora import KnowledgeBaseManager
 # Initialize the knowledge base manager
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    class_name="Documents",
+    collection="Documents",
     embedding_model="all-mpnet-base-v2",
     chunk_size=768,
     chunk_overlap=100
@@ -127,15 +127,17 @@ chunk_ids = kbm.process_documents(document_paths)
 print(f"Processed {len(chunk_ids)} chunks")
 
 # Query the knowledge base
-results = kbm.query(
+from ragora import SearchStrategy
+
+results = kbm.search(
     "What is quantum entanglement?",
-    search_type="hybrid",
+    strategy=SearchStrategy.HYBRID,
     top_k=5
 )
 
 # Display results
-for i, result in enumerate(results['chunks'], 1):
-    print(f"\n{i}. Score: {result['similarity_score']:.3f}")
+for i, result in enumerate(results.results, 1):
+    print(f"\n{i}. Score: {result.get('similarity_score', 0):.3f}")
     print(f"   Content: {result['content'][:200]}...")
 ```
 
@@ -180,7 +182,7 @@ db_manager = DatabaseManager(url="http://localhost:8080")
 # Create retriever
 retriever = Retriever(
     db_manager=db_manager,
-    class_name="Documents"
+    collection="Documents"
 )
 
 # Semantic search
@@ -271,9 +273,9 @@ kbm = KnowledgeBaseManager(
 
 ```python
 # Configure search types
-results = kbm.query(
+results = kbm.search(
     "your query here",
-    search_type="hybrid",  # Options: "similar", "keyword", "hybrid"
+    strategy=SearchStrategy.HYBRID,  # Options: SearchStrategy.SIMILAR, SearchStrategy.KEYWORD, SearchStrategy.HYBRID
     top_k=10,              # Number of results
     alpha=0.7              # Hybrid search weight (0.0-1.0)
 )
@@ -289,7 +291,7 @@ from ragora import KnowledgeBaseManager
 # Initialize
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    class_name="AcademicPapers"
+    collection="AcademicPapers"
 )
 
 # Process LaTeX documents
@@ -300,9 +302,9 @@ papers = [
 kbm.process_documents(papers)
 
 # Query with technical terms
-results = kbm.query(
+results = kbm.search(
     "What is the Heisenberg uncertainty principle?",
-    search_type="hybrid",
+    strategy=SearchStrategy.HYBRID,
     top_k=5
 )
 ```
@@ -316,7 +318,7 @@ from ragora import KnowledgeBaseManager
 # Initialize
 kbm = KnowledgeBaseManager(
     weaviate_url="http://localhost:8080",
-    class_name="Documentation"
+    collection="Documentation"
 )
 
 # Process all documents in a directory
@@ -370,9 +372,9 @@ embedder = EmbeddingEngine(
 **Issue: "Poor search results"**
 ```python
 # Try hybrid search with different alpha values
-results = kbm.query(
+results = kbm.search(
     "your query",
-    search_type="hybrid",
+    strategy=SearchStrategy.HYBRID,
     alpha=0.7  # Try values between 0.5-0.8
 )
 
