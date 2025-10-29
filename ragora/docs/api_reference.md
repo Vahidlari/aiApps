@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides an overview of the Ragora API. Detailed API documentation will be generated automatically from code docstrings using Sphinx by the next release of the package.
+This document provides an overview of the Ragora APIs. Detailed API documentation will be generated automatically from code docstrings using Sphinx by the next releases of the package.
 
 
 ## 🎯 Quick API Overview
@@ -15,22 +15,60 @@ Main entry point for retrieval operations.
 from ragora import KnowledgeBaseManager
 
 kbm = KnowledgeBaseManager(
-    weaviate_url: str,
-    class_name: str,
-    embedding_model: str = "all-mpnet-base-v2",
-    chunk_size: int = 768,
-    chunk_overlap: int = 100
+    config: Optional[KnowledgeBaseManagerConfig] = None,
+    weaviate_url: str = "http://localhost:8080"
 )
 ```
 
-**Key Methods:**
-- `process_documents(file_paths: List[str]) -> List[str]` - Process documents
-- `query(query: str, search_type: str, top_k: int) -> Dict` - Query knowledge base
-- `get_system_stats() -> Dict` - Get system statistics
-- `check_new_emails(email_provider, folder=None, include_body=True, limit=50) -> Dict` - Check for new emails
-- `process_new_emails(email_provider, email_ids, class_name="Email") -> List[str]` - Process specific emails
-- `process_email_account(email_provider, folder=None, unread_only=False, class_name="Email") -> List[str]` - Bulk email processing
-- `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, **kwargs) -> SearchResult` - Unified search interface
+Arguments
+
+- **config**: Optional `KnowledgeBaseManagerConfig` that customizes the underlying components. When provided, it is used to instantiate and configure:
+  - Embedding engine (model, device, max length)
+  - Chunking strategy (chunk size, overlap, type)
+  - Database manager (URL, timeouts, retries)
+  If omitted, sensible defaults are used.
+- **weaviate_url**: Base URL for the Weaviate instance. Used when `config.database_manager_config` is not specified.
+
+About KnowledgeBaseManagerConfig
+
+`KnowledgeBaseManagerConfig` lets you declaratively configure the system. Its fields are optional; supply only what you want to override.
+
+- `chunk_config: ChunkConfig`
+  - `chunk_size` (int, default 768): Target characters per chunk
+  - `overlap_size` (int, default 100): Characters of overlap between chunks
+  - `chunk_type` (str, default "document"): Default strategy kind
+  Effect: Creates a `DocumentChunkingStrategy` with your sizes and wires it into `DataChunker` used by preprocessors.
+
+- `embedding_config: EmbeddingConfig`
+  - `model_name` (str, default "all-mpnet-base-v2"): Sentence-transformers model
+  - `device` (Optional[str], default None): e.g., "cuda", "cpu"; auto if None
+  - `max_length` (int, default 512): Truncation length for inputs
+  Effect: Initializes `EmbeddingEngine` accordingly and passes it to `VectorStore` and `Retriever`.
+
+- `database_manager_config: DatabaseManagerConfig`
+  - `url` (str, default "http://localhost:8080"): Weaviate URL
+  - `grpc_port` (int, default 50051)
+  - `timeout` (int, default 30)
+  - `retry_attempts` (int, default 3)
+  Effect: Configures `DatabaseManager` connectivity used by `VectorStore` and `Retriever`.
+
+Key Methods (brief)
+
+- `process_document(document_path, document_type="latex", collection="Document") -> List[str]`
+  Parses, chunks, embeds, and stores a single document. Returns stored chunk IDs.
+- `process_documents(document_paths, document_type="latex", collection="Document") -> List[str]`
+  Batch variant for multiple documents; returns all stored chunk IDs.
+- `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, **kwargs) -> SearchResult`
+  Unified retrieval with SIMILAR (vector), KEYWORD (BM25), or HYBRID strategies. Returns rich `SearchResult` with timing and totals.
+- `get_collection_stats(collection: str) -> Dict`
+  Aggregated statistics for the specified collection (e.g., counts, schema info).
+- `check_new_emails(email_provider, folder=None, include_body=True, limit=50) -> Dict`
+  Lists new emails from the provider with optional body retrieval; does not store.
+- `process_new_emails(email_provider, email_ids, collection="Email") -> List[str]`
+  Fetches specified emails, chunks, embeds, and stores them; returns chunk IDs.
+- `process_email_account(email_provider, folder=None, unread_only=False, collection="Email") -> List[str]`
+  Scans a mailbox (optionally unread only) and stores processed email chunks.
+
 
 #### `ragora.core.DatabaseManager`
 
@@ -57,7 +95,8 @@ from ragora.core import VectorStore
 
 vector_store = VectorStore(
     db_manager: DatabaseManager,
-    class_name: str
+    embedding_engine: Optional[EmbeddingEngine] = None,
+    collection: str = "Document"
 )
 ```
 
@@ -139,7 +178,7 @@ context = (ChunkingContextBuilder()
 chunks = chunker.chunk(document_text, context)
 
 # Store chunks - custom metadata will be automatically handled
-vector_store.store_chunks(chunks, "Documents")
+vector_store.store_chunks(chunks, "Document")
 ```
 
 **Email Example:**
@@ -165,7 +204,7 @@ context = (ChunkingContextBuilder()
     .build())
 
 chunks = chunker.chunk(email_body, context)
-vector_store.store_chunks(chunks, "Emails")
+vector_store.store_chunks(chunks, "Email")
 ```
 
 #### `ragora.core.Retriever`
@@ -177,15 +216,15 @@ from ragora.core import Retriever
 
 retriever = Retriever(
     db_manager: DatabaseManager,
-    class_name: str
+    embedding_engine: Optional[EmbeddingEngine] = None
 )
 ```
 
 **Key Methods:**
-- `search_similar(query: str, top_k: int) -> List[Dict]` - Semantic search
-- `search_keyword(query: str, top_k: int) -> List[Dict]` - Keyword search
-- `search_hybrid(query: str, alpha: float, top_k: int) -> List[Dict]` - Hybrid search
-- `search_with_filter(query: str, filters: Dict, top_k: int) -> List[Dict]` - Filtered search
+- `search_similar(query: str, collection: str, top_k: int) -> List[Dict]` - Semantic search
+- `search_keyword(query: str, collection: str, top_k: int) -> List[Dict]` - Keyword search
+- `search_hybrid(query: str, collection: str, alpha: float, top_k: int) -> List[Dict]` - Hybrid search
+- `search_with_filter(query: str, collection: str, filters: Dict, top_k: int) -> List[Dict]` - Filtered search
 
 #### `ragora.core.DocumentPreprocessor`
 
@@ -309,13 +348,12 @@ from ragora import KnowledgeBaseManager
 
 # Initialize
 kbm = KnowledgeBaseManager(
-    weaviate_url="http://localhost:8080",
-    class_name="Documents"
+    weaviate_url="http://localhost:8080"
 )
 
 # Process and query
-kbm.process_documents(["document.tex"])
-results = kbm.query("What is quantum mechanics?", search_type="hybrid")
+kbm.process_documents(["document.tex"])  # stores into collection "Document" by default
+results = kbm.search("What is quantum mechanics?", collection="Document", strategy=SearchStrategy.HYBRID, top_k=5)
 ```
 
 ### Example 2: Email Knowledge Base
@@ -359,13 +397,13 @@ from ragora.core import (
 
 # Setup components
 db = DatabaseManager("http://localhost:8080")
-store = VectorStore(db, "MyDocs")
-retriever = Retriever(db, "MyDocs")
-embedder = EmbeddingEngine("all-mpnet-base-v2")
+store = VectorStore(db, collection="MyDocs")
+embedder = EmbeddingEngine(model_name="all-mpnet-base-v2")
+retriever = Retriever(db, embedding_engine=embedder)
 email_preprocessor = EmailPreprocessor()
 
 # Use components
-results = retriever.search_similar("query", top_k=5)
+results = retriever.search_similar("query", collection="MyDocs", top_k=5)
 ```
 
 ## 🔍 Data Models
