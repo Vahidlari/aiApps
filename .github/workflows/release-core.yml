@@ -250,13 +250,16 @@ jobs:
           # Set CI_BRANCH as additional fallback (BRANCH is already exported above)
           export CI_BRANCH="$BRANCH"
 
+          # Define version regex pattern for consistency
+          VERSION_REGEX='[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?'
+
           if [ "${{ needs.validate-inputs.outputs.is_dry_run }}" = "true" ]; then
             echo "🧪 Running semantic-release in DRY RUN mode"
             echo "Current branch: ${{ inputs.branch }}"
             npx semantic-release --dry-run 2>&1 | tee semantic-release-output.txt
             
             # Extract the next version from dry-run output
-            NEXT_VERSION=$(grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt || echo "")
+            NEXT_VERSION=$(grep -oP "The next release version is \K$VERSION_REGEX" semantic-release-output.txt || echo "")
             
             # Extract changelog from dry-run output
             CHANGELOG=$(grep -A 1000 "## \[.*\]" semantic-release-output.txt | head -n -1 || echo "")
@@ -286,7 +289,7 @@ jobs:
             npx semantic-release 2>&1 | tee semantic-release-output.txt
             
             # Extract the published version from output
-            NEXT_VERSION=$(grep -oP '(?:Published release|Created tag v?|The next release version is )\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt | head -1 || echo "")
+            NEXT_VERSION=$(grep -oP "(?:Published release|Created tag v?|The next release version is )\K$VERSION_REGEX" semantic-release-output.txt | head -1 || echo "")
             
             # Extract changelog from the generated CHANGELOG.md
             if [ -f "CHANGELOG.md" ]; then
