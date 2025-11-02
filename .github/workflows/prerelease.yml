@@ -32,13 +32,13 @@ jobs:
         id: validate
         run: |
           BRANCH="${{ inputs.branch }}"
-          if [[ "$BRANCH" =~ ^release/[1-9][0-9]*\.[0-9]+(\.[0-9]+)?$ ]]; then
+          if [[ "$BRANCH" =~ ^release/[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
             echo "✅ Branch $BRANCH matches release/x.y or release/x.y.x pattern"
             echo "is_valid=true" >> $GITHUB_OUTPUT
           else
             echo "❌ Error: Branch $BRANCH does not match required pattern"
-            echo "Branch must match: release/x.y or release/x.y.x (where x >= 1, y >= 0 are numbers)"
-            echo "Examples: release/3.0 or release/3.0.1"
+            echo "Branch must match: release/x.y or release/x.y.x (where x, y, z >= 0 are numbers)"
+            echo "Examples: release/0.1, release/1.0, or release/3.0.1"
             echo "is_valid=false" >> $GITHUB_OUTPUT
             exit 1
           fi
