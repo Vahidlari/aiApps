@@ -1,0 +1,98 @@
+name: Prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to release from (should be a release/x.y or release/x.y.x branch for RC releases)"
+        required: false
+        type: string
+        default: main
+      dry_run:
+        description: "Dry run mode - test workflow without publishing"
+        required: false
+        type: boolean
+        default: false
+      pypi_target:
+        description: "PyPI publishing target (only applies when dry-run is disabled)"
+        required: false
+        type: choice
+        options:
+          - production
+          - test
+        default: production
+
+jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      is_valid: ${{ steps.validate.outputs.is_valid }}
+    steps:
+      - name: Validate branch pattern
+        id: validate
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          if [[ "$BRANCH" =~ ^release/[1-9][0-9]*\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "✅ Branch $BRANCH matches release/x.y or release/x.y.x pattern"
+            echo "is_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Branch $BRANCH does not match required pattern"
+            echo "Branch must match: release/x.y or release/x.y.x (where x >= 1, y >= 0 are numbers)"
+            echo "Examples: release/3.0 or release/3.0.1"
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  prerelease:
+    needs: validate-branch
+    if: needs.validate-branch.outputs.is_valid == 'true'
+    permissions:
+      contents: write
+      packages: write
+      issues: read
+      pull-requests: read
+    uses: ./.github/workflows/release-core.yml
+    secrets:
+      PERSONAL_GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+    with:
+      release_type: prerelease
+      branch: ${{ inputs.branch }}
+      prerelease_mode: ${{ inputs.dry_run && 'dry-run' || 'rc' }}
+      publish_to_pypi: ${{ inputs.dry_run == false }}
+      use_test_pypi: ${{ inputs.dry_run == false && inputs.pypi_target == 'test' }}
+
+  summary:
+    needs: prerelease
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Prerelease Summary
+        run: |
+          echo "🎯 **PRERELEASE SUMMARY**"
+          echo "========================"
+          echo ""
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "PyPI Target: ${{ inputs.pypi_target }}"
+          echo "Published: ${{ needs.prerelease.outputs.published }}"
+          echo ""
+
+          if [ "${{ needs.prerelease.outputs.published }}" = "true" ]; then
+            echo "✅ Version: ${{ needs.prerelease.outputs.version }}"
+            echo ""
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "🧪 This was a dry-run test. No actual release was created."
+              echo "The workflow was tested successfully without any side effects."
+            elif [ "${{ inputs.pypi_target }}" = "test" ]; then
+              echo "🧪 Package published to Test PyPI"
+              echo "📦 Install with: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple ragora==${{ needs.prerelease.outputs.version }}"
+            else
+              echo "🚀 Package published to Production PyPI"
+              echo "📦 Install with: pip install ragora==${{ needs.prerelease.outputs.version }}"
+            fi
+          else
+            echo "❌ No release was published"
+            echo "This usually means no release-worthy commits were found."
+          fi

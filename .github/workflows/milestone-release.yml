@@ -1,736 +1,117 @@
 name: Milestone-Driven Release
 
 on:
-    milestone:
-        types: [closed]
-    workflow_dispatch:
-        inputs:
-            branch:
-                description: "Branch to release from (default: main). Find branches in the repository branches page."
-                required: false
-                type: string
-                default: main
-            milestone_title:
-                description: "Milestone name (leave empty for latest closed). Find milestones at: Issues → Milestones"
-                required: false
-                type: string
-            dry_run:
-                description: "Dry run mode - test without publishing (creates draft release)"
-                required: false
-                type: boolean
-                default: false
-            use_test_pypi:
-                description: "Publish to test.pypi.org instead of PyPI (only applies if dry-run is disabled)"
-                required: false
-                type: boolean
-                default: false
-
-env:
-    PYTHON_VERSION: "3.11"
-    NODE_VERSION: "18"
+  milestone:
+    types: [closed]
 
 jobs:
-    check-milestone:
-        runs-on: ubuntu-latest
-        outputs:
-            milestone_title: ${{ steps.get_milestone.outputs.title }}
-            milestone_number: ${{ steps.get_milestone.outputs.number }}
-            has_release_commits: ${{ steps.check_commits.outputs.has_release_commits }}
-            last_tag: ${{ steps.get_last_tag.outputs.tag }}
-            dry_run: ${{ github.event.inputs.dry_run == 'true' }}
-            use_test_pypi: ${{ github.event.inputs.use_test_pypi == 'true' }}
-            release_branch: ${{ steps.determine_branch.outputs.branch }}
-        steps:
-            - name: Determine release branch
-              id: determine_branch
-              run: |
-                  if [ "${{ github.event_name }}" = "milestone" ]; then
-                    BRANCH="${{ github.ref_name }}"
-                  else
-                    BRANCH="${{ github.event.inputs.branch || 'main' }}"
-                  fi
-                  echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-                  echo "Release branch: $BRANCH"
-
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ steps.determine_branch.outputs.branch }}
-                  fetch-depth: 0
-                  token: ${{ secrets.PERSONAL_GH_TOKEN }}
-
-            - name: Get milestone information
-              id: get_milestone
-              env:
-                  GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
-              run: |
-                  if [ "${{ github.event_name }}" = "milestone" ]; then
-                    MILESTONE_TITLE="${{ github.event.milestone.title }}"
-                    MILESTONE_NUMBER="${{ github.event.milestone.number }}"
-                  else
-                    # For workflow_dispatch, use input or get the latest closed milestone
-                    MILESTONE_TITLE="${{ github.event.inputs.milestone_title }}"
-                    if [ -z "$MILESTONE_TITLE" ]; then
-                      MILESTONE_TITLE=$(gh api repos/${{ github.repository }}/milestones --jq '.[0].title' --paginate)
-                      MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones --jq '.[0].number' --paginate)
-                    else
-                      MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones --jq '.[] | select(.title == "'$MILESTONE_TITLE'") | .number')
-                    fi
-                  fi
-
-                  echo "title=$MILESTONE_TITLE" >> $GITHUB_OUTPUT
-                  echo "number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
-                  echo "Milestone: $MILESTONE_TITLE (#$MILESTONE_NUMBER)"
-
-            - name: Get last tag
-              id: get_last_tag
-              run: |
-                  BRANCH="${{ steps.determine_branch.outputs.branch }}"
-                  # Try to get the last tag from the current branch
-                  LAST_TAG=$(git describe --tags --abbrev=0 "$BRANCH" 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-                  echo "tag=$LAST_TAG" >> $GITHUB_OUTPUT
-                  echo "Last tag: $LAST_TAG (from branch: $BRANCH)"
-
-            - name: Check for release-worthy commits
-              id: check_commits
-              run: |
-                  BRANCH="${{ steps.determine_branch.outputs.branch }}"
-                  if bash tools/release-scripts/check-release-commits.sh "${{ steps.get_last_tag.outputs.tag }}" "$BRANCH"; then
-                    echo "has_release_commits=true" >> $GITHUB_OUTPUT
-                  else
-                    echo "has_release_commits=false" >> $GITHUB_OUTPUT
-                  fi
-
-    release:
-        needs: check-milestone
-        if: needs.check-milestone.outputs.has_release_commits == 'true'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-            packages: write
-            issues: read
-            pull-requests: read
-        outputs:
-            version: ${{ steps.determine_version.outputs.version }}
-            published: ${{ steps.determine_version.outputs.version != '' }}
-            changelog: ${{ steps.extract_changelog.outputs.changelog }}
-        steps:
-            - name: Log dry run mode
-              if: needs.check-milestone.outputs.dry_run == 'true'
-              run: |
-                  echo "🧪 **DRY RUN MODE ENABLED**"
-                  echo "This workflow will:"
-                  echo "  ✅ Create a draft GitHub release"
-                  echo "  ✅ Build Python packages"
-                  echo "  ✅ Create database server archives"
-                  echo "  ❌ SKIP PyPI publishing"
-                  echo "  ❌ SKIP git tags and commits"
-                  echo ""
-                  echo "This allows you to test the release workflow without publishing to PyPI."
-
-            - name: Log test PyPI mode
-              if: needs.check-milestone.outputs.dry_run == 'false' && needs.check-milestone.outputs.use_test_pypi == 'true'
-              run: |
-                  echo "🧪 **TEST PYPI MODE ENABLED**"
-                  echo "This workflow will:"
-                  echo "  ✅ Create a GitHub release"
-                  echo "  ✅ Build Python packages"
-                  echo "  ✅ Create database server archives"
-                  echo "  ✅ Publish to test.pypi.org (NOT production PyPI)"
-                  echo "  ✅ Create git tags and commits"
-                  echo ""
-                  echo "Package will be available at: https://test.pypi.org/project/ragora/"
-
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ needs.check-milestone.outputs.release_branch }}
-                  fetch-depth: 0
-                  token: ${{ secrets.PERSONAL_GH_TOKEN }}
-
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-
-            - name: Install semantic-release dependencies
-              run: npm install
-
-            - name: Install Python dependencies
-              working-directory: ./ragora
-              run: |
-                  python -m pip install --upgrade pip
-                  pip install build twine setuptools_scm[toml]
-
-            - name: Run semantic-release
-              id: semantic_release
-              run: |
-                  if [ "${{ needs.check-milestone.outputs.dry_run }}" = "true" ]; then
-                    echo "🧪 Running semantic-release in DRY RUN mode"
-                    # Capture dry-run output to extract version and changelog
-                    npx semantic-release --dry-run 2>&1 | tee semantic-release-output.txt
-                    SEMANTIC_RELEASE_EXIT_CODE=${PIPESTATUS[0]}
-                    
-                    # Check if semantic-release failed with an error (not just "no release needed")
-                    if [ $SEMANTIC_RELEASE_EXIT_CODE -ne 0 ]; then
-                      echo "❌ Semantic-release failed with exit code $SEMANTIC_RELEASE_EXIT_CODE"
-                      echo "Check the output above for error details."
-                      echo "Common issues:"
-                      echo "  - Invalid branch configuration"
-                      echo "  - Missing or invalid commit messages"
-                      echo "  - Plugin configuration errors"
-                      exit 1
-                    fi
-                    
-                    # Extract the next version from dry-run output
-                    NEXT_VERSION=$(grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt || echo "")
-                    
-                    # Extract changelog from dry-run output
-                    # Look for the changelog section in the output
-                    CHANGELOG=$(awk '/^## \[/{flag=1; next} /^## \[/ && flag{exit} flag' semantic-release-output.txt || echo "")
-                    
-                    if [ -n "$NEXT_VERSION" ]; then
-                      echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-                      echo "new_release_published=true" >> $GITHUB_OUTPUT
-                      echo "new_release_notes<<EOF" >> $GITHUB_OUTPUT
-                      echo "$CHANGELOG" >> $GITHUB_OUTPUT
-                      echo "EOF" >> $GITHUB_OUTPUT
-                      echo "Detected version: $NEXT_VERSION"
-                    else
-                      echo "No version detected from dry-run"
-                      echo "new_release_published=false" >> $GITHUB_OUTPUT
-                    fi
-                  else
-                    echo "🚀 Running semantic-release in PRODUCTION mode"
-                    # Capture output to extract version and changelog
-                    npx semantic-release 2>&1 | tee semantic-release-output.txt
-                    SEMANTIC_RELEASE_EXIT_CODE=${PIPESTATUS[0]}
-                    
-                    # Check if semantic-release failed with an error (not just "no release needed")
-                    if [ $SEMANTIC_RELEASE_EXIT_CODE -ne 0 ]; then
-                      echo "❌ Semantic-release failed with exit code $SEMANTIC_RELEASE_EXIT_CODE"
-                      echo "Check the output above for error details."
-                      echo "Common issues:"
-                      echo "  - Invalid branch configuration"
-                      echo "  - Missing or invalid commit messages"
-                      echo "  - Plugin configuration errors"
-                      exit 1
-                    fi
-                    
-                    # Extract the published version from output
-                    # Look for patterns like "Published release X.Y.Z" or "Created tag vX.Y.Z"
-                    NEXT_VERSION=$(grep -oP '(?:Published release|Created tag v?|The next release version is )\K[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' semantic-release-output.txt | head -1 || echo "")
-                    
-                    # Extract changelog from the generated CHANGELOG.md
-                    if [ -f "CHANGELOG.md" ]; then
-                      # Get the latest changelog entry - try multiple patterns
-                      CHANGELOG=""
-                      for pattern in "^## \\[" "^## v" "^## [0-9]"; do
-                        CHANGELOG=$(awk "/$pattern/{flag=1; next} /^## / && flag{exit} flag" CHANGELOG.md || echo "")
-                        if [ -n "$CHANGELOG" ]; then
-                          echo "Found changelog with pattern: $pattern"
-                          break
-                        fi
-                      done
-                      
-                      if [ -z "$CHANGELOG" ]; then
-                        echo "⚠️ Warning: Could not extract changelog from CHANGELOG.md"
-                        echo "CHANGELOG.md content preview:"
-                        head -20 CHANGELOG.md || echo "File is empty or unreadable"
-                      fi
-                    else
-                      echo "⚠️ Warning: CHANGELOG.md not found after semantic-release"
-                    fi
-                    
-                    # Fallback: if version not found in output, check if a new tag was created
-                    if [ -z "$NEXT_VERSION" ]; then
-                      echo "Trying to detect version from git tags..."
-                      git fetch --tags
-                      LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-                      if [ -n "$LATEST_TAG" ]; then
-                        NEXT_VERSION="${LATEST_TAG#v}"
-                        echo "Found version from git tag: $NEXT_VERSION"
-                      fi
-                    fi
-                    
-                    if [ -n "$NEXT_VERSION" ]; then
-                      echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-                      echo "new_release_published=true" >> $GITHUB_OUTPUT
-                      echo "new_release_notes<<EOF" >> $GITHUB_OUTPUT
-                      echo "$CHANGELOG" >> $GITHUB_OUTPUT
-                      echo "EOF" >> $GITHUB_OUTPUT
-                      echo "Published version: $NEXT_VERSION"
-                    else
-                      echo "No version published by semantic-release"
-                      echo "new_release_published=false" >> $GITHUB_OUTPUT
-                    fi
-                  fi
-              env:
-                  GITHUB_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
-
-            - name: Extract changelog for current release
-              id: extract_changelog
-              run: |
-                  echo "🔍 Extracting changelog for release..."
-
-                  # Use semantic-release's built-in release notes from the previous step
-                  SEMANTIC_RELEASE_NOTES="${{ steps.semantic_release.outputs.new_release_notes }}"
-
-                  if [ -n "$SEMANTIC_RELEASE_NOTES" ]; then
-                    echo "✅ Using semantic-release generated changelog"
-                    echo "changelog<<EOF" >> $GITHUB_OUTPUT
-                    echo "$SEMANTIC_RELEASE_NOTES" >> $GITHUB_OUTPUT
-                    echo "EOF" >> $GITHUB_OUTPUT
-                    echo "Successfully extracted changelog from semantic-release output"
-                  else
-                    echo "⚠️ No changelog found in semantic-release output, attempting fallback..."
-                    
-                    # Fallback: Try to extract from CHANGELOG.md if semantic-release output is empty
-                    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                    if [ -n "$VERSION" ]; then
-                      echo "Attempting to extract from CHANGELOG.md for version $VERSION"
-                      
-                      # Fetch the latest commit that semantic-release just made
-                      git fetch origin ${{ needs.check-milestone.outputs.release_branch }}
-                      
-                      # Check if CHANGELOG.md exists
-                      if git show origin/${{ needs.check-milestone.outputs.release_branch }}:CHANGELOG.md > /dev/null 2>&1; then
-                        echo "CHANGELOG.md found, extracting version section..."
-                        git checkout origin/${{ needs.check-milestone.outputs.release_branch }} -- CHANGELOG.md
-                        
-                        # Try multiple version format patterns
-                        CHANGELOG=""
-                        for pattern in "## \\[$VERSION\\]" "## \\[v$VERSION\\]" "## $VERSION" "## v$VERSION"; do
-                          CHANGELOG=$(awk "/^$pattern/{flag=1; next} /^## \\[/ && flag{exit} flag" CHANGELOG.md || echo "")
-                          if [ -n "$CHANGELOG" ]; then
-                            echo "Found changelog with pattern: $pattern"
-                            break
-                          fi
-                        done
-                        
-                        if [ -n "$CHANGELOG" ]; then
-                          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-                          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-                          echo "EOF" >> $GITHUB_OUTPUT
-                          echo "✅ Successfully extracted changelog from CHANGELOG.md"
-                        else
-                          echo "❌ ERROR: Could not extract changelog for version $VERSION from CHANGELOG.md"
-                          echo "Available sections in CHANGELOG.md:"
-                          grep "^## " CHANGELOG.md | head -5 || echo "No sections found"
-                          echo "changelog=" >> $GITHUB_OUTPUT
-                          exit 1
-                        fi
-                      else
-                        echo "❌ ERROR: CHANGELOG.md not found in repository"
-                        echo "changelog=" >> $GITHUB_OUTPUT
-                        exit 1
-                      fi
-                    else
-                      echo "❌ ERROR: No version available for changelog extraction"
-                      echo "changelog=" >> $GITHUB_OUTPUT
-                      exit 1
-                    fi
-                  fi
-
-            - name: Verify tag creation (production mode)
-              if: needs.check-milestone.outputs.dry_run == 'false'
-              run: |
-                  echo "🔍 Verifying that semantic-release created a new git tag..."
-
-                  # Refresh tags from repository
-                  git fetch --tags --force
-
-                  # Get the latest tag
-                  LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-                  LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
-
-                  echo "Last tag before release: $LAST_TAG"
-                  echo "Latest tag after semantic-release: $LATEST_TAG"
-
-                  # Check if we have a tag at all
-                  if [ -z "$LATEST_TAG" ]; then
-                    echo "❌ ERROR: No git tags found in repository!"
-                    echo "Semantic-release may have failed to create a tag."
-                    exit 1
-                  fi
-
-                  # Check if the tag changed (new tag was created)
-                  if [ "$LATEST_TAG" = "$LAST_TAG" ]; then
-                    echo "❌ ERROR: No new tag was created!"
-                    echo "Expected: New tag different from $LAST_TAG"
-                    echo "Actual: Latest tag is still $LATEST_TAG"
-                    echo ""
-                    echo "This usually means:"
-                    echo "  1. Semantic-release failed to create the tag (check semantic-release output above)"
-                    echo "  2. GitHub prevented tag creation (possibly a deleted tag being recreated)"
-                    echo "  3. No commits warranted a new release"
-                    echo ""
-                    echo "Cannot proceed with building Python package using stale version."
-                    exit 1
-                  fi
-
-                  # Verify the new tag matches what semantic-release reported
-                  EXPECTED_VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                  if [ -n "$EXPECTED_VERSION" ]; then
-                    EXPECTED_TAG="v$EXPECTED_VERSION"
-                    if [ "$LATEST_TAG" != "$EXPECTED_TAG" ]; then
-                      echo "⚠️ WARNING: Tag mismatch!"
-                      echo "Semantic-release reported version: $EXPECTED_VERSION (tag: $EXPECTED_TAG)"
-                      echo "Latest git tag: $LATEST_TAG"
-                      echo "Proceeding with git tag version, but this may indicate an issue."
-                    fi
-                  fi
-
-                  echo "✅ Tag verification passed: New tag $LATEST_TAG was created successfully"
-
-            - name: Determine version for artifacts
-              id: determine_version
-              run: |
-                  # Use semantic-release version if available, otherwise fall back to last tag
-                  if [ -n "${{ steps.semantic_release.outputs.new_release_version }}" ]; then
-                    VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
-                    echo "Using version from semantic-release: $VERSION"
-                  else
-                    # Fall back to last tag (remove 'v' prefix if present)
-                    LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
-                    VERSION="${LAST_TAG#v}"
-                    echo "Semantic-release did not produce version, using last tag: $VERSION"
-                  fi
-                  echo "version=$VERSION" >> $GITHUB_OUTPUT
-                  echo "Final version for artifacts: $VERSION"
-
-            - name: Build Python package
-              working-directory: ./ragora
-              run: |
-                  bash ../tools/release-scripts/build-python-package.sh \
-                    "${{ steps.determine_version.outputs.version }}" \
-                    "${{ needs.check-milestone.outputs.dry_run }}"
-
-            - name: Upload Python artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: python-packages
-                  path: ragora/dist/*
-
-            - name: Create database server metadata
-              if: steps.determine_version.outputs.version != ''
-              run: |
-                  VERSION="${{ steps.determine_version.outputs.version }}"
-
-                  # Create version metadata files
-                  bash tools/release-scripts/create-version-metadata.sh \
-                    "$VERSION" \
-                    "${{ github.sha }}" \
-                    "${{ github.ref_name }}" \
-                    "${{ github.repository }}"
-
-                  # Update README with version
-                  bash tools/release-scripts/update-readme-version.sh \
-                    "$VERSION" \
-                    "${{ github.repository }}"
-
-            - name: Create database server archive
-              id: create_db_archive
-              if: steps.determine_version.outputs.version != ''
-              run: |
-                  VERSION="${{ steps.determine_version.outputs.version }}"
-
-                  # Create archives in artifacts folder
-                  ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh "$VERSION" "artifacts")
-
-                  # Extract archive filenames from output
-                  TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
-                  ZIP_ARCHIVE=$(echo "$ARCHIVES" | grep "\.zip$" | tail -1)
-
-                  echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
-                  echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
-
-            - name: Upload database server archives
-              if: steps.create_db_archive.outputs.tar_archive != '' && steps.create_db_archive.outputs.zip_archive != ''
-              uses: actions/upload-artifact@v4
-              with:
-                  name: database-server-archives
-                  path: |
-                      ${{ steps.create_db_archive.outputs.tar_archive }}
-                      ${{ steps.create_db_archive.outputs.zip_archive }}
-
-    publish-pypi:
-        needs: [check-milestone, release]
-        if: needs.release.outputs.published == 'true' && needs.check-milestone.outputs.dry_run == 'false'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
-        steps:
-            - name: Download Python artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: python-packages
-                  path: ./dist
-
-            - name: Publish to PyPI (production)
-              if: needs.check-milestone.outputs.use_test_pypi == 'false'
-              uses: pypa/gh-action-pypi-publish@release/v1
-              with:
-                  skip-existing: true
-                  password: ${{ secrets.PYPI_TOKEN }}
-
-            - name: Publish to Test PyPI
-              if: needs.check-milestone.outputs.use_test_pypi == 'true'
-              uses: pypa/gh-action-pypi-publish@release/v1
-              with:
-                  repository-url: https://test.pypi.org/legacy/
-                  skip-existing: true
-                  password: ${{ secrets.TEST_PYPI_TOKEN }}
-
-            - name: Log success
-              run: |
-                  if [ "${{ needs.check-milestone.outputs.use_test_pypi }}" = "true" ]; then
-                    echo "✅ Successfully published to Test PyPI"
-                    echo "📦 Package available at: https://test.pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
-                    echo ""
-                    echo "To install from Test PyPI:"
-                    echo "  pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple ragora"
-                  else
-                    echo "✅ Successfully published to PyPI"
-                    echo "📦 Package available at: https://pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
-                  fi
-
-    skip-pypi-dry-run:
-        needs: [check-milestone, release]
-        if: needs.release.outputs.published == 'true' && needs.check-milestone.outputs.dry_run == 'true'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Log skipped PyPI publish
-              run: |
-                  echo "🧪 DRY RUN: Skipping PyPI publication"
-                  echo "In a real release, the package would be published to PyPI now."
-
-    create-github-release:
-        needs: [check-milestone, release]
-        if: needs.release.outputs.published == 'true'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-            issues: read
-            pull-requests: read
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ needs.check-milestone.outputs.release_branch }}
-                  fetch-depth: 0
-                  token: ${{ secrets.PERSONAL_GH_TOKEN }}
-
-            - name: Download Python packages
-              uses: actions/download-artifact@v4
-              with:
-                  name: python-packages
-                  path: ./python-dist
-
-            - name: Download database server archives
-              uses: actions/download-artifact@v4
-              with:
-                  name: database-server-archives
-                  path: ./
-
-            - name: Get milestone issues and PRs
-              id: get_milestone_items
-              env:
-                  GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
-              run: |
-                  MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
-                  VERSION="${{ needs.release.outputs.version }}"
-
-                  # Get issues
-                  ISSUES=$(gh api repos/${{ github.repository }}/issues \
-                    --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | "- #" + (.number | tostring) + " " + .title' \
-                    --paginate || echo "")
-
-                  # Get pull requests
-                  PRS=$(gh api repos/${{ github.repository }}/pulls \
-                    --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | "- #" + (.number | tostring) + " " + .title' \
-                    --paginate || echo "")
-
-                  # Combine and format
-                  if [ -n "$ISSUES" ] || [ -n "$PRS" ]; then
-                    MILESTONE_SUMMARY=$(printf "%s\n\n%s\n%s\n\n%s\n%s\n\n%s" \
-                      "## Milestone Summary" \
-                      "### Issues Closed" \
-                      "$ISSUES" \
-                      "### Pull Requests Merged" \
-                      "$PRS" \
-                      "*Milestone: ${{ needs.check-milestone.outputs.milestone_title }}*")
-                  else
-                    MILESTONE_SUMMARY=""
-                  fi
-
-                  # Save to file for later use
-                  echo "$MILESTONE_SUMMARY" > milestone_summary.md
-
-            - name: Validate changelog extraction
-              if: needs.check-milestone.outputs.dry_run == 'false'
-              run: |
-                  echo "🔍 Validating changelog extraction..."
-
-                  CHANGELOG="${{ needs.release.outputs.changelog }}"
-
-                  if [ -z "$CHANGELOG" ]; then
-                    echo "❌ CRITICAL ERROR: No changelog was extracted!"
-                    echo "This indicates a failure in the changelog extraction process."
-                    echo "The release cannot proceed without a changelog."
-                    echo ""
-                    echo "Possible causes:"
-                    echo "  1. Semantic-release failed to generate release notes"
-                    echo "  2. CHANGELOG.md was not created or is empty"
-                    echo "  3. Version format mismatch in CHANGELOG.md parsing"
-                    echo "  4. Git fetch/checkout issues"
-                    echo ""
-                    echo "Please check the 'Extract changelog for current release' step output above."
-                    exit 1
-                  fi
-
-                  # Basic validation - check if changelog has reasonable content
-                  CHANGELOG_LENGTH=$(echo "$CHANGELOG" | wc -c)
-                  if [ "$CHANGELOG_LENGTH" -lt 50 ]; then
-                    echo "⚠️ WARNING: Changelog seems too short ($CHANGELOG_LENGTH characters)"
-                    echo "Changelog content:"
-                    echo "$CHANGELOG"
-                    echo ""
-                    echo "This might indicate an extraction issue, but proceeding with release..."
-                  fi
-
-                  echo "✅ Changelog validation passed"
-                  echo "Changelog length: $CHANGELOG_LENGTH characters"
-
-            - name: Create GitHub release (Production mode)
-              if: needs.check-milestone.outputs.dry_run == 'false'
-              env:
-                  GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
-              run: |
-                  VERSION="${{ needs.release.outputs.version }}"
-                  TAG="v$VERSION"
-
-                  echo "🚀 Creating GitHub release for version $VERSION"
-
-                  # Get semantic-release changelog from extracted step
-                  CHANGELOG="${{ needs.release.outputs.changelog }}"
-
-                  # Generate installation instructions and milestone summary
-                  ADDITIONAL_CONTENT=$(python tools/release-scripts/format-release-notes.py \
-                    "$VERSION" \
-                    "${{ github.repository }}" \
-                    milestone_summary.md)
-
-                  # Combine all content - put changelog first, then installation instructions
-                  if [ -n "$CHANGELOG" ]; then
-                    RELEASE_BODY=$(printf "%s\n\n%s" "$CHANGELOG" "$ADDITIONAL_CONTENT")
-                    echo "✅ Release body includes changelog and installation instructions"
-                  else
-                    echo "❌ CRITICAL ERROR: No changelog available for release body!"
-                    echo "This should not happen after validation step."
-                    exit 1
-                  fi
-
-                  # Create release with all artifacts attached
-                  gh release create "$TAG" \
-                    --title "v$VERSION" \
-                    --notes "$RELEASE_BODY" \
-                    --target "${{ needs.check-milestone.outputs.release_branch }}" \
-                    python-dist/*.whl \
-                    python-dist/*.tar.gz \
-                    database_server-*.tar.gz \
-                    database_server-*.zip
-
-                  echo "✅ GitHub release v$VERSION created and published!"
-
-            - name: Log dry-run summary (Dry-run mode)
-              if: needs.check-milestone.outputs.dry_run == 'true'
-              run: |
-                  VERSION="${{ needs.release.outputs.version }}"
-                  TAG="v$VERSION"
-
-                  echo "🧪 **DRY RUN SUMMARY**"
-                  echo "========================"
-                  echo ""
-                  echo "📦 **Version**: $VERSION"
-                  echo "🏷️  **Tag**: $TAG"
-                  echo "🌿 **Branch**: ${{ needs.check-milestone.outputs.release_branch }}"
-                  echo ""
-
-                  # Show semantic-release changelog
-                  echo "📝 **Changelog (from semantic-release)**:"
-                  echo "----------------------------------------"
-                  echo "${{ needs.release.outputs.changelog }}"
-                  echo ""
-
-                  # Show milestone summary
-                  if [ -f "milestone_summary.md" ]; then
-                    echo "🎯 **Milestone Summary**:"
-                    echo "------------------------"
-                    cat milestone_summary.md
-                    echo ""
-                  fi
-
-                  # Show installation instructions
-                  echo "📦 **Installation Instructions**:"
-                  echo "--------------------------------"
-                  python tools/release-scripts/format-release-notes.py \
-                    "$VERSION" \
-                    "${{ github.repository }}" \
-                    milestone_summary.md
-                  echo ""
-
-                  # Show artifacts
-                  echo "📁 **Artifacts that would be attached**:"
-                  echo "---------------------------------------"
-                  echo "Python packages:"
-                  ls -la python-dist/ 2>/dev/null || echo "  No Python packages found"
-                  echo ""
-                  echo "Database server archives:"
-                  ls -la database_server-* 2>/dev/null || echo "  No database archives found"
-                  echo ""
-
-                  echo "✅ **DRY RUN COMPLETE**"
-                  echo "No GitHub release was created. This was a test run only."
-
-    no-release-needed:
-        needs: check-milestone
-        if: needs.check-milestone.outputs.has_release_commits == 'false'
-        runs-on: ubuntu-latest
-        permissions:
-            issues: write
-        steps:
-            - name: Comment on milestone
-              env:
-                  GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
-              run: |
-                  MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
-
-                  # Create a comment on the milestone
-                  LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
-                  MILESTONE_TITLE="${{ needs.check-milestone.outputs.milestone_title }}"
-                  COMMENT_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s\n%s\n%s\n%s" \
-                    "🚫 **No Release Needed**" \
-                    "This milestone was closed, but no version bump was required because there were no release-worthy commits since the last tag (${LAST_TAG})." \
-                    "**Milestone:** ${MILESTONE_TITLE}" \
-                    "To trigger a release, ensure your commits follow [Conventional Commits](https://www.conventionalcommits.org/) format:" \
-                    "- \`feat:\` for new features (minor version bump)" \
-                    "- \`fix:\` for bug fixes (patch version bump)" \
-                    "- \`BREAKING CHANGE:\` for breaking changes (major version bump)")
-
-                  gh api repos/${{ github.repository }}/issues \
-                    --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER') | .number' \
-                    --paginate | head -1 | while read ISSUE_NUMBER; do
-                    if [ -n "$ISSUE_NUMBER" ]; then
-                      gh api repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments \
-                        --method POST \
-                        --field body="$COMMENT_BODY"
-                      break
-                    fi
-                  done
+  check-milestone:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      milestone_title: ${{ steps.get_milestone.outputs.title }}
+      milestone_number: ${{ steps.get_milestone.outputs.number }}
+      has_release_commits: ${{ steps.check_commits.outputs.has_release_commits }}
+      last_tag: ${{ steps.get_last_tag.outputs.tag }}
+      release_branch: ${{ steps.determine_branch.outputs.branch }}
+    steps:
+      - name: Determine release branch
+        id: determine_branch
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Release branch: $BRANCH"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.determine_branch.outputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_GH_TOKEN }}
+
+      - name: Get milestone information
+        id: get_milestone
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+        run: |
+          MILESTONE_TITLE="${{ github.event.milestone.title }}"
+          MILESTONE_NUMBER="${{ github.event.milestone.number }}"
+
+          echo "title=$MILESTONE_TITLE" >> $GITHUB_OUTPUT
+          echo "number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+          echo "Milestone: $MILESTONE_TITLE (#$MILESTONE_NUMBER)"
+
+      - name: Get last tag
+        id: get_last_tag
+        run: |
+          BRANCH="${{ steps.determine_branch.outputs.branch }}"
+          # Try to get the last tag from the current branch
+          LAST_TAG=$(git describe --tags --abbrev=0 "$BRANCH" 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "Last tag: $LAST_TAG (from branch: $BRANCH)"
+
+      - name: Check for release-worthy commits
+        id: check_commits
+        run: |
+          BRANCH="${{ steps.determine_branch.outputs.branch }}"
+          if bash tools/release-scripts/check-release-commits.sh "${{ steps.get_last_tag.outputs.tag }}" "$BRANCH"; then
+            echo "has_release_commits=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_release_commits=false" >> $GITHUB_OUTPUT
+          fi
+
+  production-release:
+    needs: check-milestone
+    if: needs.check-milestone.outputs.has_release_commits == 'true'
+    permissions:
+      contents: write
+      packages: write
+      issues: read
+      pull-requests: read
+    uses: ./.github/workflows/release-core.yml
+    secrets:
+      PERSONAL_GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+    with:
+      release_type: production
+      branch: ${{ needs.check-milestone.outputs.release_branch }}
+      milestone_title: ${{ needs.check-milestone.outputs.milestone_title }}
+      publish_to_pypi: true
+      use_test_pypi: false
+
+  no-release-needed:
+    needs: check-milestone
+    if: needs.check-milestone.outputs.has_release_commits == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Comment on milestone
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+        run: |
+          MILESTONE_NUMBER="${{ needs.check-milestone.outputs.milestone_number }}"
+
+          # Create a comment on the milestone
+          LAST_TAG="${{ needs.check-milestone.outputs.last_tag }}"
+          MILESTONE_TITLE="${{ needs.check-milestone.outputs.milestone_title }}"
+          COMMENT_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s\n%s\n%s\n%s" \
+            "🚫 **No Release Needed**" \
+            "This milestone was closed, but no version bump was required because there were no release-worthy commits since the last tag (${LAST_TAG})." \
+            "**Milestone:** ${MILESTONE_TITLE}" \
+            "To trigger a release, ensure your commits follow [Conventional Commits](https://www.conventionalcommits.org/) format:" \
+            "- \`feat:\` for new features (minor version bump)" \
+            "- \`fix:\` for bug fixes (patch version bump)" \
+            "- \`BREAKING CHANGE:\` for breaking changes (major version bump)")
+
+          gh api repos/${{ github.repository }}/issues \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER') | .number' \
+            --paginate | head -1 | while read ISSUE_NUMBER; do
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh api repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments \
+                --method POST \
+                --field body="$COMMENT_BODY"
+              break
+            fi
+          done
