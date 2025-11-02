@@ -1,0 +1,719 @@
+name: Release Core (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        description: "Type of release (production or prerelease)"
+        required: true
+        type: string
+      branch:
+        description: "Source branch for release"
+        required: false
+        type: string
+        default: main
+      milestone_title:
+        description: "Milestone title for production releases"
+        required: false
+        type: string
+      prerelease_mode:
+        description: "Prerelease mode (dry-run or rc)"
+        required: false
+        type: string
+        default: rc
+      publish_to_pypi:
+        description: "Whether to publish to PyPI"
+        required: false
+        type: boolean
+        default: false
+      use_test_pypi:
+        description: "Whether to use test PyPI instead of production"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      PERSONAL_GH_TOKEN:
+        required: true
+      PYPI_TOKEN:
+        required: false
+      TEST_PYPI_TOKEN:
+        required: false
+    outputs:
+      version:
+        description: "Released version"
+        value: ${{ jobs.release.outputs.version }}
+      published:
+        description: "Whether release was published"
+        value: ${{ jobs.release.outputs.published }}
+      changelog:
+        description: "Release changelog"
+        value: ${{ jobs.release.outputs.changelog }}
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      is_dry_run: ${{ steps.validate.outputs.is_dry_run }}
+      is_production: ${{ steps.validate.outputs.is_production }}
+      is_prerelease: ${{ steps.validate.outputs.is_prerelease }}
+      milestone_number: ${{ steps.validate.outputs.milestone_number }}
+    steps:
+      - name: Validate inputs
+        id: validate
+        run: |
+          echo "Validating release inputs..."
+
+          # Validate release_type
+          if [ "${{ inputs.release_type }}" != "production" ] && [ "${{ inputs.release_type }}" != "prerelease" ]; then
+            echo "❌ Invalid release_type: ${{ inputs.release_type }}"
+            echo "Must be 'production' or 'prerelease'"
+            exit 1
+          fi
+
+          # Validate prerelease_mode for prerelease type
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            if [ "${{ inputs.prerelease_mode }}" != "dry-run" ] && 
+               [ "${{ inputs.prerelease_mode }}" != "rc" ]; then
+              echo "❌ Invalid prerelease_mode: ${{ inputs.prerelease_mode }}"
+              echo "Must be 'dry-run' or 'rc'"
+              exit 1
+            fi
+          fi
+
+          # Set flags
+          if [ "${{ inputs.release_type }}" = "production" ]; then
+            echo "is_production=true" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "is_dry_run=false" >> $GITHUB_OUTPUT
+          else
+            echo "is_production=false" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            if [ "${{ inputs.prerelease_mode }}" = "dry-run" ]; then
+              echo "is_dry_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "is_dry_run=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+          echo "✅ Input validation passed"
+          echo "Release type: ${{ inputs.release_type }}"
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Prerelease mode: ${{ inputs.prerelease_mode }}"
+          echo "Publish to PyPI: ${{ inputs.publish_to_pypi }}"
+          echo "Use test PyPI: ${{ inputs.use_test_pypi }}"
+          echo "Is dry run: ${{ steps.validate.outputs.is_dry_run }}"
+
+      - name: Get milestone information (production only)
+        if: inputs.release_type == 'production'
+        id: get_milestone
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.milestone_title }}" ]; then
+            # Query milestones with state=all to include closed milestones
+            # This is necessary because when a milestone is closed (triggering milestone-release),
+            # it won't appear in the default query which only returns open milestones
+            MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones?state=all --jq '.[] | select(.title == "'${{ inputs.milestone_title }}'") | .number')
+            if [ -z "$MILESTONE_NUMBER" ]; then
+              echo "❌ Milestone not found: ${{ inputs.milestone_title }}"
+              exit 1
+            fi
+            echo "number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+            echo "Found milestone: ${{ inputs.milestone_title }} (#$MILESTONE_NUMBER)"
+          else
+            echo "❌ milestone_title is required for production releases"
+            exit 1
+          fi
+
+  release:
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.determine_version.outputs.version }}
+      published: ${{ steps.determine_version.outputs.published }}
+      changelog: ${{ steps.extract_changelog.outputs.changelog }}
+    steps:
+      - name: Log release mode
+        run: |
+          echo "🚀 **RELEASE CORE WORKFLOW**"
+          echo "=========================="
+          echo ""
+          echo "Release Type: ${{ inputs.release_type }}"
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Prerelease Mode: ${{ inputs.prerelease_mode }}"
+          echo "Publish to PyPI: ${{ inputs.publish_to_pypi }}"
+          echo "Use Test PyPI: ${{ inputs.use_test_pypi }}"
+          echo "Is Dry Run: ${{ needs.validate-inputs.outputs.is_dry_run }}"
+          echo ""
+
+          if [ "${{ needs.validate-inputs.outputs.is_dry_run }}" = "true" ]; then
+            echo "🧪 **DRY RUN MODE** - No publishing, no git operations"
+          elif [ "${{ inputs.use_test_pypi }}" = "true" ]; then
+            echo "🧪 **TEST PYPI MODE** - Publishing to test.pypi.org"
+          elif [ "${{ inputs.publish_to_pypi }}" = "true" ]; then
+            echo "🚀 **PRODUCTION MODE** - Publishing to pypi.org"
+          else
+            echo "📦 **NO PYPI MODE** - Building artifacts only"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_GH_TOKEN }}
+
+      - name: Fetch main branch for semantic-release context (non-main branches only)
+        if: inputs.branch != 'main'
+        run: |
+          git fetch origin main
+          # Create a local branch reference that semantic-release can use
+          if git show-ref --verify --quiet refs/heads/main; then
+            echo "Main branch already exists locally"
+          else
+            git branch main origin/main || git branch main FETCH_HEAD || (echo "❌ Failed to create main branch reference" && exit 1)
+            echo "Created local main branch reference"
+          fi
+          git branch -a
+          echo "✅ Main branch fetched and available for semantic-release context"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          # Install semantic-release dependencies
+          npm install
+
+          # Install Python dependencies
+          cd ragora
+          python -m pip install --upgrade pip
+          pip install build twine setuptools_scm[toml]
+
+      - name: Run semantic-release
+        id: semantic_release
+        run: |
+          # Ensure we're on the correct branch
+          # Store branch name and export as environment variable for semantic-release
+          export BRANCH="${{ inputs.branch }}"
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+          if [ "$CURRENT_BRANCH" = "$BRANCH" ]; then
+            echo "✅ Already on branch: $BRANCH"
+          else
+            echo "Switching to branch: $BRANCH"
+            # Try to checkout existing local branch
+            if git checkout "$BRANCH" 2>/dev/null; then
+              echo "✅ Checked out existing local branch: $BRANCH"
+            # Try to create new branch from remote
+            elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+              git checkout -b "$BRANCH" "origin/$BRANCH" || (echo "❌ Failed to checkout branch $BRANCH from origin" && exit 1)
+              echo "✅ Created and checked out branch: $BRANCH from origin"
+            else
+              echo "❌ Error: Branch $BRANCH does not exist locally or on origin"
+              echo "Available branches:"
+              git branch -a
+              exit 1
+            fi
+          fi
+
+          # Verify we're on the correct branch
+          VERIFY_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$VERIFY_BRANCH" != "$BRANCH" ]; then
+            echo "❌ Error: Branch checkout verification failed. Expected: $BRANCH, Got: $VERIFY_BRANCH"
+            exit 1
+          fi
+
+          # Override GITHUB_REF for semantic-release branch detection
+          # semantic-release uses GITHUB_REF to determine the branch, but in reusable workflows
+          # GITHUB_REF points to the calling workflow's branch, not the checked-out branch.
+          # By setting GITHUB_REF to refs/heads/<branch>, we force semantic-release to use the correct branch.
+          export GITHUB_REF="refs/heads/$BRANCH"
+          echo "🔧 Overriding GITHUB_REF to: $GITHUB_REF (for semantic-release branch detection)"
+
+          # Set CI_BRANCH as additional fallback (BRANCH is already exported above)
+          export CI_BRANCH="$BRANCH"
+
+          # Define version regex pattern for consistency
+          VERSION_REGEX='[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?'
+
+          if [ "${{ needs.validate-inputs.outputs.is_dry_run }}" = "true" ]; then
+            echo "🧪 Running semantic-release in DRY RUN mode"
+            echo "Current branch: ${{ inputs.branch }}"
+            npx semantic-release --dry-run 2>&1 | tee semantic-release-output.txt
+            
+            # Extract the next version from dry-run output
+            NEXT_VERSION=$(grep -oP "The next release version is \K$VERSION_REGEX" semantic-release-output.txt || echo "")
+            
+            # Extract changelog from dry-run output
+            CHANGELOG=$(grep -A 1000 "## \[.*\]" semantic-release-output.txt | head -n -1 || echo "")
+            
+            # Clean diffhunk links from the extracted changelog text
+            if [ -n "$CHANGELOG" ]; then
+              echo "$CHANGELOG" > /tmp/changelog_dryrun.md
+              bash tools/release-scripts/clean-changelog-diffhunks.sh /tmp/changelog_dryrun.md
+              CHANGELOG=$(cat /tmp/changelog_dryrun.md)
+              rm -f /tmp/changelog_dryrun.md
+            fi
+            
+            if [ -n "$NEXT_VERSION" ]; then
+              echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+              echo "new_release_published=true" >> $GITHUB_OUTPUT
+              echo "new_release_notes<<EOF" >> $GITHUB_OUTPUT
+              echo "$CHANGELOG" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+              echo "Detected version: $NEXT_VERSION"
+            else
+              echo "No version detected from dry-run"
+              echo "new_release_published=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "🚀 Running semantic-release in PRODUCTION mode"
+            echo "Current branch: ${{ inputs.branch }}"
+            npx semantic-release 2>&1 | tee semantic-release-output.txt
+            
+            # Extract the published version from output
+            NEXT_VERSION=$(grep -oP "(?:Published release|Created tag v?|The next release version is )\K$VERSION_REGEX" semantic-release-output.txt | head -1 || echo "")
+            
+            # Extract changelog from the generated CHANGELOG.md
+            if [ -f "CHANGELOG.md" ]; then
+              CHANGELOG=$(awk '/^## \[/{flag=1; next} /^## \[/ && flag{exit} flag' CHANGELOG.md || echo "")
+            fi
+            
+            # Fallback: if version not found in output, check if a new tag was created
+            if [ -z "$NEXT_VERSION" ]; then
+              echo "Trying to detect version from git tags..."
+              git fetch --tags
+              LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+              if [ -n "$LATEST_TAG" ]; then
+                NEXT_VERSION="${LATEST_TAG#v}"
+                echo "Found version from git tag: $NEXT_VERSION"
+              fi
+            fi
+            
+            if [ -n "$NEXT_VERSION" ]; then
+              echo "new_release_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+              echo "new_release_published=true" >> $GITHUB_OUTPUT
+              echo "new_release_notes<<EOF" >> $GITHUB_OUTPUT
+              echo "$CHANGELOG" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+              echo "Published version: $NEXT_VERSION"
+            else
+              echo "No version published by semantic-release"
+              echo "new_release_published=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+          CI: true
+          GIT_BRANCH: ${{ inputs.branch }}
+
+      - name: Clean diffhunk links from CHANGELOG (production mode)
+        if: needs.validate-inputs.outputs.is_dry_run == 'false'
+        run: |
+          # Clean diffhunk links from CHANGELOG.md if it was generated
+          if [ -f "CHANGELOG.md" ]; then
+            echo "🧹 Cleaning diffhunk links from CHANGELOG.md..."
+            bash tools/release-scripts/clean-changelog-diffhunks.sh CHANGELOG.md
+            
+            # Check if CHANGELOG.md has uncommitted changes
+            if ! git diff --quiet CHANGELOG.md; then
+              echo "📝 CHANGELOG.md was modified by cleanup, checking if we need to amend commit..."
+              
+              # Check if the last commit was from semantic-release (chore(release))
+              LAST_COMMIT_MSG=$(git log -1 --format="%s" 2>/dev/null || echo "")
+              if echo "$LAST_COMMIT_MSG" | grep -q "chore(release)"; then
+                echo "📝 Amending semantic-release commit with cleaned CHANGELOG.md..."
+                git add CHANGELOG.md
+                git commit --amend --no-edit
+                echo "✅ Commit amended with cleaned CHANGELOG.md"
+                
+                # Push the amended commit back to origin
+                echo "📤 Pushing amended commit to origin..."
+                git push origin ${{ inputs.branch }} --force-with-lease || {
+                  echo "⚠️ Warning: Failed to push amended commit. Continuing anyway."
+                }
+              else
+                echo "⚠️ CHANGELOG.md has changes but last commit is not from semantic-release"
+                echo "Skipping commit amendment"
+              fi
+            else
+              echo "✅ CHANGELOG.md is clean (no diffhunk links found or already cleaned)"
+            fi
+          else
+            echo "ℹ️ CHANGELOG.md not found (no release generated)"
+          fi
+
+      - name: Extract changelog for current release
+        id: extract_changelog
+        if: needs.validate-inputs.outputs.is_dry_run == 'false'
+        run: |
+          # After semantic-release and cleanup, the CHANGELOG.md should be in the working directory
+          # and committed to HEAD (either by semantic-release or by the cleanup amend step).
+          # We should use the local file directly since it contains the latest changes.
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "❌ Error: CHANGELOG.md not found. It should have been created by semantic-release."
+            exit 1
+          fi
+
+          # Verify the CHANGELOG.md is up to date by checking if HEAD contains it
+          # If cleanup amended the commit, HEAD will have the cleaned version
+          # If cleanup didn't run or didn't modify it, HEAD will have the semantic-release version
+          # In both cases, we should use the local working directory file which is the latest
+          echo "Using local CHANGELOG.md (from semantic-release + cleanup if applicable)"
+
+          # Extract the latest release section from CHANGELOG.md
+          VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+          if [ -n "$VERSION" ]; then
+            # Extract changelog section: from "## [VERSION]" to next "## [" or end of file
+            # Use awk with index() to find the version string, avoiding regex escaping issues
+            CHANGELOG=$(awk -v version="$VERSION" '
+              BEGIN { found=0 }
+              /^## \[/ {
+                if (index($0, "## [" version "]") == 1) {
+                  found = 1
+                  print
+                  next
+                }
+                if (found) exit
+              }
+              found { print }
+            ' CHANGELOG.md)
+            
+            if [ -z "$CHANGELOG" ]; then
+              echo "⚠️ Warning: Could not extract changelog for version $VERSION from CHANGELOG.md"
+              echo "Extracted changelog (empty): '$CHANGELOG'"
+              echo "CHANGELOG.md contents (first 50 lines):"
+              head -50 CHANGELOG.md
+            else
+              echo "✅ Successfully extracted changelog for version $VERSION"
+              echo "Changelog length: ${#CHANGELOG} characters"
+            fi
+            
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGELOG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "No version found, skipping changelog extraction"
+            echo "changelog=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify tag creation (production mode)
+        if: needs.validate-inputs.outputs.is_dry_run == 'false'
+        run: |
+          echo "🔍 Verifying that semantic-release created a new git tag..."
+
+          # Refresh tags from repository
+          git fetch --tags --force
+
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          echo "Latest tag after semantic-release: $LATEST_TAG"
+
+          # Check if we have a tag at all
+          if [ -z "$LATEST_TAG" ]; then
+            echo "❌ ERROR: No git tags found in repository!"
+            echo "Semantic-release may have failed to create a tag."
+            exit 1
+          fi
+
+          echo "✅ Tag verification passed: Latest tag $LATEST_TAG"
+
+      - name: Determine version for artifacts
+        id: determine_version
+        run: |
+          # Use semantic-release version if available
+          if [ -n "${{ steps.semantic_release.outputs.new_release_version }}" ]; then
+            VERSION="${{ steps.semantic_release.outputs.new_release_version }}"
+            echo "Using version from semantic-release: $VERSION"
+            echo "published=true" >> $GITHUB_OUTPUT
+          else
+            echo "No version produced by semantic-release"
+            echo "published=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Final version for artifacts: $VERSION"
+
+      - name: Build Python package
+        working-directory: ./ragora
+        run: |
+          bash ../tools/release-scripts/build-python-package.sh \
+            "${{ steps.determine_version.outputs.version }}" \
+            "${{ needs.validate-inputs.outputs.is_dry_run }}"
+
+      - name: Upload Python artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-packages
+          path: ragora/dist/*
+
+      - name: Create database server metadata
+        if: steps.determine_version.outputs.version != ''
+        run: |
+          VERSION="${{ steps.determine_version.outputs.version }}"
+
+          # Create version metadata files
+          bash tools/release-scripts/create-version-metadata.sh \
+            "$VERSION" \
+            "${{ github.sha }}" \
+            "${{ inputs.branch }}" \
+            "${{ github.repository }}"
+
+          # Update README with version
+          bash tools/release-scripts/update-readme-version.sh \
+            "$VERSION" \
+            "${{ github.repository }}"
+
+      - name: Create database server archive
+        id: create_db_archive
+        if: steps.determine_version.outputs.version != ''
+        run: |
+          VERSION="${{ steps.determine_version.outputs.version }}"
+
+          # Create archives in artifacts folder
+          ARCHIVES=$(bash tools/release-scripts/create-db-archives.sh "$VERSION" "artifacts")
+
+          # Extract archive filenames from output
+          TAR_ARCHIVE=$(echo "$ARCHIVES" | grep "\.tar\.gz$" | tail -1)
+          ZIP_ARCHIVE=$(echo "$ARCHIVES" | grep "\.zip$" | tail -1)
+
+          echo "tar_archive=$TAR_ARCHIVE" >> $GITHUB_OUTPUT
+          echo "zip_archive=$ZIP_ARCHIVE" >> $GITHUB_OUTPUT
+
+      - name: Upload database server archives
+        if: steps.create_db_archive.outputs.tar_archive != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-server-archives
+          path: |
+            artifacts/database_server-*.tar.gz
+            artifacts/database_server-*.zip
+
+  publish-pypi:
+    needs: [validate-inputs, release]
+    if: needs.release.outputs.published == 'true' && needs.validate-inputs.outputs.is_dry_run == 'false' && inputs.publish_to_pypi == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download Python artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-packages
+          path: ./dist
+
+      - name: Publish to PyPI (production)
+        if: inputs.use_test_pypi == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          password: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Publish to Test PyPI
+        if: inputs.use_test_pypi == true
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+
+      - name: Log success
+        run: |
+          if [ "${{ inputs.use_test_pypi }}" = "true" ]; then
+            echo "✅ Successfully published to Test PyPI"
+            echo "📦 Package available at: https://test.pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
+            echo ""
+            echo "To install from Test PyPI:"
+            echo "  pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple ragora"
+          else
+            echo "✅ Successfully published to PyPI"
+            echo "📦 Package available at: https://pypi.org/project/ragora/${{ needs.release.outputs.version }}/"
+          fi
+
+  skip-pypi-dry-run:
+    needs: [validate-inputs, release]
+    if: needs.release.outputs.published == 'true' && needs.validate-inputs.outputs.is_dry_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log skipped PyPI publish
+        run: |
+          echo "🧪 DRY RUN: Skipping PyPI publication"
+          echo "In a real release, the package would be published to PyPI now."
+
+  create-github-release:
+    needs: [validate-inputs, release]
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_GH_TOKEN }}
+
+      - name: Download Python packages
+        uses: actions/download-artifact@v4
+        with:
+          name: python-packages
+          path: ./python-dist
+
+      - name: Download database server archives
+        uses: actions/download-artifact@v4
+        with:
+          name: database-server-archives
+          path: ./
+
+      - name: Get milestone issues and PRs (production only)
+        if: needs.validate-inputs.outputs.is_production == 'true'
+        id: get_milestone_items
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+        run: |
+          MILESTONE_NUMBER="${{ needs.validate-inputs.outputs.milestone_number }}"
+          VERSION="${{ needs.release.outputs.version }}"
+
+          # Get issues
+          ISSUES=$(gh api repos/${{ github.repository }}/issues \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | "- #" + (.number | tostring) + " " + .title' \
+            --paginate || echo "")
+
+          # Get pull requests
+          PRS=$(gh api repos/${{ github.repository }}/pulls \
+            --jq '.[] | select(.milestone.number == '$MILESTONE_NUMBER' and .state == "closed") | "- #" + (.number | tostring) + " " + .title' \
+            --paginate || echo "")
+
+          # Combine and format
+          if [ -n "$ISSUES" ] || [ -n "$PRS" ]; then
+            MILESTONE_SUMMARY=$(printf "%s\n\n%s\n%s\n\n%s\n%s\n\n%s" \
+              "## Milestone Summary" \
+              "### Issues Closed" \
+              "$ISSUES" \
+              "### Pull Requests Merged" \
+              "$PRS" \
+              "*Milestone: ${{ inputs.milestone_title }}*")
+          else
+            MILESTONE_SUMMARY=""
+          fi
+
+          # Save to file for later use
+          echo "$MILESTONE_SUMMARY" > milestone_summary.md
+
+      - name: Create GitHub release (Production mode)
+        if: needs.validate-inputs.outputs.is_dry_run == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          TAG="v$VERSION"
+
+          echo "🚀 Creating GitHub release for version $VERSION"
+
+          # Get semantic-release changelog from extracted step
+          CHANGELOG="${{ needs.release.outputs.changelog }}"
+
+          # Generate installation instructions and milestone summary
+          ADDITIONAL_CONTENT=$(python tools/release-scripts/format-release-notes.py \
+            "$VERSION" \
+            "${{ github.repository }}" \
+            milestone_summary.md)
+
+          # Combine all content - put changelog first, then installation instructions
+          if [ -n "$CHANGELOG" ]; then
+            RELEASE_BODY=$(printf "%s\n\n%s" "$CHANGELOG" "$ADDITIONAL_CONTENT")
+          else
+            echo "⚠️ Warning: No changelog extracted, using only installation instructions"
+            RELEASE_BODY="$ADDITIONAL_CONTENT"
+          fi
+
+          # Determine if this should be a prerelease
+          IS_PRERELEASE="false"
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            IS_PRERELEASE="true"
+          fi
+
+          # Create release with all artifacts attached
+          gh release create "$TAG" \
+            --title "v$VERSION" \
+            --notes "$RELEASE_BODY" \
+            --target "${{ inputs.branch }}" \
+            --prerelease="$IS_PRERELEASE" \
+            python-dist/*.whl \
+            python-dist/*.tar.gz \
+            database_server-*.tar.gz \
+            database_server-*.zip
+
+          echo "✅ GitHub release v$VERSION created and published!"
+
+      - name: Log dry-run summary (Dry-run mode)
+        if: needs.validate-inputs.outputs.is_dry_run == 'true'
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          TAG="v$VERSION"
+
+          echo "🧪 **DRY RUN SUMMARY**"
+          echo "========================"
+          echo ""
+          echo "📦 **Version**: $VERSION"
+          echo "🏷️  **Tag**: $TAG"
+          echo "🌿 **Branch**: ${{ inputs.branch }}"
+          echo ""
+
+          # Show semantic-release changelog
+          echo "📝 **Changelog (from semantic-release)**:"
+          echo "----------------------------------------"
+          echo "${{ needs.release.outputs.changelog }}"
+          echo ""
+
+          # Show milestone summary (if production)
+          if [ "${{ needs.validate-inputs.outputs.is_production }}" = "true" ] && [ -f "milestone_summary.md" ]; then
+            echo "🎯 **Milestone Summary**:"
+            echo "------------------------"
+            cat milestone_summary.md
+            echo ""
+          fi
+
+          # Show installation instructions
+          echo "📦 **Installation Instructions**:"
+          echo "--------------------------------"
+          python tools/release-scripts/format-release-notes.py \
+            "$VERSION" \
+            "${{ github.repository }}" \
+            milestone_summary.md 2>/dev/null || echo "No milestone summary available"
+          echo ""
+
+          # Show artifacts
+          echo "📁 **Artifacts that would be attached**:"
+          echo "---------------------------------------"
+          echo "Python packages:"
+          ls -la python-dist/ 2>/dev/null || echo "  No Python packages found"
+          echo ""
+          echo "Database server archives:"
+          ls -la database_server-* 2>/dev/null || echo "  No database archives found"
+          echo ""
+
+          echo "✅ **DRY RUN COMPLETE**"
+          echo "No GitHub release was created. This was a test run only."

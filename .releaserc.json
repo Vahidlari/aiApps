@@ -2,27 +2,21 @@
     "branches": [
         "main",
         {
-            "name": "beta",
-            "prerelease": true
+            "name": "release/*.*",
+            "prerelease": "rc"
         },
         {
-            "name": "alpha",
-            "prerelease": true
-        },
-        {
-            "name": "release/*",
-            "prerelease": "${name.replace(/^release\\//g, '').replace(/[^a-zA-Z0-9.-]/g, '-')}"
-        },
-        {
-            "name": "feature/*",
-            "prerelease": "${name.replace(/^feature\\//g, '').replace(/[^a-zA-Z0-9.-]/g, '-')}"
+            "name": "release/*.*.*",
+            "prerelease": "rc"
         }
     ],
+    "_comment": "Note: The release/*.* patterns accept any characters. Branch validation is enforced in .github/workflows/prerelease.yml to restrict to numbered versions (release/x.y or release/x.y.x)",
     "plugins": [
         [
             "@semantic-release/commit-analyzer",
             {
                 "preset": "conventionalcommits",
+                "from": "lastTagOnBranch",
                 "releaseRules": [
                     {
                         "type": "feat",
