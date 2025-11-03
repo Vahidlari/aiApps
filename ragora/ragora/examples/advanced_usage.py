@@ -31,7 +31,6 @@ from ragora import (
     EmbeddingConfig,
     KnowledgeBaseManager,
     KnowledgeBaseManagerConfig,
-    SearchResult,
     SearchStrategy,
 )
 
@@ -384,43 +383,52 @@ def main():
 
         # 1. Vector similarity search
         logger.info("\n1️⃣ Vector Similarity Search:")
-        similar_results = kbm.search_similar(
-            "computer science and quantum physics", top_k=3, collection=collection_name
+        similar_response = kbm.search(
+            "computer science and quantum physics",
+            strategy=SearchStrategy.SIMILAR,
+            top_k=3,
+            collection=collection_name,
         )
-        for i, result in enumerate(similar_results, 1):
-            logger.info(f"   {i}. Score: {result.get('similarity_score', 'N/A'):.3f}")
-            logger.info(f"      Content: {result['content'][:60]}...")
+        for i, result in enumerate(similar_response.results, 1):
+            logger.info(f"   {i}. Score: {result.similarity_score:.3f}")
+            logger.info(f"      Content: {result.content[:60]}...")
             # Show metadata if available
-            metadata = result.get("metadata", {})
-            if metadata.get("language"):
+            metadata = result.metadata
+            if metadata.language:
                 logger.info(
-                    f"      Language: {metadata['language']}, Domain: {metadata['domain']}"
+                    f"      Language: {metadata.language}, "
+                    f"Domain: {metadata.domain}"
                 )
-            if metadata.get("email_subject"):
+            if metadata.email_subject:
                 logger.info(
-                    f"      Email: {metadata['email_subject']} from {metadata['email_sender']}"
+                    f"      Email: {metadata.email_subject} from "
+                    f"{metadata.email_sender}"
                 )
 
         # 2. Hybrid search
         logger.info("\n2️⃣ Hybrid Search:")
-        hybrid_results = kbm.search_hybrid(
+        hybrid_response = kbm.search(
             "computer science and quantum physics",
+            strategy=SearchStrategy.HYBRID,
             alpha=0.7,
             top_k=3,
             collection=collection_name,
         )
-        for i, result in enumerate(hybrid_results, 1):
-            logger.info(f"   {i}. Score: {result.get('hybrid_score', 'N/A'):.3f}")
-            logger.info(f"      Content: {result['content'][:60]}...")
+        for i, result in enumerate(hybrid_response.results, 1):
+            hybrid_score = result.hybrid_score or 0.0
+            logger.info(f"   {i}. Score: {hybrid_score:.3f}")
+            logger.info(f"      Content: {result.content[:60]}...")
             # Show metadata if available
-            metadata = result.get("metadata", {})
-            if metadata.get("language"):
+            metadata = result.metadata
+            if metadata.language:
                 logger.info(
-                    f"      Language: {metadata['language']}, Domain: {metadata['domain']}"
+                    f"      Language: {metadata.language}, "
+                    f"Domain: {metadata.domain}"
                 )
-            if metadata.get("email_subject"):
+            if metadata.email_subject:
                 logger.info(
-                    f"      Email: {metadata['email_subject']} from {metadata['email_sender']}"
+                    f"      Email: {metadata.email_subject} from "
+                    f"{metadata.email_sender}"
                 )
 
         # 3. Unified query with different search types
@@ -443,7 +451,7 @@ def main():
             )
 
             for i, chunk in enumerate(response.results, 1):
-                logger.info(f"   {i}. {chunk['content'][:50]}...")
+                logger.info(f"   {i}. {chunk.content[:50]}...")
 
         # System statistics and monitoring
         logger.info("\n📊 System Statistics:")

@@ -91,19 +91,15 @@ class TestVectorStoreRefactored:
         assert vector_store.collection == "TestDocument"
         assert vector_store.embedding_engine == mock_embedding_engine
 
-    def test_init_with_default_embedding_engine(self, mock_db_manager):
-        """Test initialization with default EmbeddingEngine."""
-        with patch("ragora.core.vector_store.EmbeddingEngine") as mock_engine_class:
-            mock_engine = Mock(spec=EmbeddingEngine)
-            mock_engine_class.return_value = mock_engine
+    def test_init_without_embedding_engine(self, mock_db_manager):
+        """Test initialization without EmbeddingEngine (default None)."""
+        vector_store = VectorStore(
+            db_manager=mock_db_manager,
+            collection="TestDocument",
+        )
 
-            vector_store = VectorStore(
-                db_manager=mock_db_manager,
-                collection="TestDocument",
-            )
-
-            assert vector_store.embedding_engine == mock_engine
-            mock_engine_class.assert_called_once()
+        # EmbeddingEngine should be None by default (Weaviate handles embeddings)
+        assert vector_store.embedding_engine is None
 
     def test_init_with_none_db_manager(self):
         """Test initialization with None DatabaseManager."""

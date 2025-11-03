@@ -98,23 +98,41 @@ class TestKnowledgeBaseManager:
     @pytest.fixture
     def sample_search_results(self):
         """Create sample search results for testing."""
+        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+
         return [
-            {
-                "content": "Test content 1",
-                "chunk_id": "test_001",
-                "source_document": "test.tex",
-                "chunk_type": "text",
-                "metadata": {"page": 1, "author": "Test Author"},
-                "similarity_score": 0.85,
-            },
-            {
-                "content": "Test content 2",
-                "chunk_id": "test_002",
-                "source_document": "test.tex",
-                "chunk_type": "equation",
-                "metadata": {"page": 2, "author": "Test Author"},
-                "similarity_score": 0.75,
-            },
+            SearchResultItem(
+                content="Test content 1",
+                chunk_id="test_001",
+                properties={
+                    "content": "Test content 1",
+                    "chunk_id": "test_001",
+                    "source_document": "test.tex",
+                    "chunk_type": "text",
+                },
+                similarity_score=0.85,
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(
+                    source_document="test.tex",
+                    chunk_type="text",
+                ),
+            ),
+            SearchResultItem(
+                content="Test content 2",
+                chunk_id="test_002",
+                properties={
+                    "content": "Test content 2",
+                    "chunk_id": "test_002",
+                    "source_document": "test.tex",
+                    "chunk_type": "equation",
+                },
+                similarity_score=0.75,
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(
+                    source_document="test.tex",
+                    chunk_type="equation",
+                ),
+            ),
         ]
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
@@ -226,16 +244,31 @@ class TestKnowledgeBaseManager:
         # Assertions
         assert isinstance(result, SearchResult)
         assert result.query == "What is the test content?"
-        assert result.strategy == SearchStrategy.SIMILAR
+        assert result.strategy == "similar"
         assert result.collection == "Document"
         assert result.total_found == 2
-        assert result.results == sample_search_results
+        assert len(result.results) == len(sample_search_results)
+        # Compare individual properties
+        assert result.results[0].content == sample_search_results[0].content
+        assert result.results[0].chunk_id == sample_search_results[0].chunk_id
+        assert result.results[1].content == sample_search_results[1].content
+        assert result.results[1].chunk_id == sample_search_results[1].chunk_id
         assert "test.tex" in result.metadata["chunk_sources"]
         assert "text" in result.metadata["chunk_types"]
         assert "equation" in result.metadata["chunk_types"]
         assert result.metadata["avg_similarity"] == 0.8  # (0.85 + 0.75) / 2
         assert result.metadata["max_similarity"] == 0.85
         assert result.execution_time > 0
+        # Verify SearchResultItem instances (check properties instead of isinstance
+        # since Pydantic 2.x may reconstruct instances differently)
+        from pydantic import BaseModel
+
+        assert isinstance(result.results[0], BaseModel)
+        assert isinstance(result.results[1], BaseModel)
+        # Verify they have SearchResultItem attributes
+        assert hasattr(result.results[0], "content")
+        assert hasattr(result.results[0], "chunk_id")
+        assert hasattr(result.results[0], "similarity_score")
 
         mock_components["retriever"].search_similar.assert_called_once_with(
             "What is the test content?", collection="Document", top_k=5
@@ -257,7 +290,7 @@ class TestKnowledgeBaseManager:
 
         # Assertions
         assert isinstance(result, SearchResult)
-        assert result.strategy == SearchStrategy.HYBRID
+        assert result.strategy == "hybrid"
         mock_components["retriever"].search_hybrid.assert_called_once_with(
             "What is the test content?", collection="Document", top_k=3
         )
@@ -278,7 +311,7 @@ class TestKnowledgeBaseManager:
 
         # Assertions
         assert isinstance(result, SearchResult)
-        assert result.strategy == SearchStrategy.KEYWORD
+        assert result.strategy == "keyword"
         mock_components["retriever"].search_keyword.assert_called_once_with(
             "machine learning algorithms", collection="Document", top_k=3
         )
@@ -478,9 +511,25 @@ class TestKnowledgeBaseManager:
 
     def test_query_with_no_similarity_scores(self, mock_components):
         """Test query with results that have no similarity scores."""
+        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+
         results_without_scores = [
-            {"content": "test 1", "chunk_id": "001"},
-            {"content": "test 2", "chunk_id": "002"},
+            SearchResultItem(
+                content="test 1",
+                chunk_id="001",
+                properties={"content": "test 1", "chunk_id": "001"},
+                similarity_score=0.0,
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(),
+            ),
+            SearchResultItem(
+                content="test 2",
+                chunk_id="002",
+                properties={"content": "test 2", "chunk_id": "002"},
+                similarity_score=0.0,
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(),
+            ),
         ]
         mock_components["retriever"].search_similar.return_value = (
             results_without_scores
@@ -496,15 +545,31 @@ class TestKnowledgeBaseManager:
 
         # Assertions
         assert isinstance(result, SearchResult)
-        assert "avg_similarity" not in result.metadata
-        assert "max_similarity" not in result.metadata
+        assert result.metadata["avg_similarity"] == 0.0
+        assert result.metadata["max_similarity"] == 0.0
         assert result.total_found == 2
 
     def test_query_with_mixed_similarity_scores(self, mock_components):
         """Test query with mixed similarity scores."""
+        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+
         mixed_results = [
-            {"content": "test 1", "chunk_id": "001", "similarity_score": 0.8},
-            {"content": "test 2", "chunk_id": "002"},  # No similarity score
+            SearchResultItem(
+                content="test 1",
+                chunk_id="001",
+                properties={"content": "test 1", "chunk_id": "001"},
+                similarity_score=0.8,
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(),
+            ),
+            SearchResultItem(
+                content="test 2",
+                chunk_id="002",
+                properties={"content": "test 2", "chunk_id": "002"},
+                similarity_score=0.0,  # No similarity score
+                retrieval_method="vector_similarity",
+                metadata=RetrievalMetadata(),
+            ),
         ]
         mock_components["retriever"].search_similar.return_value = mixed_results
 

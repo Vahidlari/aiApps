@@ -55,8 +55,7 @@ class VectorStore:
         Args:
             db_manager: DatabaseManager instance for database operations
             collection: Name of the Weaviate class for document storage
-            embedding_engine: EmbeddingEngine instance (optional, will create
-                default if not provided)
+            embedding_engine: EmbeddingEngine instance (optional, defaults to None)
 
         Raises:
             ValueError: If invalid parameters are provided

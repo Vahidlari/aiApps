@@ -178,7 +178,7 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
 
             # Format the response nicely
             print("   📝 Answer:")
-            print(f"   Strategy: {response.strategy.value}")
+            print(f"   Strategy: {response.strategy}")
             print(
                 f"   Found {response.total_found} chunks in {response.execution_time:.3f}s"
             )
@@ -186,7 +186,7 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
             if response.results:
                 # Show the first result as the answer
                 first_result = response.results[0]
-                content = first_result.get("content", "")
+                content = first_result.content
 
                 # Split long responses into readable chunks
                 words = content.split()
@@ -208,8 +208,12 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
                     print(f"      {line}")
 
                 # Show source information
-                if first_result.get("source_document"):
-                    print(f"   📄 Source: {first_result['source_document']}")
+                source_doc = (
+                    first_result.properties.get("source_document")
+                    or first_result.metadata.source_document
+                )
+                if source_doc:
+                    print(f"   📄 Source: {source_doc}")
             else:
                 print("      No relevant results found.")
 
@@ -235,21 +239,19 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
     for term in search_terms:
         print(f'\n🔎 Searching for: "{term}"')
         try:
-            # Use the correct method name: search_similar
-            results = kbm.search_similar(term, top_k=3)
+            # Use the search method with SIMILAR strategy
+            response = kbm.search(term, strategy=SearchStrategy.SIMILAR, top_k=3)
+            results = response.results
 
             if results:
                 print(f"   Found {len(results)} similar documents:")
                 for i, result in enumerate(results, 1):
-                    # Extract content from the result dictionary
-                    content = result.get("content", str(result))
-                    if isinstance(content, str):
-                        content_preview = content[:100]
-                        if len(content) > 100:
-                            content_preview += "..."
-                        print(f"   {i}. {content_preview}")
-                    else:
-                        print(f"   {i}. {result}")
+                    # Extract content from the result
+                    content = result.content
+                    content_preview = content[:100]
+                    if len(content) > 100:
+                        content_preview += "..."
+                    print(f"   {i}. {content_preview}")
             else:
                 print("   No similar documents found.")
                 if term == "energy conservation":

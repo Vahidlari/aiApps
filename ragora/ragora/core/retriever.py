@@ -16,13 +16,203 @@ The retriever uses DatabaseManager for data access but handles all search
 logic independently, enabling better testability and maintainability.
 """
 
+import json
 import logging
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional
 
+from pydantic import BaseModel, Field, field_validator
 from weaviate.classes.query import MetadataQuery
 
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
+
+
+class RetrievalMetadata(BaseModel):
+    """Structured metadata for search results.
+
+    Extracts and organizes metadata fields from stored properties,
+    providing type-safe access to chunk, document, and email metadata.
+    """
+
+    # Chunk metadata
+    chunk_idx: Optional[int] = Field(default=None, description="Chunk index")
+    chunk_size: Optional[int] = Field(default=None, description="Chunk size")
+    total_chunks: Optional[int] = Field(
+        default=None, description="Total chunks in document"
+    )
+    created_at: Optional[str] = Field(default=None, description="Creation timestamp")
+
+    # Document metadata
+    source_document: Optional[str] = Field(
+        default=None, description="Source document filename"
+    )
+    page_number: Optional[int] = Field(default=None, description="Page number")
+    section_title: Optional[str] = Field(
+        default=None, description="Section or chapter title"
+    )
+    chunk_type: Optional[str] = Field(
+        default=None,
+        description="Type of chunk (text, citation, equation, etc.)",
+    )
+
+    # Email metadata
+    email_subject: Optional[str] = Field(default=None, description="Email subject line")
+    email_sender: Optional[str] = Field(
+        default=None, description="Email sender address"
+    )
+    email_recipient: Optional[str] = Field(
+        default=None, description="Email recipient address"
+    )
+    email_date: Optional[str] = Field(default=None, description="Email timestamp")
+    email_id: Optional[str] = Field(default=None, description="Unique email identifier")
+    email_folder: Optional[str] = Field(default=None, description="Email folder/path")
+
+    # Custom metadata
+    custom_metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Custom metadata dictionary"
+    )
+    language: Optional[str] = Field(
+        default=None, description="Content language (e.g., en, es, fr)"
+    )
+    domain: Optional[str] = Field(
+        default=None,
+        description="Content domain (e.g., scientific, legal, medical)",
+    )
+    confidence: Optional[float] = Field(
+        default=None, description="Processing confidence score (0.0-1.0)"
+    )
+    tags: Optional[str] = Field(
+        default=None, description="Comma-separated tags/categories"
+    )
+    priority: Optional[int] = Field(
+        default=None, description="Content priority/importance level"
+    )
+    content_category: Optional[str] = Field(
+        default=None, description="Fine-grained content categorization"
+    )
+
+    @classmethod
+    def from_properties(cls, properties: Dict[str, Any]) -> "RetrievalMetadata":
+        """Create RetrievalMetadata from properties dictionary.
+
+        Args:
+            properties: Dictionary containing stored properties
+
+        Returns:
+            RetrievalMetadata instance
+        """
+        # Parse custom_metadata JSON string if present
+        custom_meta = properties.get("custom_metadata")
+        if custom_meta:
+            if isinstance(custom_meta, str):
+                try:
+                    custom_meta = json.loads(custom_meta) if custom_meta else None
+                except (json.JSONDecodeError, TypeError):
+                    custom_meta = None
+            elif not isinstance(custom_meta, dict):
+                custom_meta = None
+        else:
+            custom_meta = None
+
+        return cls(
+            chunk_idx=properties.get("metadata_chunk_idx"),
+            chunk_size=properties.get("metadata_chunk_size"),
+            total_chunks=properties.get("metadata_total_chunks"),
+            created_at=properties.get("metadata_created_at")
+            or properties.get("created_at"),
+            source_document=properties.get("source_document"),
+            page_number=properties.get("page_number"),
+            section_title=properties.get("section_title"),
+            chunk_type=properties.get("chunk_type"),
+            email_subject=properties.get("email_subject"),
+            email_sender=properties.get("email_sender"),
+            email_recipient=properties.get("email_recipient"),
+            email_date=properties.get("email_date"),
+            email_id=properties.get("email_id"),
+            email_folder=properties.get("email_folder"),
+            custom_metadata=custom_meta,
+            language=properties.get("language"),
+            domain=properties.get("domain"),
+            confidence=properties.get("confidence"),
+            tags=properties.get("tags"),
+            priority=properties.get("priority"),
+            content_category=properties.get("content_category"),
+        )
+
+
+class SearchResultItem(BaseModel):
+    """Individual search result item.
+
+    Represents a single search result with all its properties,
+    scores, and metadata. Provides type-safe access to result data.
+    """
+
+    # Core content
+    content: str = Field(..., description="Text content of the chunk")
+    chunk_id: str = Field(..., description="Unique chunk identifier")
+
+    # All stored properties (full dict for backward compatibility)
+    properties: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="All stored properties from the vector database",
+    )
+
+    # Retrieval scores
+    similarity_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Similarity score (0.0-1.0)",
+    )
+    distance: Optional[float] = Field(
+        default=None, description="Distance metric (for vector similarity)"
+    )
+    hybrid_score: Optional[float] = Field(
+        default=None, description="Hybrid search score"
+    )
+    bm25_score: Optional[float] = Field(
+        default=None, description="BM25 keyword search score"
+    )
+
+    # Retrieval context
+    retrieval_method: Literal[
+        "vector_similarity", "hybrid_search", "keyword_search"
+    ] = Field(..., description="Method used for retrieval")
+    retrieval_timestamp: datetime = Field(
+        default_factory=datetime.now,
+        description="Timestamp when retrieval occurred",
+    )
+
+    # Structured metadata
+    metadata: RetrievalMetadata = Field(
+        default_factory=RetrievalMetadata,
+        description="Structured metadata extracted from properties",
+    )
+
+    # Convenience properties for email results
+    @property
+    def subject(self) -> Optional[str]:
+        """Email subject (if applicable)."""
+        return self.properties.get("email_subject") or self.metadata.email_subject
+
+    @property
+    def sender(self) -> Optional[str]:
+        """Email sender (if applicable)."""
+        return self.properties.get("email_sender") or self.metadata.email_sender
+
+    @field_validator("retrieval_timestamp", mode="before")
+    @classmethod
+    def parse_timestamp(cls, v: Any) -> datetime:
+        """Parse timestamp from string or datetime."""
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                return datetime.now()
+        return datetime.now()
 
 
 class Retriever:
@@ -48,8 +238,7 @@ class Retriever:
 
         Args:
             db_manager: DatabaseManager instance for database access
-            embedding_engine: EmbeddingEngine instance (optional, will create
-                default if not provided)
+            embedding_engine: EmbeddingEngine instance (optional, defaults to None)
 
         Raises:
             ValueError: If db_manager is None
@@ -74,7 +263,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Search for similar documents using vector similarity.
 
         This method performs semantic search using vector embeddings to find
@@ -82,11 +271,12 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty
@@ -131,7 +321,7 @@ class Retriever:
         top_k: int = 5,
         alpha: float = 0.5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Perform hybrid search combining vector and keyword search.
 
         This method combines semantic similarity search with traditional
@@ -139,13 +329,14 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             alpha: Weight for vector search (0.0 = keyword only,
                 1.0 = vector only)
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty or alpha is out of range
@@ -210,7 +401,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Perform keyword search using BM25 algorithm.
 
         This method performs traditional keyword search using BM25 algorithm
@@ -218,11 +409,12 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty
@@ -262,7 +454,7 @@ class Retriever:
 
     def _process_vector_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process vector search results from Weaviate.
 
         Args:
@@ -270,7 +462,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -283,25 +475,30 @@ class Retriever:
             if similarity_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": similarity_score,
-                    "distance": distance,
-                    "retrieval_method": "vector_similarity",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=similarity_score,
+                    distance=distance,
+                    retrieval_method="vector_similarity",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by similarity score (highest first)
-        results.sort(key=lambda x: x.get("similarity_score", 0), reverse=True)
+        results.sort(key=lambda x: x.similarity_score, reverse=True)
         return results
 
     def _process_hybrid_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process hybrid search results from Weaviate.
 
         Args:
@@ -309,7 +506,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -321,25 +518,30 @@ class Retriever:
             if hybrid_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": hybrid_score,
-                    "hybrid_score": hybrid_score,
-                    "retrieval_method": "hybrid_search",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=hybrid_score,
+                    hybrid_score=hybrid_score,
+                    retrieval_method="hybrid_search",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by hybrid score (highest first)
-        results.sort(key=lambda x: x.get("hybrid_score", 0), reverse=True)
+        results.sort(key=lambda x: x.hybrid_score or 0.0, reverse=True)
         return results
 
     def _process_keyword_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process keyword search results from Weaviate.
 
         Args:
@@ -347,7 +549,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -359,20 +561,25 @@ class Retriever:
             if bm25_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": bm25_score,
-                    "bm25_score": bm25_score,
-                    "retrieval_method": "keyword_search",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=bm25_score,
+                    bm25_score=bm25_score,
+                    retrieval_method="keyword_search",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by BM25 score (highest first)
-        results.sort(key=lambda x: x.get("bm25_score", 0), reverse=True)
+        results.sort(key=lambda x: x.bm25_score or 0.0, reverse=True)
         return results
 
     def _get_current_timestamp(self) -> str:

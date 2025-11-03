@@ -17,9 +17,10 @@ of concerns between storage, retrieval, and generation layers.
 
 import logging
 import time
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 from ..config import KnowledgeBaseManagerConfig
 from ..utils.email_utils.base import EmailProvider
@@ -28,7 +29,7 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .retriever import Retriever
+from .retriever import Retriever, SearchResultItem
 from .vector_store import VectorStore
 
 
@@ -41,17 +42,25 @@ class SearchStrategy(Enum):
     AUTO = "auto"  # Automatically choose best strategy
 
 
-@dataclass
-class SearchResult:
-    """Search result dataclass."""
+class SearchResult(BaseModel):
+    """Container for search results with query metadata.
 
-    query: str
-    strategy: SearchStrategy
-    collection: str
-    results: List[Dict[str, Any]]
-    total_found: int
-    execution_time: float
-    metadata: Dict[str, Any]
+    Provides a structured container for search results including
+    the query, strategy, results list, and execution metadata.
+    """
+
+    query: str = Field(..., description="Search query text")
+    strategy: str = Field(..., description="Search strategy used")
+    collection: str = Field(..., description="Collection searched")
+    results: List[SearchResultItem] = Field(
+        default_factory=list, description="List of search result items"
+    )
+    total_found: int = Field(..., ge=0, description="Total number of results found")
+    execution_time: float = Field(..., ge=0.0, description="Execution time in seconds")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata about the search",
+    )
 
 
 class KnowledgeBaseManager:
@@ -305,34 +314,63 @@ class KnowledgeBaseManager:
             # Prepare metadata
             metadata = {
                 "chunk_sources": list(
-                    set(result.get("source_document", "") for result in results)
+                    set(
+                        result.properties.get("source_document", "")
+                        or result.metadata.source_document
+                        or ""
+                        for result in results
+                    )
                 ),
                 "chunk_types": list(
-                    set(result.get("chunk_type", "") for result in results)
+                    set(
+                        result.properties.get("chunk_type", "")
+                        or result.metadata.chunk_type
+                        or ""
+                        for result in results
+                    )
                 ),
             }
 
             # Add similarity scores if available
-            if results and "similarity_score" in results[0]:
+            if results:
                 metadata["avg_similarity"] = sum(
-                    result.get("similarity_score", 0) for result in results
+                    result.similarity_score for result in results
                 ) / len(results)
                 metadata["max_similarity"] = max(
-                    result.get("similarity_score", 0) for result in results
+                    result.similarity_score for result in results
                 )
 
             self.logger.info(
-                f"Search completed: {len(results)} results in {execution_time:.3f}s"
+                f"Search completed: {len(results)} results in " f"{execution_time:.3f}s"
             )
 
-            return SearchResult(
-                query=query,
-                strategy=strategy,
-                collection=collection,
-                results=results,
-                total_found=len(results),
-                execution_time=execution_time,
-                metadata=metadata,
+            # Convert strategy enum to string for SearchResult
+            strategy_str = (
+                strategy.value if hasattr(strategy, "value") else str(strategy)
+            )
+
+            # Convert SearchResultItem instances to dicts for Pydantic 2.x compatibility
+            # This ensures proper nested model validation
+            results_dicts = []
+            for item in results:
+                if hasattr(item, "model_dump"):
+                    # If it's a Pydantic model, convert to dict
+                    results_dicts.append(item.model_dump())
+                else:
+                    # If it's already a dict, use as-is
+                    results_dicts.append(item)
+
+            # Use model_validate for proper nested model validation in Pydantic 2.x
+            return SearchResult.model_validate(
+                {
+                    "query": query,
+                    "strategy": strategy_str,
+                    "collection": collection,
+                    "results": results_dicts,
+                    "total_found": len(results),
+                    "execution_time": execution_time,
+                    "metadata": metadata,
+                }
             )
 
         except Exception as e:

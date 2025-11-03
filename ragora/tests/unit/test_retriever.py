@@ -8,7 +8,7 @@ from weaviate.exceptions import WeaviateBaseError
 
 from ragora.core.database_manager import DatabaseManager
 from ragora.core.embedding_engine import EmbeddingEngine
-from ragora.core.retriever import Retriever
+from ragora.core.retriever import RetrievalMetadata, Retriever, SearchResultItem
 
 
 class TestRetriever:
@@ -54,7 +54,7 @@ class TestRetriever:
             "chunk_id": "test_chunk_1",
             "source_document": "test_doc.pdf",
             "chunk_type": "text",
-            "metadata_chunk_id": 1,
+            "metadata_chunk_idx": 1,
             "metadata_chunk_size": 100,
             "metadata_total_chunks": 5,
             "metadata_created_at": "2023-01-01T00:00:00",
@@ -79,18 +79,14 @@ class TestRetriever:
         assert retriever.db_manager == mock_db_manager
         assert retriever.embedding_engine == mock_embedding_engine
 
-    def test_init_with_default_embedding_engine(self, mock_db_manager):
-        """Test initialization with default EmbeddingEngine."""
-        with patch("ragora.core.retriever.EmbeddingEngine") as mock_engine_class:
-            mock_engine = Mock(spec=EmbeddingEngine)
-            mock_engine_class.return_value = mock_engine
+    def test_init_without_embedding_engine(self, mock_db_manager):
+        """Test initialization without EmbeddingEngine (default None)."""
+        retriever = Retriever(
+            db_manager=mock_db_manager,
+        )
 
-            retriever = Retriever(
-                db_manager=mock_db_manager,
-            )
-
-            assert retriever.embedding_engine == mock_engine
-            mock_engine_class.assert_called_once()
+        # EmbeddingEngine should be None by default (Weaviate handles embeddings)
+        assert retriever.embedding_engine is None
 
     def test_init_with_none_db_manager(self):
         """Test initialization with None DatabaseManager."""
@@ -118,7 +114,12 @@ class TestRetriever:
         ):
             with patch.object(retriever, "_process_vector_results") as mock_process:
                 mock_process.return_value = [
-                    {"content": "test", "similarity_score": 0.8}
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
                 ]
 
                 result = retriever.search_similar(
@@ -161,7 +162,15 @@ class TestRetriever:
             retriever, "_preprocess_query", return_value="machine learning"
         ):
             with patch.object(retriever, "_process_hybrid_results") as mock_process:
-                mock_process.return_value = [{"content": "test", "hybrid_score": 0.8}]
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        hybrid_score=0.8,
+                        retrieval_method="hybrid_search",
+                    )
+                ]
 
                 result = retriever.search_hybrid(
                     "machine learning", collection="Document", alpha=0.7, top_k=5
@@ -200,7 +209,15 @@ class TestRetriever:
             retriever, "_preprocess_query", return_value="machine learning"
         ):
             with patch.object(retriever, "_process_keyword_results") as mock_process:
-                mock_process.return_value = [{"content": "test", "bm25_score": 0.8}]
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        bm25_score=0.8,
+                        retrieval_method="keyword_search",
+                    )
+                ]
 
                 result = retriever.search_keyword(
                     "machine learning", collection="Document", top_k=5
@@ -225,10 +242,11 @@ class TestRetriever:
         result = retriever._process_vector_results(objects, score_threshold=0.5)
 
         assert len(result) == 1
-        assert result[0]["similarity_score"] == 0.8  # 1.0 - 0.2
-        assert result[0]["distance"] == 0.2
-        assert result[0]["retrieval_method"] == "vector_similarity"
-        assert "retrieval_timestamp" in result[0]
+        assert isinstance(result[0], SearchResultItem)
+        assert result[0].similarity_score == 0.8  # 1.0 - 0.2
+        assert result[0].distance == 0.2
+        assert result[0].retrieval_method == "vector_similarity"
+        assert result[0].retrieval_timestamp is not None
 
     def test_process_vector_results_score_threshold(
         self, retriever, mock_search_result
@@ -248,10 +266,11 @@ class TestRetriever:
         result = retriever._process_hybrid_results(objects, score_threshold=0.5)
 
         assert len(result) == 1
-        assert result[0]["hybrid_score"] == 0.8
-        assert result[0]["similarity_score"] == 0.8
-        assert result[0]["retrieval_method"] == "hybrid_search"
-        assert "retrieval_timestamp" in result[0]
+        assert isinstance(result[0], SearchResultItem)
+        assert result[0].hybrid_score == 0.8
+        assert result[0].similarity_score == 0.8
+        assert result[0].retrieval_method == "hybrid_search"
+        assert result[0].retrieval_timestamp is not None
 
     def test_process_keyword_results(self, retriever, mock_search_result):
         """Test processing keyword search results."""
@@ -260,10 +279,11 @@ class TestRetriever:
         result = retriever._process_keyword_results(objects, score_threshold=0.5)
 
         assert len(result) == 1
-        assert result[0]["bm25_score"] == 0.8
-        assert result[0]["similarity_score"] == 0.8
-        assert result[0]["retrieval_method"] == "keyword_search"
-        assert "retrieval_timestamp" in result[0]
+        assert isinstance(result[0], SearchResultItem)
+        assert result[0].bm25_score == 0.8
+        assert result[0].similarity_score == 0.8
+        assert result[0].retrieval_method == "keyword_search"
+        assert result[0].retrieval_timestamp is not None
 
     def test_get_current_timestamp(self, retriever):
         """Test getting current timestamp."""
@@ -279,7 +299,7 @@ class TestRetriever:
     def test_get_retrieval_stats_success(
         self, retriever, mock_db_manager, mock_embedding_engine
     ):
-        """Test successful retrieval stats."""
+        """Test successful retrieval stats with embedding engine."""
         result = retriever.get_retrieval_stats(collection="Document")
 
         expected = {
@@ -300,9 +320,64 @@ class TestRetriever:
 
         assert result == expected
 
+    def test_get_retrieval_stats_without_embedding_engine(self, mock_db_manager):
+        """Test retrieval stats without embedding engine."""
+        retriever = Retriever(db_manager=mock_db_manager)
+        result = retriever.get_retrieval_stats(collection="Document")
+
+        assert result["embedding_model"] == (
+            "Weaviate text2vec-transformers (server-side)"
+        )
+        assert result["embedding_dimension"] == "N/A (server-side)"
+
     def test_get_retrieval_stats_failure(self, retriever, mock_db_manager):
         """Test retrieval stats failure."""
         mock_db_manager.list_collections.side_effect = Exception("Stats failed")
 
         with pytest.raises(Exception, match="Stats failed"):
             retriever.get_retrieval_stats(collection="Document")
+
+    def test_search_result_item_convenience_properties(self):
+        """Test SearchResultItem convenience properties for email results."""
+        # Create SearchResultItem with email properties
+        result = SearchResultItem(
+            content="Test email content",
+            chunk_id="email_001",
+            properties={
+                "email_subject": "Test Subject",
+                "email_sender": "sender@example.com",
+                "content": "Test email content",
+                "chunk_id": "email_001",
+            },
+            similarity_score=0.9,
+            retrieval_method="vector_similarity",
+            metadata=RetrievalMetadata(
+                email_subject="Test Subject",
+                email_sender="sender@example.com",
+            ),
+        )
+
+        # Test convenience properties
+        assert result.subject == "Test Subject"
+        assert result.sender == "sender@example.com"
+
+    def test_search_result_item_serialization(self):
+        """Test SearchResultItem serialization methods."""
+        result = SearchResultItem(
+            content="Test content",
+            chunk_id="test_001",
+            properties={"content": "Test content", "chunk_id": "test_001"},
+            similarity_score=0.8,
+            retrieval_method="vector_similarity",
+        )
+
+        # Test model_dump
+        result_dict = result.model_dump()
+        assert result_dict["content"] == "Test content"
+        assert result_dict["chunk_id"] == "test_001"
+        assert result_dict["similarity_score"] == 0.8
+
+        # Test model_dump_json
+        result_json = result.model_dump_json()
+        assert "Test content" in result_json
+        assert "test_001" in result_json

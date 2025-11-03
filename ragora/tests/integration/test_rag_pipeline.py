@@ -23,7 +23,9 @@ from ragora import (
     ChunkMetadata,
     DataChunk,
     KnowledgeBaseManager,
+    RetrievalMetadata,
     SearchResult,
+    SearchResultItem,
     SearchStrategy,
 )
 
@@ -236,22 +238,44 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         # Setup query processing mocks
         mock_search_results = [
-            {
-                "content": "The famous equation is: E = mc²",
-                "chunk_id": "math_001",
-                "source_document": "test_document.tex",
-                "chunk_type": "equation",
-                "metadata": {"page_number": 2, "section_title": "Mathematical Content"},
-                "similarity_score": 0.95,
-            },
-            {
-                "content": "This equation was derived by Einstein in 1905",
-                "chunk_id": "citation_001",
-                "source_document": "test_document.tex",
-                "chunk_type": "citation",
-                "metadata": {"page_number": 3, "section_title": "Bibliography"},
-                "similarity_score": 0.85,
-            },
+            SearchResultItem(
+                content="The famous equation is: E = mc²",
+                chunk_id="math_001",
+                properties={
+                    "content": "The famous equation is: E = mc²",
+                    "chunk_id": "math_001",
+                    "source_document": "test_document.tex",
+                    "chunk_type": "equation",
+                },
+                similarity_score=0.95,
+                hybrid_score=0.95,
+                retrieval_method="hybrid_search",
+                metadata=RetrievalMetadata(
+                    source_document="test_document.tex",
+                    chunk_type="equation",
+                    page_number=2,
+                    section_title="Mathematical Content",
+                ),
+            ),
+            SearchResultItem(
+                content="This equation was derived by Einstein in 1905",
+                chunk_id="citation_001",
+                properties={
+                    "content": "This equation was derived by Einstein in 1905",
+                    "chunk_id": "citation_001",
+                    "source_document": "test_document.tex",
+                    "chunk_type": "citation",
+                },
+                similarity_score=0.85,
+                hybrid_score=0.85,
+                retrieval_method="hybrid_search",
+                metadata=RetrievalMetadata(
+                    source_document="test_document.tex",
+                    chunk_type="citation",
+                    page_number=3,
+                    section_title="Bibliography",
+                ),
+            ),
         ]
         mock_retriever.return_value.search_hybrid.return_value = mock_search_results
 
@@ -267,14 +291,22 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         # Assertions
         assert result.query == "What is Einstein's famous equation?"
-        assert result.strategy == SearchStrategy.HYBRID
+        assert result.strategy == "hybrid"
         assert result.total_found == 2
-        assert result.results == mock_search_results
+        assert len(result.results) == len(mock_search_results)
+        # Compare individual properties
+        assert result.results[0].content == mock_search_results[0].content
+        assert result.results[0].chunk_id == mock_search_results[0].chunk_id
+        assert result.results[1].content == mock_search_results[1].content
+        assert result.results[1].chunk_id == mock_search_results[1].chunk_id
         assert "test_document.tex" in result.metadata["chunk_sources"]
         assert "equation" in result.metadata["chunk_types"]
         assert "citation" in result.metadata["chunk_types"]
         assert abs(result.metadata["avg_similarity"] - 0.9) < 0.01  # (0.95 + 0.85) / 2
         assert result.metadata["max_similarity"] == 0.95
+        # Verify SearchResultItem instances
+        assert isinstance(result.results[0], SearchResultItem)
+        assert isinstance(result.results[1], SearchResultItem)
 
         # Verify retriever was called correctly
         mock_retriever.return_value.search_hybrid.assert_called_once_with(

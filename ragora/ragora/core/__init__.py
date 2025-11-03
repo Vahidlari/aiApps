@@ -21,7 +21,7 @@ from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .knowledge_base_manager import KnowledgeBaseManager, SearchResult, SearchStrategy
-from .retriever import Retriever
+from .retriever import RetrievalMetadata, Retriever, SearchResultItem
 from .vector_store import VectorStore
 
 __all__ = [
@@ -41,6 +41,8 @@ __all__ = [
     "KnowledgeBaseManager",
     "SearchStrategy",
     "SearchResult",
+    "SearchResultItem",
+    "RetrievalMetadata",
     "Retriever",
     "VectorStore",
 ]
