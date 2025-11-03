@@ -457,7 +457,7 @@ john.doe@example.com
 Phone: 555-123-4567"""
         result = preprocessor._strip_signatures(text)
         assert "This is the email body." in result
-        assert "--" not in result or "--" not in result.strip()
+        assert "--" not in result.strip()
         assert "john.doe@example.com" not in result
 
         # Test "Best regards" signature
