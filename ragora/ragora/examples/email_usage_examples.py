@@ -96,6 +96,7 @@ from typing import List
 
 from dotenv import load_dotenv
 
+from ragora.core import EmailPreprocessor
 from ragora.utils import (
     EmailProvider,
     EmailProviderFactory,
@@ -185,8 +186,8 @@ def example_imap_usage():
         print("Connected to IMAP/SMTP servers")
 
         # Fetch messages
-        messages = provider.fetch_messages(limit=10, unread_only=True)
-        print(f"Fetched {len(messages)} unread messages")
+        messages = provider.fetch_messages(limit=10, unread_only=False)
+        print(f"Fetched {len(messages)} latest messages")
 
         # Process messages
         for msg in messages:
@@ -194,6 +195,7 @@ def example_imap_usage():
             print(f"From: {msg.sender}")
             print(f"Date: {msg.date_sent}")
             print(f"Body preview: {msg.get_body()[:100]}...")
+            print(f"Cleaned body: {EmailPreprocessor().clean_email_body(msg)}")
             print("-" * 50)
 
         # getting the list of folders
