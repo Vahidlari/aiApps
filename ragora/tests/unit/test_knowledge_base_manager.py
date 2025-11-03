@@ -136,9 +136,7 @@ class TestKnowledgeBaseManager:
         mock_document_preprocessor.return_value = Mock()
 
         # Test
-        kbm = KnowledgeBaseManager(
-            weaviate_url="http://localhost:8080", class_name="TestDocument"
-        )
+        kbm = KnowledgeBaseManager(weaviate_url="http://localhost:8080")
 
         # Assertions
         assert kbm.is_initialized is True
