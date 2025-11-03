@@ -59,11 +59,12 @@ class Retriever:
 
         self.db_manager = db_manager
 
-        # Initialize embedding engine if not provided
-        if embedding_engine is None:
-            self.embedding_engine = EmbeddingEngine()
-        else:
-            self.embedding_engine = embedding_engine
+        # Note: Embedding engine is not needed when using Weaviate's
+        # text2vec-transformers. Weaviate handles embeddings server-side.
+        # EmbeddingEngine is only kept for potential future use cases where
+        # client-side embeddings might be needed. DO NOT initialize it by
+        # default to avoid unnecessary model loading.
+        self.embedding_engine = embedding_engine
 
         self.logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ class Retriever:
             raise ValueError("Query cannot be empty")
 
         try:
-            self.logger.debug(f"Performing vector similarity search: '{query}'")
+            self.logger.debug(f"Performing vector similarity search: " f"'{query}'")
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -115,7 +116,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} similar results for: '{query}'"
+                f"Found {len(processed_results)} similar results for: " f"'{query}'"
             )
             return processed_results
 
@@ -156,7 +157,9 @@ class Retriever:
             raise ValueError("Alpha must be between 0.0 and 1.0")
 
         try:
-            self.logger.debug(f"Performing hybrid search: '{query}' with alpha={alpha}")
+            self.logger.debug(
+                f"Performing hybrid search: '{query}' with " f"alpha={alpha}"
+            )
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -178,7 +181,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} hybrid results for: '{query}'"
+                f"Found {len(processed_results)} hybrid results for: " f"'{query}'"
             )
             return processed_results
 
@@ -230,7 +233,7 @@ class Retriever:
             raise ValueError("Query cannot be empty")
 
         try:
-            self.logger.debug(f"Performing keyword search: '{query}'")
+            self.logger.debug(f"Performing keyword search: " f"'{query}'")
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -251,7 +254,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} keyword results for: '{query}'"
+                f"Found {len(processed_results)} keyword results for: " f"'{query}'"
             )
             return processed_results
 
@@ -280,38 +283,13 @@ class Retriever:
             similarity_score = 1.0 - distance
 
             if similarity_score >= score_threshold:
+                # Build a consistent result that includes all stored properties
+                properties = dict(obj.properties or {})
                 result = {
-                    "content": obj.properties.get("content", ""),
-                    "chunk_id": obj.properties.get("chunk_id", ""),
-                    "source_document": obj.properties.get("source_document", ""),
-                    "chunk_type": obj.properties.get("chunk_type", ""),
-                    "metadata": {
-                        "chunk_id": obj.properties.get("metadata_chunk_id", 0),
-                        "chunk_size": obj.properties.get("metadata_chunk_size", 0),
-                        "total_chunks": obj.properties.get("metadata_total_chunks", 0),
-                        "created_at": obj.properties.get("metadata_created_at", ""),
-                        "source_document": obj.properties.get("source_document", ""),
-                        "page_number": obj.properties.get("page_number", 0),
-                        "section_title": obj.properties.get("section_title", ""),
-                        "chunk_type": obj.properties.get("chunk_type", ""),
-                        # Email-specific fields
-                        "email_subject": obj.properties.get("email_subject", ""),
-                        "email_sender": obj.properties.get("email_sender", ""),
-                        "email_recipient": obj.properties.get("email_recipient", ""),
-                        "email_date": obj.properties.get("email_date", ""),
-                        "email_id": obj.properties.get("email_id", ""),
-                        "email_folder": obj.properties.get("email_folder", ""),
-                        # Custom metadata fields
-                        "custom_metadata": obj.properties.get("custom_metadata", ""),
-                        "language": obj.properties.get("language", ""),
-                        "domain": obj.properties.get("domain", ""),
-                        "confidence": obj.properties.get("confidence", 0.0),
-                        "tags": obj.properties.get("tags", ""),
-                        "priority": obj.properties.get("priority", 0),
-                        "content_category": obj.properties.get("content_category", ""),
-                    },
-                    "page_number": obj.properties.get("page_number", 0),
-                    "section_title": obj.properties.get("section_title", ""),
+                    "properties": properties,
+                    # Convenience fields (backward compatible)
+                    "content": properties.get("content", ""),
+                    "chunk_id": properties.get("chunk_id", ""),
                     "similarity_score": similarity_score,
                     "distance": distance,
                     "retrieval_method": "vector_similarity",
@@ -343,38 +321,13 @@ class Retriever:
             )
 
             if hybrid_score >= score_threshold:
+                # Build a consistent result that includes all stored properties
+                properties = dict(obj.properties or {})
                 result = {
-                    "content": obj.properties.get("content", ""),
-                    "chunk_id": obj.properties.get("chunk_id", ""),
-                    "source_document": obj.properties.get("source_document", ""),
-                    "chunk_type": obj.properties.get("chunk_type", ""),
-                    "metadata": {
-                        "chunk_id": obj.properties.get("metadata_chunk_id", 0),
-                        "chunk_size": obj.properties.get("metadata_chunk_size", 0),
-                        "total_chunks": obj.properties.get("metadata_total_chunks", 0),
-                        "created_at": obj.properties.get("metadata_created_at", ""),
-                        "source_document": obj.properties.get("source_document", ""),
-                        "page_number": obj.properties.get("page_number", 0),
-                        "section_title": obj.properties.get("section_title", ""),
-                        "chunk_type": obj.properties.get("chunk_type", ""),
-                        # Email-specific fields
-                        "email_subject": obj.properties.get("email_subject", ""),
-                        "email_sender": obj.properties.get("email_sender", ""),
-                        "email_recipient": obj.properties.get("email_recipient", ""),
-                        "email_date": obj.properties.get("email_date", ""),
-                        "email_id": obj.properties.get("email_id", ""),
-                        "email_folder": obj.properties.get("email_folder", ""),
-                        # Custom metadata fields
-                        "custom_metadata": obj.properties.get("custom_metadata", ""),
-                        "language": obj.properties.get("language", ""),
-                        "domain": obj.properties.get("domain", ""),
-                        "confidence": obj.properties.get("confidence", 0.0),
-                        "tags": obj.properties.get("tags", ""),
-                        "priority": obj.properties.get("priority", 0),
-                        "content_category": obj.properties.get("content_category", ""),
-                    },
-                    "page_number": obj.properties.get("page_number", 0),
-                    "section_title": obj.properties.get("section_title", ""),
+                    "properties": properties,
+                    # Convenience fields (backward compatible)
+                    "content": properties.get("content", ""),
+                    "chunk_id": properties.get("chunk_id", ""),
                     "similarity_score": hybrid_score,
                     "hybrid_score": hybrid_score,
                     "retrieval_method": "hybrid_search",
@@ -406,38 +359,13 @@ class Retriever:
             )
 
             if bm25_score >= score_threshold:
+                # Build a consistent result that includes all stored properties
+                properties = dict(obj.properties or {})
                 result = {
-                    "content": obj.properties.get("content", ""),
-                    "chunk_id": obj.properties.get("chunk_id", ""),
-                    "source_document": obj.properties.get("source_document", ""),
-                    "chunk_type": obj.properties.get("chunk_type", ""),
-                    "metadata": {
-                        "chunk_id": obj.properties.get("metadata_chunk_id", 0),
-                        "chunk_size": obj.properties.get("metadata_chunk_size", 0),
-                        "total_chunks": obj.properties.get("metadata_total_chunks", 0),
-                        "created_at": obj.properties.get("metadata_created_at", ""),
-                        "source_document": obj.properties.get("source_document", ""),
-                        "page_number": obj.properties.get("page_number", 0),
-                        "section_title": obj.properties.get("section_title", ""),
-                        "chunk_type": obj.properties.get("chunk_type", ""),
-                        # Email-specific fields
-                        "email_subject": obj.properties.get("email_subject", ""),
-                        "email_sender": obj.properties.get("email_sender", ""),
-                        "email_recipient": obj.properties.get("email_recipient", ""),
-                        "email_date": obj.properties.get("email_date", ""),
-                        "email_id": obj.properties.get("email_id", ""),
-                        "email_folder": obj.properties.get("email_folder", ""),
-                        # Custom metadata fields
-                        "custom_metadata": obj.properties.get("custom_metadata", ""),
-                        "language": obj.properties.get("language", ""),
-                        "domain": obj.properties.get("domain", ""),
-                        "confidence": obj.properties.get("confidence", 0.0),
-                        "tags": obj.properties.get("tags", ""),
-                        "priority": obj.properties.get("priority", 0),
-                        "content_category": obj.properties.get("content_category", ""),
-                    },
-                    "page_number": obj.properties.get("page_number", 0),
-                    "section_title": obj.properties.get("section_title", ""),
+                    "properties": properties,
+                    # Convenience fields (backward compatible)
+                    "content": properties.get("content", ""),
+                    "chunk_id": properties.get("chunk_id", ""),
                     "similarity_score": bm25_score,
                     "bm25_score": bm25_score,
                     "retrieval_method": "keyword_search",
@@ -474,11 +402,22 @@ class Retriever:
             }
 
             # Add retrieval-specific stats
+            embedding_info = (
+                {
+                    "embedding_model": self.embedding_engine.model_name,
+                    "embedding_dimension": (self.embedding_engine.embedding_dimension),
+                }
+                if self.embedding_engine
+                else {
+                    "embedding_model": ("Weaviate text2vec-transformers (server-side)"),
+                    "embedding_dimension": "N/A (server-side)",
+                }
+            )
+
             retrieval_stats = {
                 "database_stats": db_stats,
                 "collection": collection,
-                "embedding_model": self.embedding_engine.model_name,
-                "embedding_dimension": (self.embedding_engine.embedding_dimension),
+                **embedding_info,
                 "retrieval_methods": [
                     "vector_similarity",
                     "hybrid_search",

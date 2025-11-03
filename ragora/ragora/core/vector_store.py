@@ -70,11 +70,11 @@ class VectorStore:
         # Set up logging
         self.logger = logging.getLogger(__name__)
 
-        # Initialize embedding engine if not provided
-        if embedding_engine is None:
-            self.embedding_engine = EmbeddingEngine()
-        else:
-            self.embedding_engine = embedding_engine
+        # Note: Embedding engine is not needed when using Weaviate's text2vec-transformers
+        # Weaviate handles embeddings server-side. EmbeddingEngine is only kept for
+        # potential future use cases where client-side embeddings might be needed.
+        # DO NOT initialize it by default to avoid unnecessary model loading.
+        self.embedding_engine = embedding_engine
 
     def is_connected(self) -> bool:
         """Check if the vector store is connected to the database.
