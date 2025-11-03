@@ -95,7 +95,7 @@ class Retriever:
             raise ValueError("Query cannot be empty")
 
         try:
-            self.logger.debug(f"Performing vector similarity search: " f"'{query}'")
+            self.logger.debug(f"Performing vector similarity search: '{query}'")
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -116,7 +116,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} similar results for: " f"'{query}'"
+                f"Found {len(processed_results)} similar results for: '{query}'"
             )
             return processed_results
 
@@ -157,9 +157,7 @@ class Retriever:
             raise ValueError("Alpha must be between 0.0 and 1.0")
 
         try:
-            self.logger.debug(
-                f"Performing hybrid search: '{query}' with " f"alpha={alpha}"
-            )
+            self.logger.debug(f"Performing hybrid search: '{query}' with alpha={alpha}")
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -181,7 +179,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} hybrid results for: " f"'{query}'"
+                f"Found {len(processed_results)} hybrid results for: '{query}'"
             )
             return processed_results
 
@@ -233,7 +231,7 @@ class Retriever:
             raise ValueError("Query cannot be empty")
 
         try:
-            self.logger.debug(f"Performing keyword search: " f"'{query}'")
+            self.logger.debug(f"Performing keyword search: '{query}'")
 
             # Preprocess query for better results
             processed_query = self._preprocess_query(query)
@@ -254,7 +252,7 @@ class Retriever:
             )
 
             self.logger.debug(
-                f"Found {len(processed_results)} keyword results for: " f"'{query}'"
+                f"Found {len(processed_results)} keyword results for: '{query}'"
             )
             return processed_results
 
