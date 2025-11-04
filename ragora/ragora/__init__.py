@@ -53,6 +53,7 @@ from .core.database_manager import DatabaseManager
 from .core.document_preprocessor import DocumentPreprocessor
 from .core.email_preprocessor import EmailPreprocessor
 from .core.embedding_engine import EmbeddingEngine
+from .core.filters import FilterBuilder
 from .core.knowledge_base_manager import (
     KnowledgeBaseManager,
     SearchResult,
@@ -97,6 +98,7 @@ __all__ = [
     "DocumentPreprocessor",
     "EmailPreprocessor",
     "EmbeddingEngine",
+    "FilterBuilder",
     "Retriever",
     "VectorStore",
     # Configuration

@@ -310,7 +310,10 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
 
         # Verify retriever was called correctly
         mock_retriever.return_value.search_hybrid.assert_called_once_with(
-            "What is Einstein's famous equation?", collection="Document", top_k=5
+            "What is Einstein's famous equation?",
+            collection="Document",
+            top_k=5,
+            filter=None,
         )
 
     @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")

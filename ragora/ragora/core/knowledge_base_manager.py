@@ -21,6 +21,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+from weaviate.classes.query import Filter
 
 from ..config import KnowledgeBaseManagerConfig
 from ..utils.email_utils.base import EmailProvider
@@ -257,6 +258,7 @@ class KnowledgeBaseManager:
         collection: str = "Document",
         strategy: SearchStrategy = SearchStrategy.HYBRID,
         top_k: int = 5,
+        filter: Optional[Filter] = None,
         **strategy_kwargs,
     ) -> SearchResult:
         """Unified search interface for all data types and strategies.
@@ -266,7 +268,9 @@ class KnowledgeBaseManager:
             collection: Collection name to search in
             strategy: Search strategy to use
             top_k: Number of results to return
-            **strategy_kwargs: Strategy-specific parameters (alpha, score_threshold, etc.)
+            filter: Optional Weaviate Filter to filter results by properties
+            **strategy_kwargs: Strategy-specific parameters
+                (alpha, score_threshold, etc.)
 
         Returns:
             SearchResult: Structured search results with metadata
@@ -292,20 +296,37 @@ class KnowledgeBaseManager:
             # Execute search based on strategy
             if strategy == SearchStrategy.SIMILAR:
                 results = self.retriever.search_similar(
-                    query, collection=collection, top_k=top_k, **strategy_kwargs
+                    query,
+                    collection=collection,
+                    top_k=top_k,
+                    filter=filter,
+                    **strategy_kwargs,
                 )
             elif strategy == SearchStrategy.KEYWORD:
                 results = self.retriever.search_keyword(
-                    query, collection=collection, top_k=top_k, **strategy_kwargs
+                    query,
+                    collection=collection,
+                    top_k=top_k,
+                    filter=filter,
+                    **strategy_kwargs,
                 )
             elif strategy == SearchStrategy.HYBRID:
                 results = self.retriever.search_hybrid(
-                    query, collection=collection, top_k=top_k, **strategy_kwargs
+                    query,
+                    collection=collection,
+                    top_k=top_k,
+                    filter=filter,
+                    **strategy_kwargs,
                 )
             elif strategy == SearchStrategy.AUTO:
-                # For now, default to hybrid. Could be enhanced with automatic strategy selection
+                # For now, default to hybrid.
+                # Could be enhanced with automatic strategy selection
                 results = self.retriever.search_hybrid(
-                    query, collection=collection, top_k=top_k, **strategy_kwargs
+                    query,
+                    collection=collection,
+                    top_k=top_k,
+                    filter=filter,
+                    **strategy_kwargs,
                 )
             else:
                 raise ValueError(f"Invalid search strategy: {strategy}")

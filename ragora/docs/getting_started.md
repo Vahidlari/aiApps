@@ -200,19 +200,74 @@ results = retriever.search_keyword(
     top_k=5
 )
 
-# Search with filters
-results = retriever.search_with_filter(
-    query="quantum mechanics",
-    filters={"author": "Feynman"},
-    top_k=5
-)
-
 # Display results
 for result in results:
     print(f"Score: {result['similarity_score']:.3f}")
     print(f"Content: {result['content'][:150]}...")
     print(f"Metadata: {result.get('metadata', {})}\n")
 ```
+
+### Filtering Search Results
+
+Ragora supports filtering search results by properties using Weaviate filters. The `FilterBuilder` class provides convenient methods for creating filters aligned with your domain model.
+
+```python
+from ragora import KnowledgeBaseManager, FilterBuilder, SearchStrategy
+
+kbm = KnowledgeBaseManager()
+
+# Filter by chunk type (only text chunks)
+filter = FilterBuilder.by_chunk_type("text")
+results = kbm.search(
+    "machine learning",
+    strategy=SearchStrategy.HYBRID,
+    filter=filter
+)
+
+# Filter by source document
+filter = FilterBuilder.by_source_document("research_paper.pdf")
+results = kbm.search("quantum mechanics", filter=filter)
+
+# Filter by date range (documents from 2024)
+date_filter = FilterBuilder.by_date_range(
+    start="2024-01-01",
+    end="2024-12-31"
+)
+results = kbm.search("latest research", filter=date_filter)
+
+# Combine multiple filters (AND logic)
+type_filter = FilterBuilder.by_chunk_type("text")
+doc_filter = FilterBuilder.by_source_document("paper.pdf")
+combined = FilterBuilder.combine_and(type_filter, doc_filter)
+results = kbm.search("findings", filter=combined)
+
+# Email-specific filters
+email_filter = FilterBuilder.by_email_sender("colleague@example.com")
+results = kbm.search(
+    "project update",
+    collection="Email",
+    filter=email_filter
+)
+
+# Filter by page number
+page_filter = FilterBuilder.by_page_number(1)
+results = kbm.search("introduction", filter=page_filter)
+
+# Advanced: Use raw Weaviate Filter for complex queries
+from weaviate.classes.query import Filter
+raw_filter = Filter.by_property("chunk_type").equal("text")
+results = kbm.search("query", filter=raw_filter)
+```
+
+**Common Filter Patterns:**
+
+- **Filter by content type**: `FilterBuilder.by_chunk_type("text")`
+- **Filter by document**: `FilterBuilder.by_source_document("filename.pdf")`
+- **Filter by date range**: `FilterBuilder.by_date_range(start="2024-01-01", end="2024-12-31")`
+- **Filter by email sender**: `FilterBuilder.by_email_sender("sender@example.com")`
+- **Combine filters**: `FilterBuilder.combine_and(filter1, filter2)`
+
+For more details, see the [API Reference - FilterBuilder](../docs/api_reference.md#ragorafilterbuilder).
 
 ## 🔧 Configuration
 
