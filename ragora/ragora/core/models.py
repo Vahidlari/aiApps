@@ -203,12 +203,33 @@ class SearchResultItem(RetrievalResultItem):
     @field_validator("retrieval_timestamp", mode="before")
     @classmethod
     def parse_timestamp(cls, v: Any) -> datetime:
-        """Parse timestamp from string or datetime."""
+        """Parse timestamp from string or datetime.
+
+        Args:
+            v: Timestamp value (datetime or ISO format string)
+
+        Returns:
+            datetime: Parsed datetime object
+
+        Raises:
+            ValueError: If the value cannot be parsed into a valid datetime
+        """
         if isinstance(v, datetime):
             return v
         if isinstance(v, str):
             try:
                 return datetime.fromisoformat(v.replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                return datetime.now()
-        return datetime.now()
+            except (ValueError, AttributeError) as e:
+                raise ValueError(
+                    f"Invalid timestamp string format: {v}. "
+                    f"Expected ISO 8601 format (e.g., '2024-01-15T14:30:00Z')."
+                ) from e
+        if v is None:
+            raise ValueError(
+                "retrieval_timestamp cannot be None. "
+                "If not provided, it will default to the current time."
+            )
+        raise ValueError(
+            f"Invalid timestamp type: {type(v).__name__}. "
+            f"Expected datetime or ISO 8601 format string."
+        )

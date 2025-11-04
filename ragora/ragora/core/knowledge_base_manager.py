@@ -342,7 +342,7 @@ class KnowledgeBaseManager:
                 )
 
             self.logger.info(
-                f"Search completed: {len(results)} results in " f"{execution_time:.3f}s"
+                f"Search completed: {len(results)} results in {execution_time:.3f}s"
             )
 
             # Convert strategy enum to string for SearchResult
@@ -350,16 +350,7 @@ class KnowledgeBaseManager:
                 strategy.value if hasattr(strategy, "value") else str(strategy)
             )
 
-            # Convert SearchResultItem instances to dicts for Pydantic 2.x compatibility
-            # This ensures proper nested model validation
-            results_dicts = []
-            for item in results:
-                if hasattr(item, "model_dump"):
-                    # If it's a Pydantic model, convert to dict
-                    results_dicts.append(item.model_dump())
-                else:
-                    # If it's already a dict, use as-is
-                    results_dicts.append(item)
+            results_dicts = [item.model_dump() for item in results]
 
             # Use model_validate for proper nested model validation in Pydantic 2.x
             return SearchResult.model_validate(
