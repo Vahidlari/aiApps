@@ -20,6 +20,7 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
+from .filters import FilterBuilder
 from .knowledge_base_manager import KnowledgeBaseManager, SearchResult, SearchStrategy
 from .models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
 from .retriever import Retriever
@@ -39,6 +40,7 @@ __all__ = [
     "DocumentPreprocessor",
     "EmailPreprocessor",
     "EmbeddingEngine",
+    "FilterBuilder",
     "KnowledgeBaseManager",
     "SearchStrategy",
     "SearchResult",

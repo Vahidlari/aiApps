@@ -29,6 +29,7 @@ from ragora import (
     DatabaseManagerConfig,
     DataChunker,
     EmbeddingConfig,
+    FilterBuilder,
     KnowledgeBaseManager,
     KnowledgeBaseManagerConfig,
     SearchStrategy,
@@ -452,6 +453,105 @@ def main():
 
             for i, chunk in enumerate(response.results, 1):
                 logger.info(f"   {i}. {chunk.content[:50]}...")
+
+        # 4. Filter examples
+        logger.info("\n4️⃣ Filter Examples:")
+
+        # Filter by chunk type
+        logger.info("\n   Filter by chunk type (text only):")
+        text_filter = FilterBuilder.by_chunk_type("text")
+        filtered_results = kbm.search(
+            "computer science",
+            strategy=SearchStrategy.HYBRID,
+            top_k=5,
+            collection=collection_name,
+            filter=text_filter,
+        )
+        logger.info(f"   Found {filtered_results.total_found} text chunks")
+        for i, result in enumerate(filtered_results.results[:2], 1):
+            logger.info(f"   {i}. {result.content[:50]}...")
+
+        # Filter by source document
+        logger.info("\n   Filter by source document:")
+        doc_filter = FilterBuilder.by_source_document("physics_paper.tex")
+        doc_results = kbm.search(
+            "quantum mechanics",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=doc_filter,
+        )
+        logger.info(f"   Found {doc_results.total_found} chunks from physics_paper.tex")
+
+        # Filter by date range
+        logger.info("\n   Filter by date range (2024 documents):")
+        date_filter = FilterBuilder.by_date_range(start="2024-01-01", end="2024-12-31")
+        date_results = kbm.search(
+            "research findings",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=date_filter,
+        )
+        logger.info(f"   Found {date_results.total_found} chunks from 2024")
+
+        # Filter by email sender
+        logger.info("\n   Filter by email sender:")
+        email_filter = FilterBuilder.by_email_sender("project.manager@company.com")
+        email_results = kbm.search(
+            "project update",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=email_filter,
+        )
+        logger.info(
+            f"   Found {email_results.total_found} emails from project.manager@company.com"
+        )
+
+        # Combined filters (AND logic)
+        logger.info("\n   Combined filters (text chunks from specific document):")
+        type_filter = FilterBuilder.by_chunk_type("text")
+        source_filter = FilterBuilder.by_source_document("physics_paper.tex")
+        combined_filter = FilterBuilder.combine_and(type_filter, source_filter)
+        combined_results = kbm.search(
+            "physics concepts",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=combined_filter,
+        )
+        logger.info(
+            f"   Found {combined_results.total_found} text chunks from physics_paper.tex"
+        )
+
+        # Filter by page number
+        logger.info("\n   Filter by page number:")
+        page_filter = FilterBuilder.by_page_number(1)
+        page_results = kbm.search(
+            "introduction",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=page_filter,
+        )
+        logger.info(f"   Found {page_results.total_found} chunks from page 1")
+
+        # Advanced: Email date range filter
+        logger.info("\n   Filter by email date range:")
+        email_date_filter = FilterBuilder.by_email_date_range(
+            start="2024-01-01", end="2024-01-31"
+        )
+        email_date_results = kbm.search(
+            "project",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            collection=collection_name,
+            filter=email_date_filter,
+        )
+        logger.info(
+            f"   Found {email_date_results.total_found} emails from January 2024"
+        )
 
         # System statistics and monitoring
         logger.info("\n📊 System Statistics:")

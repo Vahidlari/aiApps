@@ -58,8 +58,8 @@ Key Methods (brief)
   Parses, chunks, embeds, and stores a single document. Returns stored chunk IDs.
 - `process_documents(document_paths, document_type="latex", collection="Document") -> List[str]`
   Batch variant for multiple documents; returns all stored chunk IDs.
-- `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, **kwargs) -> SearchResult`
-  Unified retrieval with SIMILAR (vector), KEYWORD (BM25), or HYBRID strategies. Returns rich `SearchResult` with timing and totals.
+- `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, filter: Optional[Filter] = None, **kwargs) -> SearchResult`
+  Unified retrieval with SIMILAR (vector), KEYWORD (BM25), or HYBRID strategies. Optional `filter` parameter allows filtering results by properties (e.g., chunk type, date ranges, source documents). Returns rich `SearchResult` with timing and totals.
 - `get_chunk(chunk_id: str, collection: str) -> Optional[RetrievalResultItem]`
   Retrieve a specific chunk by its ID. Returns structured `RetrievalResultItem` with content, metadata, and properties.
 - `get_collection_stats(collection: str) -> Dict`
@@ -223,9 +223,9 @@ retriever = Retriever(
 ```
 
 **Key Methods:**
-- `search_similar(query: str, collection: str, top_k: int) -> List[SearchResultItem]` - Semantic search
-- `search_keyword(query: str, collection: str, top_k: int) -> List[SearchResultItem]` - Keyword search
-- `search_hybrid(query: str, collection: str, alpha: float, top_k: int) -> List[SearchResultItem]` - Hybrid search
+- `search_similar(query: str, collection: str, top_k: int, filter: Optional[Filter] = None) -> List[SearchResultItem]` - Semantic search with optional filter
+- `search_keyword(query: str, collection: str, top_k: int, filter: Optional[Filter] = None) -> List[SearchResultItem]` - Keyword search with optional filter
+- `search_hybrid(query: str, collection: str, alpha: float, top_k: int, filter: Optional[Filter] = None) -> List[SearchResultItem]` - Hybrid search with optional filter
 
 **Return Types:**
 
@@ -259,6 +259,82 @@ for result in results.results:
     print(result.content)  # Base class field
     print(result.similarity_score)  # Search-specific field
 ```
+
+#### `ragora.FilterBuilder`
+
+Helper class for constructing Weaviate filters using domain model semantics.
+
+```python
+from ragora import FilterBuilder
+from weaviate.classes.query import Filter
+```
+
+**Overview:**
+
+FilterBuilder provides convenience methods for creating Weaviate Filter objects that align with your domain model (`RetrievalMetadata`, `DataChunk`). This eliminates the need to know exact Weaviate property names and makes filtering more intuitive.
+
+**Key Methods:**
+
+**Simple Filters:**
+- `by_chunk_type(value: str) -> Filter` - Filter by chunk type (e.g., "text", "equation")
+- `by_source_document(value: str) -> Filter` - Filter by source document filename
+- `by_page_number(value: int) -> Filter` - Filter by page number
+- `by_section_title(value: str) -> Filter` - Filter by section/chapter title
+- `by_chunk_idx(value: int) -> Filter` - Filter by chunk index
+
+**Email Filters:**
+- `by_email_sender(value: str) -> Filter` - Filter by email sender address
+- `by_email_subject(value: str) -> Filter` - Filter by email subject
+- `by_email_recipient(value: str) -> Filter` - Filter by email recipient
+- `by_email_folder(value: str) -> Filter` - Filter by email folder
+
+**Date Range Filters:**
+- `by_date_range(start: Optional[str] = None, end: Optional[str] = None) -> Optional[Filter]` - Filter by creation date range
+- `by_email_date_range(start: Optional[str] = None, end: Optional[str] = None) -> Optional[Filter]` - Filter by email date range
+
+**Combination Methods:**
+- `combine_and(*filters: Filter) -> Filter` - Combine filters with AND logic
+- `combine_or(*filters: Filter) -> Filter` - Combine filters with OR logic
+
+**Example Usage:**
+
+```python
+from ragora import KnowledgeBaseManager, FilterBuilder, SearchStrategy
+
+kbm = KnowledgeBaseManager()
+
+# Simple filter: only text chunks
+filter = FilterBuilder.by_chunk_type("text")
+results = kbm.search("machine learning", filter=filter)
+
+# Date range filter: documents from 2024
+date_filter = FilterBuilder.by_date_range(start="2024-01-01", end="2024-12-31")
+results = kbm.search("quantum mechanics", filter=date_filter)
+
+# Combined filter: text chunks from specific document
+type_filter = FilterBuilder.by_chunk_type("text")
+doc_filter = FilterBuilder.by_source_document("research.pdf")
+combined = FilterBuilder.combine_and(type_filter, doc_filter)
+results = kbm.search("research findings", filter=combined)
+
+# Email filters
+email_filter = FilterBuilder.by_email_sender("colleague@example.com")
+results = kbm.search("project update", collection="Email", filter=email_filter)
+
+# Using raw Weaviate Filter (advanced)
+from weaviate.classes.query import Filter
+raw_filter = Filter.by_property("chunk_type").equal("text")
+results = kbm.search("query", filter=raw_filter)
+```
+
+**Filter Properties Available:**
+
+The following Weaviate properties can be filtered (mapped by FilterBuilder):
+
+- **Text properties**: `chunk_type`, `source_document`, `created_at`, `section_title`, `email_subject`, `email_sender`, `email_recipient`, `email_date`, `email_folder`
+- **Integer properties**: `metadata_chunk_idx`, `metadata_chunk_size`, `metadata_total_chunks`, `page_number`
+
+For advanced filtering needs, you can use Weaviate's Filter API directly. See [Weaviate Filter Documentation](https://weaviate.io/developers/weaviate/search/filters) for more details.
 
 #### `ragora.core.DocumentPreprocessor`
 

@@ -18,6 +18,7 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
+from weaviate.classes.query import Filter
 
 from ragora import (
     DatabaseManager,
@@ -25,6 +26,7 @@ from ragora import (
     DataChunker,
     DocumentPreprocessor,
     EmbeddingEngine,
+    FilterBuilder,
     KnowledgeBaseManager,
     RetrievalResultItem,
     Retriever,
@@ -272,7 +274,7 @@ class TestKnowledgeBaseManager:
         assert hasattr(result.results[0], "similarity_score")
 
         mock_components["retriever"].search_similar.assert_called_once_with(
-            "What is the test content?", collection="Document", top_k=5
+            "What is the test content?", collection="Document", top_k=5, filter=None
         )
 
     def test_search_hybrid_success(self, mock_components, sample_search_results):
@@ -293,7 +295,7 @@ class TestKnowledgeBaseManager:
         assert isinstance(result, SearchResult)
         assert result.strategy == "hybrid"
         mock_components["retriever"].search_hybrid.assert_called_once_with(
-            "What is the test content?", collection="Document", top_k=3
+            "What is the test content?", collection="Document", top_k=3, filter=None
         )
 
     def test_search_keyword_success(self, mock_components, sample_search_results):
@@ -314,7 +316,7 @@ class TestKnowledgeBaseManager:
         assert isinstance(result, SearchResult)
         assert result.strategy == "keyword"
         mock_components["retriever"].search_keyword.assert_called_once_with(
-            "machine learning algorithms", collection="Document", top_k=3
+            "machine learning algorithms", collection="Document", top_k=3, filter=None
         )
 
     def test_search_invalid_strategy(self, mock_components):
@@ -346,6 +348,127 @@ class TestKnowledgeBaseManager:
             RuntimeError, match="Knowledge base manager not initialized"
         ):
             kbm.search("test question")
+
+    def test_search_with_filter_similar(self, mock_components, sample_search_results):
+        """Test search with filter using similar strategy."""
+        mock_components["retriever"].search_similar.return_value = sample_search_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Create filter using FilterBuilder
+        test_filter = FilterBuilder.by_chunk_type("text")
+
+        # Test
+        result = kbm.search(
+            "What is the test content?",
+            strategy=SearchStrategy.SIMILAR,
+            top_k=5,
+            filter=test_filter,
+        )
+
+        # Assertions
+        assert isinstance(result, SearchResult)
+        assert result.strategy == "similar"
+        mock_components["retriever"].search_similar.assert_called_once_with(
+            "What is the test content?",
+            collection="Document",
+            top_k=5,
+            filter=test_filter,
+        )
+
+    def test_search_with_filter_hybrid(self, mock_components, sample_search_results):
+        """Test search with filter using hybrid strategy."""
+        mock_components["retriever"].search_hybrid.return_value = sample_search_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Create filter using FilterBuilder
+        test_filter = FilterBuilder.by_source_document("test.tex")
+
+        # Test
+        result = kbm.search(
+            "What is the test content?",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            filter=test_filter,
+        )
+
+        # Assertions
+        assert isinstance(result, SearchResult)
+        assert result.strategy == "hybrid"
+        mock_components["retriever"].search_hybrid.assert_called_once_with(
+            "What is the test content?",
+            collection="Document",
+            top_k=3,
+            filter=test_filter,
+        )
+
+    def test_search_with_filter_keyword(self, mock_components, sample_search_results):
+        """Test search with filter using keyword strategy."""
+        mock_components["retriever"].search_keyword.return_value = sample_search_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Create filter using raw Filter object
+        test_filter = Filter.by_property("chunk_type").equal("text")
+
+        # Test
+        result = kbm.search(
+            "machine learning algorithms",
+            strategy=SearchStrategy.KEYWORD,
+            top_k=3,
+            filter=test_filter,
+        )
+
+        # Assertions
+        assert isinstance(result, SearchResult)
+        assert result.strategy == "keyword"
+        mock_components["retriever"].search_keyword.assert_called_once_with(
+            "machine learning algorithms",
+            collection="Document",
+            top_k=3,
+            filter=test_filter,
+        )
+
+    def test_search_with_combined_filter(self, mock_components, sample_search_results):
+        """Test search with combined filters."""
+        mock_components["retriever"].search_hybrid.return_value = sample_search_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Create combined filter
+        filter1 = FilterBuilder.by_chunk_type("text")
+        filter2 = FilterBuilder.by_source_document("test.tex")
+        combined_filter = FilterBuilder.combine_and(filter1, filter2)
+
+        # Test
+        result = kbm.search(
+            "What is the test content?",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            filter=combined_filter,
+        )
+
+        # Assertions
+        assert isinstance(result, SearchResult)
+        mock_components["retriever"].search_hybrid.assert_called_once_with(
+            "What is the test content?",
+            collection="Document",
+            top_k=3,
+            filter=combined_filter,
+        )
 
     def test_get_system_stats_success(self, mock_components):
         """Test successful system statistics retrieval."""

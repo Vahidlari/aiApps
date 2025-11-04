@@ -14,7 +14,7 @@ Prerequisites:
 
 import logging
 
-from ragora import KnowledgeBaseManager, SearchStrategy
+from ragora import FilterBuilder, KnowledgeBaseManager, SearchStrategy
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -106,6 +106,19 @@ def main():
             "What is the relationship between mass and energy?",
             strategy=SearchStrategy.HYBRID,
             top_k=3,
+        )
+
+        # Example: Query with filter (only text chunks)
+        logger.info("🔍 Querying with filter (text chunks only)...")
+        text_filter = FilterBuilder.by_chunk_type("text")
+        filtered_response = kbm.search(
+            "What is the relationship between mass and energy?",
+            strategy=SearchStrategy.HYBRID,
+            top_k=3,
+            filter=text_filter,
+        )
+        logger.info(
+            f"   Filtered results: {filtered_response.total_found} chunks (text type only)"
         )
 
         # Display results

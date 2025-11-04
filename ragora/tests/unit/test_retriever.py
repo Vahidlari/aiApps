@@ -132,6 +132,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(distance=True),
+                    filter=None,
                 )
 
     def test_search_similar_empty_query(self, retriever):
@@ -183,6 +184,7 @@ class TestRetriever:
                     alpha=0.7,
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
+                    filter=None,
                 )
 
     def test_search_hybrid_invalid_alpha(self, retriever):
@@ -229,6 +231,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
+                    filter=None,
                 )
 
     def test_search_keyword_empty_query(self, retriever):
@@ -448,3 +451,159 @@ class TestRetriever:
         # But still has derived class attributes
         assert base_result.similarity_score == 0.8  # type: ignore
         assert base_result.retrieval_method == "vector_similarity"  # type: ignore
+
+    def test_search_similar_with_filter(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test vector similarity search with filter."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.near_text.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        test_filter = Filter.by_property("chunk_type").equal("text")
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_vector_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+
+                result = retriever.search_similar(
+                    "machine learning",
+                    collection="Document",
+                    top_k=5,
+                    filter=test_filter,
+                )
+
+                assert len(result) == 1
+                mock_collection.query.near_text.assert_called_once_with(
+                    query="machine learning",
+                    limit=5,
+                    return_metadata=MetadataQuery(distance=True),
+                    filter=test_filter,
+                )
+
+    def test_search_hybrid_with_filter(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test hybrid search with filter."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.hybrid.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        test_filter = Filter.by_property("source_document").equal("test.pdf")
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_hybrid_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        hybrid_score=0.8,
+                        retrieval_method="hybrid_search",
+                    )
+                ]
+
+                result = retriever.search_hybrid(
+                    "machine learning",
+                    collection="Document",
+                    alpha=0.7,
+                    top_k=5,
+                    filter=test_filter,
+                )
+
+                assert len(result) == 1
+                mock_collection.query.hybrid.assert_called_once_with(
+                    query="machine learning",
+                    alpha=0.7,
+                    limit=5,
+                    return_metadata=MetadataQuery(score=True),
+                    filter=test_filter,
+                )
+
+    def test_search_keyword_with_filter(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test keyword search with filter."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.bm25.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        test_filter = Filter.by_property("chunk_type").equal("text")
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_keyword_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        bm25_score=0.8,
+                        retrieval_method="keyword_search",
+                    )
+                ]
+
+                result = retriever.search_keyword(
+                    "machine learning",
+                    collection="Document",
+                    top_k=5,
+                    filter=test_filter,
+                )
+
+                assert len(result) == 1
+                mock_collection.query.bm25.assert_called_once_with(
+                    query="machine learning",
+                    limit=5,
+                    return_metadata=MetadataQuery(score=True),
+                    filter=test_filter,
+                )
+
+    def test_search_with_none_filter(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test that None filter works (backward compatibility)."""
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.near_text.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(
+            retriever, "_preprocess_query", return_value="machine learning"
+        ):
+            with patch.object(retriever, "_process_vector_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+
+                # Explicitly pass None filter
+                result = retriever.search_similar(
+                    "machine learning", collection="Document", top_k=5, filter=None
+                )
+
+                assert len(result) == 1
+                mock_collection.query.near_text.assert_called_once_with(
+                    query="machine learning",
+                    limit=5,
+                    return_metadata=MetadataQuery(distance=True),
+                    filter=None,
+                )

@@ -19,7 +19,7 @@ logic independently, enabling better testability and maintainability.
 import logging
 from typing import Any, Dict, List, Optional
 
-from weaviate.classes.query import MetadataQuery
+from weaviate.classes.query import Filter, MetadataQuery
 
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
@@ -74,6 +74,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
     ) -> List[SearchResultItem]:
         """Search for similar documents using vector similarity.
 
@@ -85,6 +86,7 @@ class Retriever:
             collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results
 
         Returns:
             List[SearchResultItem]: List of search result items
@@ -109,6 +111,7 @@ class Retriever:
                 query=processed_query,
                 limit=top_k,
                 return_metadata=MetadataQuery(distance=True),
+                filter=filter,
             )
 
             # Process results
@@ -132,6 +135,7 @@ class Retriever:
         top_k: int = 5,
         alpha: float = 0.5,
         score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
     ) -> List[SearchResultItem]:
         """Perform hybrid search combining vector and keyword search.
 
@@ -145,6 +149,7 @@ class Retriever:
             alpha: Weight for vector search (0.0 = keyword only,
                 1.0 = vector only)
             score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results by properties
 
         Returns:
             List[SearchResultItem]: List of search result items
@@ -173,6 +178,7 @@ class Retriever:
                 alpha=alpha,
                 limit=top_k,
                 return_metadata=MetadataQuery(score=True),
+                filter=filter,
             )
 
             # Process results
@@ -212,6 +218,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
     ) -> List[SearchResultItem]:
         """Perform keyword search using BM25 algorithm.
 
@@ -223,6 +230,7 @@ class Retriever:
             collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results by properties
 
         Returns:
             List[SearchResultItem]: List of search result items
@@ -247,6 +255,7 @@ class Retriever:
                 query=processed_query,
                 limit=top_k,
                 return_metadata=MetadataQuery(score=True),
+                filter=filter,
             )
 
             # Process results
