@@ -248,10 +248,13 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
                 for i, result in enumerate(results, 1):
                     # Extract content from the result
                     content = result.content
+                    similarity_score = result.similarity_score
                     content_preview = content[:100]
                     if len(content) > 100:
                         content_preview += "..."
-                    print(f"   {i}. {content_preview}")
+                    print(
+                        f"   {i}. {content_preview} (Similarity score: {similarity_score:.3f})"
+                    )
             else:
                 print("   No similar documents found.")
                 if term == "energy conservation":

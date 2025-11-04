@@ -353,6 +353,7 @@ def example_email_database_creation():
             print(f"\n{i}. {result.subject or 'No subject'}")
             print(f"   Sender: {result.sender or 'Unknown'}")
             print(f"   Content preview: {result.content[:100]}...")
+            print(f"   Similarity score: {result.similarity_score:.3f}")
 
         new_emails_info = kbm.check_new_emails(
             email_provider=provider,
