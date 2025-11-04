@@ -389,7 +389,7 @@ class TestKnowledgeBaseManager:
         kbm.logger = Mock()
 
         # Create filter using FilterBuilder
-        test_filter = FilterBuilder.by_source_document("test.tex")
+        test_filter = FilterBuilder.by_source_document("test.pdf")
 
         # Test
         result = kbm.search(
