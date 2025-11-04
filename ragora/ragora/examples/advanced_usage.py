@@ -483,7 +483,7 @@ def main():
                 logger.info(f"   Successfully deleted chunk {second_chunk_id}")
 
         # Updated statistics
-        updated_stats = kbm.get_system_stats(collection=collection_name)
+        updated_stats = kbm.get_collection_stats(collection=collection_name)
         logger.info(
             f"   Updated total objects: {updated_stats['vector_store']['total_objects']}"
         )
