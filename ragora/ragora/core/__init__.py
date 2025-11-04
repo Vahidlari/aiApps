@@ -21,12 +21,8 @@ from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .knowledge_base_manager import KnowledgeBaseManager, SearchResult, SearchStrategy
-from .retriever import (
-    RetrievalMetadata,
-    RetrievalResultItem,
-    Retriever,
-    SearchResultItem,
-)
+from .models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
+from .retriever import Retriever
 from .vector_store import VectorStore
 
 __all__ = [

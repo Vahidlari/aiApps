@@ -27,7 +27,7 @@ from weaviate.util import generate_uuid5
 from .chunking import DataChunk
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
-from .retriever import RetrievalMetadata, RetrievalResultItem
+from .models import RetrievalMetadata, RetrievalResultItem
 
 
 class VectorStore:

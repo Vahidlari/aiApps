@@ -58,12 +58,8 @@ from .core.knowledge_base_manager import (
     SearchResult,
     SearchStrategy,
 )
-from .core.retriever import (
-    RetrievalMetadata,
-    RetrievalResultItem,
-    Retriever,
-    SearchResultItem,
-)
+from .core.models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
+from .core.retriever import Retriever
 from .core.vector_store import VectorStore
 from .exceptions import (
     ConfigurationError,

@@ -99,7 +99,7 @@ class TestKnowledgeBaseManager:
     @pytest.fixture
     def sample_search_results(self):
         """Create sample search results for testing."""
-        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
 
         return [
             SearchResultItem(
@@ -512,7 +512,7 @@ class TestKnowledgeBaseManager:
 
     def test_query_with_no_similarity_scores(self, mock_components):
         """Test query with results that have no similarity scores."""
-        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
 
         results_without_scores = [
             SearchResultItem(
@@ -552,7 +552,7 @@ class TestKnowledgeBaseManager:
 
     def test_query_with_mixed_similarity_scores(self, mock_components):
         """Test query with mixed similarity scores."""
-        from ragora.core.retriever import RetrievalMetadata, SearchResultItem
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
 
         mixed_results = [
             SearchResultItem(

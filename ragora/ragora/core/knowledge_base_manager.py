@@ -29,7 +29,8 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .retriever import RetrievalResultItem, Retriever, SearchResultItem
+from .models import RetrievalResultItem, SearchResultItem
+from .retriever import Retriever
 from .vector_store import VectorStore
 
 

@@ -8,12 +8,8 @@ from weaviate.exceptions import WeaviateBaseError
 
 from ragora.core.database_manager import DatabaseManager
 from ragora.core.embedding_engine import EmbeddingEngine
-from ragora.core.retriever import (
-    RetrievalMetadata,
-    RetrievalResultItem,
-    Retriever,
-    SearchResultItem,
-)
+from ragora.core.models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
+from ragora.core.retriever import Retriever
 
 
 class TestRetriever:

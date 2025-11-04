@@ -9,7 +9,7 @@ from weaviate.exceptions import WeaviateBaseError
 from ragora.core.chunking import ChunkMetadata, DataChunk
 from ragora.core.database_manager import DatabaseManager
 from ragora.core.embedding_engine import EmbeddingEngine
-from ragora.core.retriever import RetrievalResultItem
+from ragora.core.models import RetrievalResultItem
 from ragora.core.vector_store import VectorStore
 
 
