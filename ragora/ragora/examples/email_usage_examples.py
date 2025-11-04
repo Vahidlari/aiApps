@@ -350,9 +350,10 @@ def example_email_database_creation():
         print(f"Found {results.total_found} relevant emails")
 
         for i, result in enumerate(results.results, 1):
-            print(f"\n{i}. {result.get('subject', 'No subject')}")
-            print(f"   Sender: {result.get('sender', 'Unknown')}")
-            print(f"   Content preview: {result.get('content', '')[:100]}...")
+            print(f"\n{i}. {result.subject or 'No subject'}")
+            print(f"   Sender: {result.sender or 'Unknown'}")
+            print(f"   Content preview: {result.content[:100]}...")
+            print(f"   Similarity score: {result.similarity_score:.3f}")
 
         new_emails_info = kbm.check_new_emails(
             email_provider=provider,
@@ -439,7 +440,7 @@ def example_email_answer_drafting_workflow():
 
             print(f"Found {context_results.total_found} relevant context items")
             for i, context in enumerate(context_results.results, 1):
-                print(f"  {i}. {context.get('subject', 'No subject')}")
+                print(f"  {i}. {context.subject or 'No subject'}")
 
             # In a real scenario, this would be passed to an LLM
             print("  → LLM would draft reply using this context")

@@ -58,6 +58,7 @@ from .core.knowledge_base_manager import (
     SearchResult,
     SearchStrategy,
 )
+from .core.models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
 from .core.retriever import Retriever
 from .core.vector_store import VectorStore
 from .exceptions import (
@@ -79,6 +80,9 @@ __all__ = [
     "KnowledgeBaseManager",
     "SearchStrategy",
     "SearchResult",
+    "SearchResultItem",
+    "RetrievalMetadata",
+    "RetrievalResultItem",
     # Core components
     "DataChunk",
     "DataChunker",

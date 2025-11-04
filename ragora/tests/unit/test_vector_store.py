@@ -9,6 +9,7 @@ from weaviate.exceptions import WeaviateBaseError
 from ragora.core.chunking import ChunkMetadata, DataChunk
 from ragora.core.database_manager import DatabaseManager
 from ragora.core.embedding_engine import EmbeddingEngine
+from ragora.core.models import RetrievalResultItem
 from ragora.core.vector_store import VectorStore
 
 
@@ -91,19 +92,15 @@ class TestVectorStoreRefactored:
         assert vector_store.collection == "TestDocument"
         assert vector_store.embedding_engine == mock_embedding_engine
 
-    def test_init_with_default_embedding_engine(self, mock_db_manager):
-        """Test initialization with default EmbeddingEngine."""
-        with patch("ragora.core.vector_store.EmbeddingEngine") as mock_engine_class:
-            mock_engine = Mock(spec=EmbeddingEngine)
-            mock_engine_class.return_value = mock_engine
+    def test_init_without_embedding_engine(self, mock_db_manager):
+        """Test initialization without EmbeddingEngine (default None)."""
+        vector_store = VectorStore(
+            db_manager=mock_db_manager,
+            collection="TestDocument",
+        )
 
-            vector_store = VectorStore(
-                db_manager=mock_db_manager,
-                collection="TestDocument",
-            )
-
-            assert vector_store.embedding_engine == mock_engine
-            mock_engine_class.assert_called_once()
+        # EmbeddingEngine should be None by default (Weaviate handles embeddings)
+        assert vector_store.embedding_engine is None
 
     def test_init_with_none_db_manager(self):
         """Test initialization with None DatabaseManager."""
@@ -432,8 +429,11 @@ class TestVectorStoreRefactored:
         result = vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
 
         assert result is not None
-        assert result["content"] == "test content"
-        assert result["chunk_id"] == "test_chunk_1"
+        assert isinstance(result, RetrievalResultItem)
+        assert result.content == "test content"
+        assert result.chunk_id == "test_chunk_1"
+        assert result.properties["source_document"] == "test_doc.pdf"
+        assert result.metadata.source_document == "test_doc.pdf"
 
     def test_get_chunk_by_id_not_found(
         self, vector_store, mock_db_manager, mock_collection
@@ -457,6 +457,36 @@ class TestVectorStoreRefactored:
 
         with pytest.raises(WeaviateBaseError):
             vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
+
+    def test_get_chunk_by_id_returns_structured_model(
+        self, vector_store, mock_db_manager, mock_collection
+    ):
+        """Test that get_chunk_by_id returns RetrievalResultItem model."""
+        mock_obj = Mock()
+        mock_obj.properties = {
+            "content": "test content",
+            "chunk_id": "test_chunk_1",
+            "source_document": "test_doc.pdf",
+            "chunk_type": "text",
+            "metadata_chunk_idx": 1,
+            "metadata_chunk_size": 100,
+            "metadata_total_chunks": 5,
+        }
+
+        mock_collection.query.fetch_object_by_id.return_value = mock_obj
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        result = vector_store.get_chunk_by_id("test_chunk_1", "TestDocument")
+
+        assert result is not None
+        assert isinstance(result, RetrievalResultItem)
+        # Verify all base class fields are accessible
+        assert hasattr(result, "content")
+        assert hasattr(result, "chunk_id")
+        assert hasattr(result, "properties")
+        assert hasattr(result, "metadata")
+        # Verify metadata is structured
+        assert result.metadata is not None
 
     def test_delete_chunk_success(self, vector_store, mock_db_manager, mock_collection):
         """Test successful chunk deletion."""

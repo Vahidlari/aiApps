@@ -23,6 +23,7 @@ from weaviate.classes.query import MetadataQuery
 
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
+from .models import RetrievalMetadata, SearchResultItem
 
 
 class Retriever:
@@ -48,8 +49,7 @@ class Retriever:
 
         Args:
             db_manager: DatabaseManager instance for database access
-            embedding_engine: EmbeddingEngine instance (optional, will create
-                default if not provided)
+            embedding_engine: EmbeddingEngine instance (optional, defaults to None)
 
         Raises:
             ValueError: If db_manager is None
@@ -74,7 +74,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Search for similar documents using vector similarity.
 
         This method performs semantic search using vector embeddings to find
@@ -82,11 +82,12 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty
@@ -131,7 +132,7 @@ class Retriever:
         top_k: int = 5,
         alpha: float = 0.5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Perform hybrid search combining vector and keyword search.
 
         This method combines semantic similarity search with traditional
@@ -139,13 +140,14 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             alpha: Weight for vector search (0.0 = keyword only,
                 1.0 = vector only)
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty or alpha is out of range
@@ -210,7 +212,7 @@ class Retriever:
         collection: str,
         top_k: int = 5,
         score_threshold: float = 0.0,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Perform keyword search using BM25 algorithm.
 
         This method performs traditional keyword search using BM25 algorithm
@@ -218,11 +220,12 @@ class Retriever:
 
         Args:
             query: Search query text
+            collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
 
         Returns:
-            List[Dict[str, Any]]: List of search results with metadata
+            List[SearchResultItem]: List of search result items
 
         Raises:
             ValueError: If query is empty
@@ -262,7 +265,7 @@ class Retriever:
 
     def _process_vector_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process vector search results from Weaviate.
 
         Args:
@@ -270,7 +273,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -283,25 +286,30 @@ class Retriever:
             if similarity_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": similarity_score,
-                    "distance": distance,
-                    "retrieval_method": "vector_similarity",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=similarity_score,
+                    distance=distance,
+                    retrieval_method="vector_similarity",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by similarity score (highest first)
-        results.sort(key=lambda x: x.get("similarity_score", 0), reverse=True)
+        results.sort(key=lambda x: x.similarity_score, reverse=True)
         return results
 
     def _process_hybrid_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process hybrid search results from Weaviate.
 
         Args:
@@ -309,7 +317,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -321,25 +329,30 @@ class Retriever:
             if hybrid_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": hybrid_score,
-                    "hybrid_score": hybrid_score,
-                    "retrieval_method": "hybrid_search",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=hybrid_score,
+                    hybrid_score=hybrid_score,
+                    retrieval_method="hybrid_search",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by hybrid score (highest first)
-        results.sort(key=lambda x: x.get("hybrid_score", 0), reverse=True)
+        results.sort(key=lambda x: x.hybrid_score or 0.0, reverse=True)
         return results
 
     def _process_keyword_results(
         self, objects: List[Any], score_threshold: float
-    ) -> List[Dict[str, Any]]:
+    ) -> List[SearchResultItem]:
         """Process keyword search results from Weaviate.
 
         Args:
@@ -347,7 +360,7 @@ class Retriever:
             score_threshold: Minimum score threshold
 
         Returns:
-            List[Dict[str, Any]]: Processed results
+            List[SearchResultItem]: Processed results
         """
         results = []
         for obj in objects:
@@ -359,20 +372,25 @@ class Retriever:
             if bm25_score >= score_threshold:
                 # Build a consistent result that includes all stored properties
                 properties = dict(obj.properties or {})
-                result = {
-                    "properties": properties,
-                    # Convenience fields (backward compatible)
-                    "content": properties.get("content", ""),
-                    "chunk_id": properties.get("chunk_id", ""),
-                    "similarity_score": bm25_score,
-                    "bm25_score": bm25_score,
-                    "retrieval_method": "keyword_search",
-                    "retrieval_timestamp": self._get_current_timestamp(),
-                }
+
+                # Create RetrievalMetadata from properties
+                metadata = RetrievalMetadata.from_properties(properties)
+
+                # Build SearchResultItem
+                result = SearchResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    similarity_score=bm25_score,
+                    bm25_score=bm25_score,
+                    retrieval_method="keyword_search",
+                    retrieval_timestamp=self._get_current_timestamp(),
+                    metadata=metadata,
+                )
                 results.append(result)
 
         # Sort by BM25 score (highest first)
-        results.sort(key=lambda x: x.get("bm25_score", 0), reverse=True)
+        results.sort(key=lambda x: x.bm25_score or 0.0, reverse=True)
         return results
 
     def _get_current_timestamp(self) -> str:
