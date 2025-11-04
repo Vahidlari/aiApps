@@ -141,11 +141,12 @@ class RetrievalMetadata(BaseModel):
         )
 
 
-class SearchResultItem(BaseModel):
-    """Individual search result item.
+class RetrievalResultItem(BaseModel):
+    """Base class for all chunk retrieval results.
 
-    Represents a single search result with all its properties,
-    scores, and metadata. Provides type-safe access to result data.
+    Contains common fields shared by both direct retrieval and search
+    results. This base class provides the core chunk data without
+    retrieval-specific context.
     """
 
     # Core content
@@ -157,6 +158,20 @@ class SearchResultItem(BaseModel):
         default_factory=dict,
         description="All stored properties from the vector database",
     )
+
+    # Structured metadata
+    metadata: RetrievalMetadata = Field(
+        default_factory=RetrievalMetadata,
+        description="Structured metadata extracted from properties",
+    )
+
+
+class SearchResultItem(RetrievalResultItem):
+    """Search result item extending base retrieval result.
+
+    Adds search-specific context: scores, retrieval method, and timestamp.
+    This is used for results returned from search operations.
+    """
 
     # Retrieval scores
     similarity_score: float = Field(
@@ -182,12 +197,6 @@ class SearchResultItem(BaseModel):
     retrieval_timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp when retrieval occurred",
-    )
-
-    # Structured metadata
-    metadata: RetrievalMetadata = Field(
-        default_factory=RetrievalMetadata,
-        description="Structured metadata extracted from properties",
     )
 
     # Convenience properties for email results

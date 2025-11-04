@@ -8,7 +8,12 @@ from weaviate.exceptions import WeaviateBaseError
 
 from ragora.core.database_manager import DatabaseManager
 from ragora.core.embedding_engine import EmbeddingEngine
-from ragora.core.retriever import RetrievalMetadata, Retriever, SearchResultItem
+from ragora.core.retriever import (
+    RetrievalMetadata,
+    RetrievalResultItem,
+    Retriever,
+    SearchResultItem,
+)
 
 
 class TestRetriever:
@@ -381,3 +386,69 @@ class TestRetriever:
         result_json = result.model_dump_json()
         assert "Test content" in result_json
         assert "test_001" in result_json
+
+    def test_retrieval_result_item_base_class(self):
+        """Test RetrievalResultItem base class functionality."""
+        base_result = RetrievalResultItem(
+            content="Test content",
+            chunk_id="test_001",
+            properties={"content": "Test content", "chunk_id": "test_001"},
+            metadata=RetrievalMetadata(source_document="test.pdf"),
+        )
+
+        # Verify base class fields
+        assert base_result.content == "Test content"
+        assert base_result.chunk_id == "test_001"
+        assert base_result.properties["chunk_id"] == "test_001"
+        assert base_result.metadata.source_document == "test.pdf"
+
+        # Verify SearchResultItem fields are not available
+        assert not hasattr(base_result, "similarity_score")
+        assert not hasattr(base_result, "retrieval_method")
+
+    def test_search_result_item_inheritance(self):
+        """Test that SearchResultItem inherits from RetrievalResultItem."""
+        search_result = SearchResultItem(
+            content="Test content",
+            chunk_id="test_001",
+            properties={"content": "Test content", "chunk_id": "test_001"},
+            similarity_score=0.8,
+            retrieval_method="vector_similarity",
+            metadata=RetrievalMetadata(source_document="test.pdf"),
+        )
+
+        # Verify it's an instance of both classes
+        assert isinstance(search_result, SearchResultItem)
+        assert isinstance(search_result, RetrievalResultItem)
+
+        # Verify base class fields are accessible
+        assert search_result.content == "Test content"
+        assert search_result.chunk_id == "test_001"
+        assert search_result.properties["chunk_id"] == "test_001"
+        assert search_result.metadata.source_document == "test.pdf"
+
+        # Verify derived class fields are accessible
+        assert search_result.similarity_score == 0.8
+        assert search_result.retrieval_method == "vector_similarity"
+
+    def test_inheritance_polymorphism(self):
+        """Test polymorphism - base class can hold derived instances."""
+        search_result = SearchResultItem(
+            content="Test content",
+            chunk_id="test_001",
+            properties={"content": "Test content", "chunk_id": "test_001"},
+            similarity_score=0.8,
+            retrieval_method="vector_similarity",
+            metadata=RetrievalMetadata(source_document="test.pdf"),
+        )
+
+        # Can be assigned to base class type
+        base_result: RetrievalResultItem = search_result
+
+        # Base class interface works
+        assert base_result.content == "Test content"
+        assert base_result.chunk_id == "test_001"
+
+        # But still has derived class attributes
+        assert base_result.similarity_score == 0.8  # type: ignore
+        assert base_result.retrieval_method == "vector_similarity"  # type: ignore

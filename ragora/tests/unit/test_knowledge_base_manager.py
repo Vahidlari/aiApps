@@ -26,6 +26,7 @@ from ragora import (
     DocumentPreprocessor,
     EmbeddingEngine,
     KnowledgeBaseManager,
+    RetrievalResultItem,
     Retriever,
     SearchResult,
     SearchStrategy,
@@ -759,3 +760,81 @@ class TestKnowledgeBaseManager:
 
         # Assertions
         assert result is False
+
+    def test_get_chunk_success(self, mock_components):
+        """Test successful chunk retrieval."""
+        # Create using model_validate to avoid Pydantic validation issues
+        mock_result = RetrievalResultItem.model_validate(
+            {
+                "content": "test content",
+                "chunk_id": "test_chunk_1",
+                "properties": {"content": "test content", "chunk_id": "test_chunk_1"},
+            }
+        )
+        mock_components["vector_store"].get_chunk_by_id.return_value = mock_result
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.get_chunk("test_chunk_1", "TestCollection")
+
+        # Assertions
+        assert result is not None
+        assert isinstance(result, RetrievalResultItem)
+        assert result.content == "test content"
+        assert result.chunk_id == "test_chunk_1"
+        mock_components["vector_store"].get_chunk_by_id.assert_called_once_with(
+            "test_chunk_1", collection="TestCollection"
+        )
+
+    def test_get_chunk_not_found(self, mock_components):
+        """Test chunk retrieval when chunk not found."""
+        mock_components["vector_store"].get_chunk_by_id.return_value = None
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.get_chunk("nonexistent_chunk", "TestCollection")
+
+        # Assertions
+        assert result is None
+
+    def test_get_chunk_with_metadata(self, mock_components):
+        """Test chunk retrieval with metadata extraction."""
+        # Create using model_validate with metadata dict
+        mock_result = RetrievalResultItem.model_validate(
+            {
+                "content": "test content",
+                "chunk_id": "test_chunk_1",
+                "properties": {
+                    "content": "test content",
+                    "chunk_id": "test_chunk_1",
+                    "source_document": "test_doc.pdf",
+                    "page_number": 1,
+                },
+                "metadata": {
+                    "source_document": "test_doc.pdf",
+                    "page_number": 1,
+                },
+            }
+        )
+        mock_components["vector_store"].get_chunk_by_id.return_value = mock_result
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        # Test
+        result = kbm.get_chunk("test_chunk_1", "TestCollection")
+
+        # Assertions
+        assert result is not None
+        assert result.metadata.source_document == "test_doc.pdf"
+        assert result.metadata.page_number == 1

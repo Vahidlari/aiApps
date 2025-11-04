@@ -27,6 +27,7 @@ from weaviate.util import generate_uuid5
 from .chunking import DataChunk
 from .database_manager import DatabaseManager
 from .embedding_engine import EmbeddingEngine
+from .retriever import RetrievalMetadata, RetrievalResultItem
 
 
 class VectorStore:
@@ -474,14 +475,14 @@ class VectorStore:
 
     def get_chunk_by_id(
         self, chunk_id: str, collection: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[RetrievalResultItem]:
         """Retrieve a specific chunk by its chunk_id using V4 API.
 
         Args:
             chunk_id: ID of the chunk
             collection: Name of the Weaviate class for document storage
         Returns:
-            Optional[Dict[str, Any]]: Chunk data if found, None otherwise
+            Optional[RetrievalResultItem]: Chunk data if found, None otherwise
 
         Raises:
             WeaviateBaseError: If retrieval operation fails
@@ -496,7 +497,14 @@ class VectorStore:
             )
 
             if result:
-                return result.properties
+                properties = result.properties
+                # Create RetrievalResultItem with structured metadata
+                return RetrievalResultItem(
+                    content=properties.get("content", ""),
+                    chunk_id=properties.get("chunk_id", ""),
+                    properties=properties,
+                    metadata=RetrievalMetadata.from_properties(properties),
+                )
             else:
                 return None
 

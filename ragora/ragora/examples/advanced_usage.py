@@ -472,7 +472,7 @@ def main():
             chunk_data = kbm.get_chunk(first_chunk_id, collection=collection_name)
             if chunk_data:
                 logger.info(
-                    f"   Retrieved specific chunk: {chunk_data['content'][:50]}..."
+                    f"   Retrieved specific chunk: {chunk_data.content[:50]}..."
                 )
 
         # Test chunk deletion (using second chunk's ID if available)

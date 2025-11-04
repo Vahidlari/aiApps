@@ -60,6 +60,8 @@ Key Methods (brief)
   Batch variant for multiple documents; returns all stored chunk IDs.
 - `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, **kwargs) -> SearchResult`
   Unified retrieval with SIMILAR (vector), KEYWORD (BM25), or HYBRID strategies. Returns rich `SearchResult` with timing and totals.
+- `get_chunk(chunk_id: str, collection: str) -> Optional[RetrievalResultItem]`
+  Retrieve a specific chunk by its ID. Returns structured `RetrievalResultItem` with content, metadata, and properties.
 - `get_collection_stats(collection: str) -> Dict`
   Aggregated statistics for the specified collection (e.g., counts, schema info).
 - `check_new_emails(email_provider, folder=None, include_body=True, limit=50) -> Dict`
@@ -139,11 +141,11 @@ The vector store supports 24 fields organized into categories:
 
 **Key Methods:**
 - `store_chunks(chunks: List[Chunk]) -> List[str]` - Store document chunks
-- `get_chunk(chunk_id: str) -> Optional[Chunk]` - Retrieve a chunk
-- `update_chunk(chunk_id: str, data: Dict) -> None` - Update chunk
-- `delete_chunk(chunk_id: str) -> None` - Delete chunk
-- `get_stats() -> Dict` - Get storage statistics
-- `create_schema(class_name: str, force_recreate: bool) -> None` - Create collection schema
+- `get_chunk_by_id(chunk_id: str, collection: str) -> Optional[RetrievalResultItem]` - Retrieve a chunk by ID
+- `update_chunk(chunk_id: str, properties: Dict, collection: str) -> bool` - Update chunk
+- `delete_chunk(chunk_id: str, collection: str) -> bool` - Delete chunk
+- `get_stats(collection: str) -> Dict` - Get storage statistics
+- `create_schema(collection: str, force_recreate: bool) -> None` - Create collection schema
 
 ### Custom Metadata Support
 
@@ -221,10 +223,42 @@ retriever = Retriever(
 ```
 
 **Key Methods:**
-- `search_similar(query: str, collection: str, top_k: int) -> List[Dict]` - Semantic search
-- `search_keyword(query: str, collection: str, top_k: int) -> List[Dict]` - Keyword search
-- `search_hybrid(query: str, collection: str, alpha: float, top_k: int) -> List[Dict]` - Hybrid search
-- `search_with_filter(query: str, collection: str, filters: Dict, top_k: int) -> List[Dict]` - Filtered search
+- `search_similar(query: str, collection: str, top_k: int) -> List[SearchResultItem]` - Semantic search
+- `search_keyword(query: str, collection: str, top_k: int) -> List[SearchResultItem]` - Keyword search
+- `search_hybrid(query: str, collection: str, alpha: float, top_k: int) -> List[SearchResultItem]` - Hybrid search
+
+**Return Types:**
+
+The retriever methods return structured Pydantic models:
+
+- **`RetrievalResultItem`** (base class): Base class for chunk retrieval results
+  - `content: str` - Text content of the chunk
+  - `chunk_id: str` - Unique chunk identifier
+  - `properties: Dict[str, Any]` - All stored properties from the vector database
+  - `metadata: RetrievalMetadata` - Structured metadata (source, page, email fields, etc.)
+
+- **`SearchResultItem`** (extends `RetrievalResultItem`): Search results with scores
+  - Inherits all fields from `RetrievalResultItem`
+  - `similarity_score: float` - Similarity score (0.0-1.0)
+  - `retrieval_method: str` - Method used ("vector_similarity", "hybrid_search", "keyword_search")
+  - `retrieval_timestamp: datetime` - When retrieval occurred
+  - Additional score fields: `distance`, `hybrid_score`, `bm25_score`
+
+**Example Usage:**
+
+```python
+# Direct chunk retrieval returns RetrievalResultItem
+chunk = kbm.get_chunk("chunk_123", "Document")
+if chunk:
+    print(chunk.content)
+    print(chunk.metadata.source_document)
+
+# Search returns SearchResultItem (extends RetrievalResultItem)
+results = kbm.search("query", collection="Document")
+for result in results.results:
+    print(result.content)  # Base class field
+    print(result.similarity_score)  # Search-specific field
+```
 
 #### `ragora.core.DocumentPreprocessor`
 

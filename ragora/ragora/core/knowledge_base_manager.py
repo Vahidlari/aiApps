@@ -29,7 +29,7 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .retriever import Retriever, SearchResultItem
+from .retriever import RetrievalResultItem, Retriever, SearchResultItem
 from .vector_store import VectorStore
 
 
@@ -377,14 +377,16 @@ class KnowledgeBaseManager:
             self.logger.error(f"Search failed: {str(e)}")
             raise
 
-    def get_chunk(self, chunk_id: str, collection: str) -> Optional[Dict[str, Any]]:
+    def get_chunk(
+        self, chunk_id: str, collection: str
+    ) -> Optional[RetrievalResultItem]:
         """Retrieve a specific chunk by its ID.
 
         Args:
             chunk_id: Unique identifier of the chunk
             collection: Collection name
         Returns:
-            Optional[Dict[str, Any]]: Chunk data if found, None otherwise
+            Optional[RetrievalResultItem]: Chunk data if found, None otherwise
         """
         return self.vector_store.get_chunk_by_id(chunk_id, collection=collection)
 
