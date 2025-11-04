@@ -450,7 +450,7 @@ class TestKnowledgeBaseManager:
 
         # Create combined filter
         filter1 = FilterBuilder.by_chunk_type("text")
-        filter2 = FilterBuilder.by_source_document("test.tex")
+        filter2 = FilterBuilder.by_source_document("test.pdf")
         combined_filter = FilterBuilder.combine_and(filter1, filter2)
 
         # Test
