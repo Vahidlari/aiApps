@@ -193,10 +193,7 @@ def _parse_version(version_str: str) -> tuple:
             prerelease_type = "alpha"
         elif prerelease_type in ("b", "beta"):
             prerelease_type = "beta"
-        elif prerelease_type == "rc":
-            prerelease_type = "rc"
-        elif prerelease_type == "dev":
-            prerelease_type = "dev"
+
         
         return (major, minor, patch, prerelease_type + prerelease_num)
     else:
