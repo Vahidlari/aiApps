@@ -1,3 +1,5 @@
+## [1.2.0-rc.2](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.1...v1.2.0-rc.2) (2025-11-05)
+
 ## [1.2.0-rc.1](https://github.com/Vahidlari/aiApps/compare/v1.1.0...v1.2.0-rc.1) (2025-11-05)
 
 
