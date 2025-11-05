@@ -1,3 +1,12 @@
+## [1.2.0-rc.1](https://github.com/Vahidlari/aiApps/compare/v1.1.0...v1.2.0-rc.1) (2025-11-05)
+
+
+### Features
+
+* improve email provide module with advanced email parser functionality ([#69](https://github.com/Vahidlari/aiApps/issues/69)) ([b89150c](https://github.com/Vahidlari/aiApps/commit/b89150ccb3f4ad68068353e7df93930ad06aef05)), closes [#65](https://github.com/Vahidlari/aiApps/issues/65)
+* improve retriever module to return rich structured search results ([#71](https://github.com/Vahidlari/aiApps/issues/71)) ([b9be738](https://github.com/Vahidlari/aiApps/commit/b9be7380052adf9c545365b82a4fd1c72e8f621f)), closes [#67](https://github.com/Vahidlari/aiApps/issues/67)
+* introduce FilterBuilder for enhanced query filtering capabilities ([#72](https://github.com/Vahidlari/aiApps/issues/72)) ([eea11c6](https://github.com/Vahidlari/aiApps/commit/eea11c6211e820598d7d941b80140ef7b774b280)), closes [#59](https://github.com/Vahidlari/aiApps/issues/59)
+
 ## [1.1.0](https://github.com/Vahidlari/aiApps/compare/v1.0.1...v1.1.0) (2025-10-29)
 
 
