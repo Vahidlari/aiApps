@@ -340,6 +340,11 @@ jobs:
               LAST_COMMIT_MSG=$(git log -1 --format="%s" 2>/dev/null || echo "")
               if echo "$LAST_COMMIT_MSG" | grep -q "chore(release)"; then
                 echo "📝 Amending semantic-release commit with cleaned CHANGELOG.md..."
+                
+                # Configure git user identity for commit amendment
+                git config user.name "github-actions[bot]"
+                git config user.email "github-actions[bot]@users.noreply.github.com"
+                
                 git add CHANGELOG.md
                 git commit --amend --no-edit
                 echo "✅ Commit amended with cleaned CHANGELOG.md"
