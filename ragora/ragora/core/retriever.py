@@ -49,7 +49,8 @@ class Retriever:
 
         Args:
             db_manager: DatabaseManager instance for database access
-            embedding_engine: EmbeddingEngine instance (optional, defaults to None)
+            embedding_engine: EmbeddingEngine instance
+                (optional, defaults to None)
 
         Raises:
             ValueError: If db_manager is None
@@ -111,7 +112,7 @@ class Retriever:
                 query=processed_query,
                 limit=top_k,
                 return_metadata=MetadataQuery(distance=True),
-                filter=filter,
+                filters=filter,
             )
 
             # Process results
@@ -149,7 +150,8 @@ class Retriever:
             alpha: Weight for vector search (0.0 = keyword only,
                 1.0 = vector only)
             score_threshold: Minimum similarity score threshold
-            filter: Optional Weaviate Filter object to filter results by properties
+            filter: Optional Weaviate Filter object to filter results
+                by properties
 
         Returns:
             List[SearchResultItem]: List of search result items
@@ -178,7 +180,7 @@ class Retriever:
                 alpha=alpha,
                 limit=top_k,
                 return_metadata=MetadataQuery(score=True),
-                filter=filter,
+                filters=filter,
             )
 
             # Process results
@@ -230,7 +232,8 @@ class Retriever:
             collection: Collection name to search
             top_k: Number of results to return
             score_threshold: Minimum similarity score threshold
-            filter: Optional Weaviate Filter object to filter results by properties
+            filter: Optional Weaviate Filter object to filter results
+                by properties
 
         Returns:
             List[SearchResultItem]: List of search result items
@@ -255,7 +258,7 @@ class Retriever:
                 query=processed_query,
                 limit=top_k,
                 return_metadata=MetadataQuery(score=True),
-                filter=filter,
+                filters=filter,
             )
 
             # Process results
