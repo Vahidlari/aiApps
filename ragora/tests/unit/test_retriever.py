@@ -132,7 +132,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(distance=True),
-                    filter=None,
+                    filters=None,
                 )
 
     def test_search_similar_empty_query(self, retriever):
@@ -184,7 +184,7 @@ class TestRetriever:
                     alpha=0.7,
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
-                    filter=None,
+                    filters=None,
                 )
 
     def test_search_hybrid_invalid_alpha(self, retriever):
@@ -231,7 +231,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
-                    filter=None,
+                    filters=None,
                 )
 
     def test_search_keyword_empty_query(self, retriever):
@@ -488,7 +488,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(distance=True),
-                    filter=test_filter,
+                    filters=test_filter,
                 )
 
     def test_search_hybrid_with_filter(
@@ -530,7 +530,7 @@ class TestRetriever:
                     alpha=0.7,
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
-                    filter=test_filter,
+                    filters=test_filter,
                 )
 
     def test_search_keyword_with_filter(
@@ -570,7 +570,7 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(score=True),
-                    filter=test_filter,
+                    filters=test_filter,
                 )
 
     def test_search_with_none_filter(
@@ -605,5 +605,5 @@ class TestRetriever:
                     query="machine learning",
                     limit=5,
                     return_metadata=MetadataQuery(distance=True),
-                    filter=None,
+                    filters=None,
                 )
