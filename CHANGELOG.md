@@ -1,3 +1,11 @@
+## [1.2.0-rc.3](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.2...v1.2.0-rc.3) (2025-11-05)
+
+
+### Bug Fixes
+
+* fixed the use of filter parameter naming in Retriever class ([#78](https://github.com/Vahidlari/aiApps/issues/78)) ([121fa07](https://github.com/Vahidlari/aiApps/commit/121fa071212b60ac656f5d0c3bd8ff87b97cd39d))
+* implement PEP 440 compliant version parsing  ([#76](https://github.com/Vahidlari/aiApps/issues/76)) ([f16c3aa](https://github.com/Vahidlari/aiApps/commit/f16c3aa3f3434f0193fd70672bd5db5bd82ee323))
+
 ## [1.2.0-rc.2](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.1...v1.2.0-rc.2) (2025-11-05)
 
 ## [1.2.0-rc.1](https://github.com/Vahidlari/aiApps/compare/v1.1.0...v1.2.0-rc.1) (2025-11-05)
