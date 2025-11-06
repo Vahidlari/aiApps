@@ -30,7 +30,12 @@ from .database_manager import DatabaseManager
 from .document_preprocessor import DocumentPreprocessor
 from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
-from .models import RetrievalResultItem, SearchResultItem
+from .models import (
+    EmailListResult,
+    EmailMessageModel,
+    RetrievalResultItem,
+    SearchResultItem,
+)
 from .retriever import Retriever
 from .vector_store import VectorStore
 
@@ -570,7 +575,7 @@ class KnowledgeBaseManager:
         folder: Optional[str] = None,
         include_body: bool = True,
         limit: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> EmailListResult:
         """Check for new unread emails without storing them.
 
         Args:
@@ -580,10 +585,15 @@ class KnowledgeBaseManager:
             limit: Maximum number of emails to return
 
         Returns:
-            Dictionary with count and email metadata
+            EmailListResult: Structured result with email items and metadata
+
+        Raises:
+            RuntimeError: If system not initialized
         """
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")
+
+        start_time = time.time()
 
         try:
             # Auto-connect if needed
@@ -594,25 +604,33 @@ class KnowledgeBaseManager:
                 limit=limit, folder=folder, unread_only=True
             )
 
-            # Build result
-            emails_data = []
-            for email in new_emails:
-                email_data = {
-                    "email_id": email.message_id,
-                    "subject": email.subject,
-                    "sender": str(email.sender) if email.sender else "",
-                    "date_sent": (
-                        email.date_sent.isoformat() if email.date_sent else None
-                    ),
-                    "folder": email.folder if hasattr(email, "folder") else None,
-                }
+            # Convert EmailMessage objects to EmailMessageModel
+            email_items = [
+                EmailMessageModel.from_email_message(email) for email in new_emails
+            ]
 
-                if include_body:
-                    email_data["body"] = email.get_body()
+            # Clear body fields if include_body is False
+            if not include_body:
+                for email_item in email_items:
+                    email_item.body_text = None
+                    email_item.body_html = None
 
-                emails_data.append(email_data)
+            execution_time = time.time() - start_time
 
-            result = {"count": len(new_emails), "emails": emails_data}
+            # Build metadata
+            metadata = {
+                "include_body": include_body,
+                "limit": limit,
+                "unread_only": True,
+            }
+
+            result = EmailListResult(
+                emails=email_items,
+                count=len(new_emails),
+                folder=folder,
+                execution_time=execution_time,
+                metadata=metadata,
+            )
 
             self.logger.info(f"Found {len(new_emails)} new emails")
             return result

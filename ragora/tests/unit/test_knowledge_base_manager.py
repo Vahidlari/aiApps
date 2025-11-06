@@ -749,10 +749,15 @@ class TestKnowledgeBaseManager:
         # Test
         result = kbm.check_new_emails(mock_provider)
 
-        # Assertions
-        assert result["count"] == 2
-        assert len(result["emails"]) == 2
-        assert result["emails"][0]["email_id"] == "msg1"
+        # Assertions - EmailListResult structure
+        assert result.count == 2
+        assert len(result.emails) == 2
+        assert result.emails[0].message_id == "msg1"
+        assert result.emails[0].subject == "Test 1"
+        assert result.emails[1].message_id == "msg2"
+        assert result.emails[1].subject == "Test 2"
+        assert isinstance(result.execution_time, float)
+        assert result.execution_time >= 0.0
         mock_provider.connect.assert_called_once()
         mock_provider.fetch_messages.assert_called_once()
 

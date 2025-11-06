@@ -6,6 +6,7 @@ import pytest
 
 from ragora.core.chunking import DataChunk, DataChunker
 from ragora.core.email_preprocessor import EmailPreprocessor
+from ragora.core.models import EmailListResult, EmailMessageModel
 from ragora.utils.email_utils.models import EmailAddress, EmailMessage
 
 
@@ -857,3 +858,187 @@ contact@example.com"""
         assert "<html>" not in cleaned_text
         assert "<div>" not in cleaned_text
         assert "<style>" not in cleaned_text
+
+    def test_clean_email_body_with_email_item(self, mock_email):
+        """Test clean_email_body accepts EmailMessageModel."""
+        from ragora.core.models import EmailMessageModel
+
+        # Convert EmailMessage to EmailMessageModel
+        email_item = EmailMessageModel.from_email_message(mock_email)
+
+        preprocessor = EmailPreprocessor()
+        cleaned = preprocessor.clean_email_body(email_item)
+
+        # Should work the same as EmailMessage
+        assert isinstance(cleaned, str)
+        # Should contain body content
+        assert len(cleaned) > 0 or mock_email.get_body() == ""
+
+    def test_clean_email_body_with_email_message(self, mock_email):
+        """Test clean_email_body backward compatibility with EmailMessage."""
+        preprocessor = EmailPreprocessor()
+        cleaned = preprocessor.clean_email_body(mock_email)
+
+        # Should work as before
+        assert isinstance(cleaned, str)
+        assert len(cleaned) > 0 or mock_email.get_body() == ""
+
+
+class TestEmailMessageModel:
+    """Test suite for EmailMessageModel Pydantic model."""
+
+    @pytest.fixture
+    def mock_email_message(self):
+        """Create a mock EmailMessage for testing."""
+        from datetime import datetime
+
+        sender = EmailAddress("sender@example.com", "Test Sender")
+        recipient = EmailAddress("recipient@example.com", "Test Recipient")
+        return EmailMessage(
+            message_id="msg_123",
+            subject="Test Email",
+            sender=sender,
+            recipients=[recipient],
+            cc_recipients=[EmailAddress("cc@example.com")],
+            bcc_recipients=[EmailAddress("bcc@example.com")],
+            body_text="This is the email body.",
+            body_html="<p>This is the email body.</p>",
+            date_sent=datetime(2024, 1, 1, 10, 0, 0),
+            date_received=datetime(2024, 1, 1, 10, 5, 0),
+            folder="INBOX",
+            thread_id="thread_123",
+            conversation_id="conv_123",
+        )
+
+    def test_email_item_from_email_message(self, mock_email_message):
+        """Test EmailMessageModel creation from EmailMessage."""
+        email_item = EmailMessageModel.from_email_message(mock_email_message)
+
+        assert email_item.message_id == "msg_123"
+        assert email_item.subject == "Test Email"
+        assert email_item.sender.email == "sender@example.com"
+        assert email_item.sender.name == "Test Sender"
+        assert len(email_item.recipients) == 1
+        assert email_item.recipients[0].email == "recipient@example.com"
+        assert len(email_item.cc_recipients) == 1
+        assert len(email_item.bcc_recipients) == 1
+        assert email_item.body_text == "This is the email body."
+        assert email_item.body_html == "<p>This is the email body.</p>"
+        assert email_item.folder == "INBOX"
+        assert email_item.thread_id == "thread_123"
+        assert email_item.conversation_id == "conv_123"
+
+    def test_email_item_to_email_message(self, mock_email_message):
+        """Test EmailMessageModel conversion back to EmailMessage."""
+        email_item = EmailMessageModel.from_email_message(mock_email_message)
+        email_message = email_item.to_email_message()
+
+        assert email_message.message_id == "msg_123"
+        assert email_message.subject == "Test Email"
+        assert email_message.sender.email == "sender@example.com"
+        assert email_message.sender.name == "Test Sender"
+        assert len(email_message.recipients) == 1
+        assert email_message.recipients[0].email == "recipient@example.com"
+        assert len(email_message.cc_recipients) == 1
+        assert len(email_message.bcc_recipients) == 1
+        assert email_message.body_text == "This is the email body."
+        assert email_message.body_html == "<p>This is the email body.</p>"
+        assert email_message.folder == "INBOX"
+        assert email_message.thread_id == "thread_123"
+        assert email_message.conversation_id == "conv_123"
+
+    def test_email_item_get_body(self, mock_email_message):
+        """Test EmailMessageModel.get_body() method."""
+        email_item = EmailMessageModel.from_email_message(mock_email_message)
+
+        # Should prefer HTML over text
+        body = email_item.get_body()
+        assert body == "<p>This is the email body.</p>"
+
+        # Test with only text body
+        email_item.body_html = None
+        body = email_item.get_body()
+        assert body == "This is the email body."
+
+        # Test with no body
+        email_item.body_text = None
+        body = email_item.get_body()
+        assert body == ""
+
+    def test_email_item_interface(self, mock_email_message):
+        """Test that EmailMessageModel has same interface as EmailMessage."""
+        email_item = EmailMessageModel.from_email_message(mock_email_message)
+
+        # All EmailMessage attributes should be accessible
+        assert hasattr(email_item, "message_id")
+        assert hasattr(email_item, "subject")
+        assert hasattr(email_item, "sender")
+        assert hasattr(email_item, "recipients")
+        assert hasattr(email_item, "body_text")
+        assert hasattr(email_item, "body_html")
+        assert hasattr(email_item, "get_body")
+        assert callable(email_item.get_body)
+
+
+class TestEmailListResult:
+    """Test suite for EmailListResult Pydantic model."""
+
+    @pytest.fixture
+    def mock_email_items(self):
+        """Create mock EmailMessageModel objects for testing."""
+        from datetime import datetime
+
+        sender = EmailAddress("sender@example.com")
+        recipient = EmailAddress("recipient@example.com")
+
+        email1 = EmailMessage(
+            message_id="msg1",
+            subject="Test 1",
+            sender=sender,
+            recipients=[recipient],
+            body_text="Body 1",
+        )
+        email2 = EmailMessage(
+            message_id="msg2",
+            subject="Test 2",
+            sender=sender,
+            recipients=[recipient],
+            body_text="Body 2",
+        )
+
+        return [
+            EmailMessageModel.from_email_message(email1),
+            EmailMessageModel.from_email_message(email2),
+        ]
+
+    def test_email_list_result_structure(self, mock_email_items):
+        """Test EmailListResult structure and properties."""
+        result = EmailListResult(
+            emails=mock_email_items,
+            count=2,
+            folder="INBOX",
+            execution_time=0.5,
+            metadata={"test": "value"},
+        )
+
+        assert len(result.emails) == 2
+        assert result.count == 2
+        assert result.folder == "INBOX"
+        assert result.execution_time == 0.5
+        assert result.metadata["test"] == "value"
+
+    def test_email_list_result_email_messages(self, mock_email_items):
+        """Test EmailListResult.email_messages property."""
+        result = EmailListResult(
+            emails=mock_email_items,
+            count=2,
+            folder=None,
+            execution_time=0.1,
+        )
+
+        email_messages = result.email_messages
+
+        assert len(email_messages) == 2
+        assert isinstance(email_messages[0], EmailMessage)
+        assert email_messages[0].message_id == "msg1"
+        assert email_messages[1].message_id == "msg2"
