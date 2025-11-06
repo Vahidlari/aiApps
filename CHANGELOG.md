@@ -1,3 +1,10 @@
+## [1.2.0-rc.4](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.3...v1.2.0-rc.4) (2025-11-06)
+
+
+### Features
+
+* update knowledgebasemanager email processing apis to return rich data structures ([#80](https://github.com/Vahidlari/aiApps/issues/80)) ([068da0a](https://github.com/Vahidlari/aiApps/commit/068da0a6d928cab2a3e02bc7e63414a222d257c1)), closes [#79](https://github.com/Vahidlari/aiApps/issues/79)
+
 ## [1.2.0-rc.3](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.2...v1.2.0-rc.3) (2025-11-05)
 
 
