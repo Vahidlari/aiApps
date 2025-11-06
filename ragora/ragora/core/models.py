@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ragora.utils.email_utils.models import (
     EmailAddress,
@@ -462,6 +462,19 @@ class EmailListResult(BaseModel):
         default_factory=dict,
         description="Additional metadata about the email fetch operation",
     )
+
+    @model_validator(mode="after")
+    def validate_count_matches_emails(self) -> "EmailListResult":
+        """Validate that count matches the actual number of emails.
+
+        This ensures data consistency and prevents mismatched counts.
+        """
+        if self.count != len(self.emails):
+            raise ValueError(
+                f"Count ({self.count}) does not match the number of emails "
+                f"({len(self.emails)})"
+            )
+        return self
 
     @property
     def email_messages(self) -> List["EmailMessage"]:
