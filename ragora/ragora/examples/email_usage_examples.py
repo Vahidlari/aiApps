@@ -430,9 +430,7 @@ def example_email_answer_drafting_workflow():
         print("\nStep 2: Finding relevant context for drafting replies...")
         for email_item in new_emails_info.emails[:3]:  # Process first 3
             print(f"\n--- Processing: {email_item.subject} ---")
-            print(
-                f"From: {email_item.sender.get('name', '')} <{email_item.sender.get('email', '')}>"
-            )
+            print(f"From: {email_item.sender.name or ''} <{email_item.sender.email}>")
 
             # Search for relevant context in knowledge base
             query = email_item.subject + " " + email_item.get_body()[:100]

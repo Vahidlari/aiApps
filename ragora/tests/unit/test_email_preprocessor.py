@@ -916,10 +916,10 @@ class TestEmailMessageModel:
 
         assert email_item.message_id == "msg_123"
         assert email_item.subject == "Test Email"
-        assert email_item.sender["email"] == "sender@example.com"
-        assert email_item.sender["name"] == "Test Sender"
+        assert email_item.sender.email == "sender@example.com"
+        assert email_item.sender.name == "Test Sender"
         assert len(email_item.recipients) == 1
-        assert email_item.recipients[0]["email"] == "recipient@example.com"
+        assert email_item.recipients[0].email == "recipient@example.com"
         assert len(email_item.cc_recipients) == 1
         assert len(email_item.bcc_recipients) == 1
         assert email_item.body_text == "This is the email body."

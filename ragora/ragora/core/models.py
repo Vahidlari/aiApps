@@ -15,7 +15,7 @@ Key Models:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -27,15 +27,46 @@ from ragora.utils.email_utils.models import (
 )
 
 
-class EmailAddressDict(TypedDict):
-    """TypedDict for email address representation.
+class EmailAddressModel(BaseModel):
+    """Pydantic model for email address representation.
 
-    This ensures 'email' is always required and non-null,
-    while 'name' remains optional.
+    This model ensures 'email' is always required and non-null,
+    while 'name' remains optional. Provides validation and a rich
+    data model interface similar to EmailAddress dataclass.
+
+    Attributes:
+        email: Required, non-null email address
+        name: Optional display name
     """
 
-    email: str  # Required, non-null email address
-    name: Optional[str]  # Optional display name
+    email: str = Field(..., description="Email address (required)")
+    name: Optional[str] = Field(default=None, description="Display name (optional)")
+
+    def __str__(self) -> str:
+        """String representation matching EmailAddress format."""
+        if self.name:
+            return f"{self.name} <{self.email}>"
+        return self.email
+
+    def to_email_address(self) -> "EmailAddress":
+        """Convert to EmailAddress dataclass.
+
+        Returns:
+            EmailAddress: EmailAddress dataclass instance
+        """
+        return EmailAddress(email=self.email, name=self.name)
+
+    @classmethod
+    def from_email_address(cls, address: "EmailAddress") -> "EmailAddressModel":
+        """Create EmailAddressModel from EmailAddress dataclass.
+
+        Args:
+            address: EmailAddress dataclass instance
+
+        Returns:
+            EmailAddressModel: EmailAddressModel instance
+        """
+        return cls(email=address.email, name=address.name)
 
 
 class RetrievalMetadata(BaseModel):
@@ -268,19 +299,19 @@ class EmailMessageModel(BaseModel):
 
     message_id: str = Field(..., description="Unique email message identifier")
     subject: str = Field(..., description="Email subject line")
-    sender: EmailAddressDict = Field(
+    sender: EmailAddressModel = Field(
         ...,
-        description="Email sender as dict with required 'email' and optional 'name'",
+        description="Email sender with required 'email' and optional 'name'",
     )
-    recipients: List[EmailAddressDict] = Field(
+    recipients: List[EmailAddressModel] = Field(
         default_factory=list,
-        description="List of recipient email addresses as dicts",
+        description="List of recipient email addresses",
     )
-    cc_recipients: List[EmailAddressDict] = Field(
-        default_factory=list, description="CC recipients as list of dicts"
+    cc_recipients: List[EmailAddressModel] = Field(
+        default_factory=list, description="CC recipients"
     )
-    bcc_recipients: List[EmailAddressDict] = Field(
-        default_factory=list, description="BCC recipients as list of dicts"
+    bcc_recipients: List[EmailAddressModel] = Field(
+        default_factory=list, description="BCC recipients"
     )
     body_text: Optional[str] = Field(default=None, description="Plain text email body")
     body_html: Optional[str] = Field(default=None, description="HTML email body")
@@ -313,11 +344,11 @@ class EmailMessageModel(BaseModel):
         """
         return self.body_html if self.body_html else (self.body_text or "")
 
-    def get_all_recipients(self) -> List[EmailAddressDict]:
+    def get_all_recipients(self) -> List[EmailAddressModel]:
         """Get all recipients including CC and BCC.
 
         Returns:
-            List of recipient dicts (recipients + cc_recipients + bcc_recipients)
+            List of EmailAddressModel instances (recipients + cc_recipients + bcc_recipients)
         """
         return self.recipients + self.cc_recipients + self.bcc_recipients
 
@@ -331,23 +362,13 @@ class EmailMessageModel(BaseModel):
             ImportError: If email_utils.models cannot be imported
         """
 
-        # Convert sender dict to EmailAddress
-        sender_addr = EmailAddress(
-            email=self.sender["email"], name=self.sender.get("name")
-        )
+        # Convert sender EmailAddressModel to EmailAddress
+        sender_addr = self.sender.to_email_address()
 
         # Convert recipients
-        recipients_list = [
-            EmailAddress(email=r["email"], name=r.get("name")) for r in self.recipients
-        ]
-        cc_list = [
-            EmailAddress(email=r["email"], name=r.get("name"))
-            for r in self.cc_recipients
-        ]
-        bcc_list = [
-            EmailAddress(email=r["email"], name=r.get("name"))
-            for r in self.bcc_recipients
-        ]
+        recipients_list = [r.to_email_address() for r in self.recipients]
+        cc_list = [r.to_email_address() for r in self.cc_recipients]
+        bcc_list = [r.to_email_address() for r in self.bcc_recipients]
 
         # Convert attachments
         attachments_list = []
@@ -399,16 +420,17 @@ class EmailMessageModel(BaseModel):
         Returns:
             EmailMessageModel: EmailMessageModel Pydantic model instance
         """
-        # Convert sender EmailAddress to dict
-        sender_dict = {
-            "email": email.sender.email,
-            "name": email.sender.name,
-        }
+        # Convert sender EmailAddress to EmailAddressModel
+        sender_model = EmailAddressModel.from_email_address(email.sender)
 
         # Convert recipients
-        recipients_list = [{"email": r.email, "name": r.name} for r in email.recipients]
-        cc_list = [{"email": r.email, "name": r.name} for r in email.cc_recipients]
-        bcc_list = [{"email": r.email, "name": r.name} for r in email.bcc_recipients]
+        recipients_list = [
+            EmailAddressModel.from_email_address(r) for r in email.recipients
+        ]
+        cc_list = [EmailAddressModel.from_email_address(r) for r in email.cc_recipients]
+        bcc_list = [
+            EmailAddressModel.from_email_address(r) for r in email.bcc_recipients
+        ]
 
         # Convert attachments
         attachments_list = [
@@ -425,7 +447,7 @@ class EmailMessageModel(BaseModel):
         return cls(
             message_id=email.message_id,
             subject=email.subject,
-            sender=sender_dict,
+            sender=sender_model,
             recipients=recipients_list,
             cc_recipients=cc_list,
             bcc_recipients=bcc_list,
