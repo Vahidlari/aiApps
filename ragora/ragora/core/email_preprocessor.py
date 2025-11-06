@@ -48,6 +48,61 @@ class EmailPreprocessor:
         chunker: DataChunker instance for chunking email content
     """
 
+    # Email TLDs for signature detection (class-level constant)
+    _EMAIL_TLDS = (
+        r"com|org|net|edu|gov|de|uk|fr|it|es|nl|be|ch|at|se|no|"
+        r"dk|fi|pl|cz|hu|ro|gr|pt|ie|lu|mt|cy|sk|si|ee|lv|lt|bg|hr"
+    )
+
+    # Patterns that indicate signature start (class-level constant)
+    _SIGNATURE_INDICATORS = [
+        r"^--\s*$",  # Two dashes on their own line
+        r"^---\s*$",  # Three dashes
+        r"^_{3,}$",  # Underscores
+        r"^={3,}$",  # Equals signs
+        r"^Best regards",
+        r"^Regards,",
+        r"^Sincerely,",
+        r"^Cheers,",
+        r"^Thanks,",
+        r"^Thank you,",
+        r"^Sent from my",
+        r"^Get Outlook",
+    ]
+
+    # Compiled regex patterns for signature indicators (pre-compiled for
+    # performance)
+    _SIGNATURE_INDICATOR_PATTERNS = [
+        re.compile(pattern, re.IGNORECASE) for pattern in _SIGNATURE_INDICATORS
+    ]
+
+    # Patterns that indicate signature content (class-level constant)
+    _SIGNATURE_CONTENT_PATTERNS = [
+        # Email addresses
+        re.compile(r"@.*\." + f"({_EMAIL_TLDS})", re.IGNORECASE),
+        # Phone numbers (international format)
+        re.compile(
+            r"\+?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}" r"[-.\s]?\d{0,4}",
+            re.IGNORECASE,
+        ),
+        re.compile(r"^www\.", re.IGNORECASE),
+        re.compile(r"^http://", re.IGNORECASE),
+        re.compile(r"^https://", re.IGNORECASE),
+        re.compile(r"linkedin\.com", re.IGNORECASE),
+        re.compile(r"facebook\.com", re.IGNORECASE),
+        re.compile(r"twitter\.com", re.IGNORECASE),
+        re.compile(r"xing\.com", re.IGNORECASE),
+        re.compile(r"^\d{5}[\s-]?\w+", re.IGNORECASE),  # Postal codes
+        # Lines ending with comma and country/state (e.g., "Germany", "USA")
+        re.compile(r",\s*\w+\s*$", re.IGNORECASE),
+        re.compile(r"\(cellphone\)", re.IGNORECASE),
+        re.compile(r"\(mobile\)", re.IGNORECASE),
+        re.compile(r"\(phone\)", re.IGNORECASE),
+        re.compile(r"Dr\.-?Ing\.", re.IGNORECASE),  # German academic titles
+        re.compile(r"Prof\.", re.IGNORECASE),  # Professor
+        re.compile(r"PhD", re.IGNORECASE),
+    ]
+
     def __init__(self, chunker: DataChunker = None):
         """Initialize the EmailPreprocessor.
 
@@ -457,56 +512,10 @@ class EmailPreprocessor:
         signature_started = False
         consecutive_blank_lines = 0
 
-        # Patterns that indicate signature start
-        signature_indicators = [
-            r"^--\s*$",  # Two dashes on their own line
-            r"^---\s*$",  # Three dashes
-            r"^_{3,}$",  # Underscores
-            r"^={3,}$",  # Equals signs
-            r"^Best regards",
-            r"^Regards,",
-            r"^Sincerely,",
-            r"^Cheers,",
-            r"^Thanks,",
-            r"^Thank you,",
-            r"^Sent from my",
-            r"^Get Outlook",
-        ]
-
-        # Patterns that indicate signature content (not just start)
-        # Email addresses (expanded TLDs)
-        email_tlds = (
-            r"com|org|net|edu|gov|de|uk|fr|it|es|nl|be|ch|at|se|no|"
-            r"dk|fi|pl|cz|hu|ro|gr|pt|ie|lu|mt|cy|sk|si|ee|lv|lt|bg|hr"
-        )
-        signature_content_patterns = [
-            r"@.*\." + f"({email_tlds})",  # Email addresses
-            # Phone numbers (international format)
-            r"\+?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{0,4}",
-            r"^www\.",
-            r"^http://",
-            r"^https://",
-            r"linkedin\.com",
-            r"facebook\.com",
-            r"twitter\.com",
-            r"xing\.com",
-            r"^\d{5}[\s-]?\w+",  # Postal codes
-            # Lines ending with comma and country/state
-            # (e.g., "Germany", "USA")
-            r",\s*\w+\s*$",
-            r"\(cellphone\)",
-            r"\(mobile\)",
-            r"\(phone\)",
-            r"Dr\.-?Ing\.",  # German academic titles
-            r"Prof\.",  # Professor
-            r"PhD",
-        ]
-
         for i, line in enumerate(lines):
             # Check if this line starts a signature
             is_signature_start = any(
-                re.match(pattern, line, re.IGNORECASE)
-                for pattern in signature_indicators
+                pattern.match(line) for pattern in self._SIGNATURE_INDICATOR_PATTERNS
             )
 
             if is_signature_start:
@@ -535,11 +544,11 @@ class EmailPreprocessor:
                             next_line = lines[next_non_blank_idx]
                             # Check if next line looks like signature content
                             is_signature_content = any(
-                                re.search(pattern, next_line, re.IGNORECASE)
-                                for pattern in signature_content_patterns
+                                pattern.search(next_line)
+                                for pattern in self._SIGNATURE_CONTENT_PATTERNS
                             ) or any(
-                                re.match(pattern, next_line, re.IGNORECASE)
-                                for pattern in signature_indicators
+                                pattern.match(next_line)
+                                for pattern in self._SIGNATURE_INDICATOR_PATTERNS
                             )
 
                             if not is_signature_content:
@@ -561,8 +570,8 @@ class EmailPreprocessor:
 
                     # Check if line looks like signature content
                     is_signature_content = any(
-                        re.search(pattern, line, re.IGNORECASE)
-                        for pattern in signature_content_patterns
+                        pattern.search(line)
+                        for pattern in self._SIGNATURE_CONTENT_PATTERNS
                     )
 
                     if is_signature_content:
