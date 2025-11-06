@@ -1,3 +1,20 @@
+## [1.2.0](https://github.com/Vahidlari/aiApps/compare/v1.1.0...v1.2.0) (2025-11-06)
+
+
+### Features
+
+* enhance email signature detection in EmailPreprocessor ([#81](https://github.com/Vahidlari/aiApps/issues/81)) ([5cd4570](https://github.com/Vahidlari/aiApps/commit/5cd457007a59d37b66d95e407081f3d83d7bb716))
+* improve email provide module with advanced email parser functionality ([#69](https://github.com/Vahidlari/aiApps/issues/69)) ([b89150c](https://github.com/Vahidlari/aiApps/commit/b89150ccb3f4ad68068353e7df93930ad06aef05)), closes [#65](https://github.com/Vahidlari/aiApps/issues/65)
+* improve retriever module to return rich structured search results ([#71](https://github.com/Vahidlari/aiApps/issues/71)) ([b9be738](https://github.com/Vahidlari/aiApps/commit/b9be7380052adf9c545365b82a4fd1c72e8f621f)), closes [#67](https://github.com/Vahidlari/aiApps/issues/67)
+* introduce FilterBuilder for enhanced query filtering capabilities ([#72](https://github.com/Vahidlari/aiApps/issues/72)) ([eea11c6](https://github.com/Vahidlari/aiApps/commit/eea11c6211e820598d7d941b80140ef7b774b280)), closes [#59](https://github.com/Vahidlari/aiApps/issues/59)
+* update knowledgebasemanager email processing apis to return rich data structures ([#80](https://github.com/Vahidlari/aiApps/issues/80)) ([068da0a](https://github.com/Vahidlari/aiApps/commit/068da0a6d928cab2a3e02bc7e63414a222d257c1)), closes [#79](https://github.com/Vahidlari/aiApps/issues/79)
+
+
+### Bug Fixes
+
+* fixed the use of filter parameter naming in Retriever class ([#78](https://github.com/Vahidlari/aiApps/issues/78)) ([121fa07](https://github.com/Vahidlari/aiApps/commit/121fa071212b60ac656f5d0c3bd8ff87b97cd39d))
+* implement PEP 440 compliant version parsing  ([#76](https://github.com/Vahidlari/aiApps/issues/76)) ([f16c3aa](https://github.com/Vahidlari/aiApps/commit/f16c3aa3f3434f0193fd70672bd5db5bd82ee323))
+
 ## [1.2.0-rc.4](https://github.com/Vahidlari/aiApps/compare/v1.2.0-rc.3...v1.2.0-rc.4) (2025-11-06)
 
 
