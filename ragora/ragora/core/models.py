@@ -15,7 +15,7 @@ Key Models:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,6 +25,17 @@ from ragora.utils.email_utils.models import (
     EmailMessage,
     MessageStatus,
 )
+
+
+class EmailAddressDict(TypedDict):
+    """TypedDict for email address representation.
+
+    This ensures 'email' is always required and non-null,
+    while 'name' remains optional.
+    """
+
+    email: str  # Required, non-null email address
+    name: Optional[str]  # Optional display name
 
 
 class RetrievalMetadata(BaseModel):
@@ -257,17 +268,18 @@ class EmailMessageModel(BaseModel):
 
     message_id: str = Field(..., description="Unique email message identifier")
     subject: str = Field(..., description="Email subject line")
-    sender: Dict[str, Optional[str]] = Field(
-        ..., description="Email sender as dict with 'email' and optional 'name'"
+    sender: EmailAddressDict = Field(
+        ...,
+        description="Email sender as dict with required 'email' and optional 'name'",
     )
-    recipients: List[Dict[str, Optional[str]]] = Field(
+    recipients: List[EmailAddressDict] = Field(
         default_factory=list,
         description="List of recipient email addresses as dicts",
     )
-    cc_recipients: List[Dict[str, Optional[str]]] = Field(
+    cc_recipients: List[EmailAddressDict] = Field(
         default_factory=list, description="CC recipients as list of dicts"
     )
-    bcc_recipients: List[Dict[str, Optional[str]]] = Field(
+    bcc_recipients: List[EmailAddressDict] = Field(
         default_factory=list, description="BCC recipients as list of dicts"
     )
     body_text: Optional[str] = Field(default=None, description="Plain text email body")
@@ -301,7 +313,7 @@ class EmailMessageModel(BaseModel):
         """
         return self.body_html if self.body_html else (self.body_text or "")
 
-    def get_all_recipients(self) -> List[Dict[str, Optional[str]]]:
+    def get_all_recipients(self) -> List[EmailAddressDict]:
         """Get all recipients including CC and BCC.
 
         Returns:

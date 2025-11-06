@@ -609,10 +609,11 @@ class KnowledgeBaseManager:
                 EmailMessageModel.from_email_message(email) for email in new_emails
             ]
 
-            # If include_body is False, we might want to clear body fields
-            # But for now, we'll always include them since EmailMessageModel.from_email_message
-            # includes all fields. Users can access get_body() if needed.
-            # If needed in the future, we could add a filter here.
+            # Clear body fields if include_body is False
+            if not include_body:
+                for email_item in email_items:
+                    email_item.body_text = None
+                    email_item.body_html = None
 
             execution_time = time.time() - start_time
 
