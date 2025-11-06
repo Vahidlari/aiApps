@@ -482,7 +482,7 @@ class EmailPreprocessor:
         signature_content_patterns = [
             r"@.*\." + f"({email_tlds})",  # Email addresses
             # Phone numbers (international format)
-            r"\+?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}" r"[-.\s]?\d{0,4}",
+            r"\+?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{0,4}",
             r"^www\.",
             r"^http://",
             r"^https://",
