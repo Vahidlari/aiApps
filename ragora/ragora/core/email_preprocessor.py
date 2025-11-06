@@ -455,6 +455,7 @@ class EmailPreprocessor:
         lines = text.split("\n")
         cleaned_lines = []
         signature_started = False
+        consecutive_blank_lines = 0
 
         # Patterns that indicate signature start
         signature_indicators = [
@@ -472,6 +473,35 @@ class EmailPreprocessor:
             r"^Get Outlook",
         ]
 
+        # Patterns that indicate signature content (not just start)
+        # Email addresses (expanded TLDs)
+        email_tlds = (
+            r"com|org|net|edu|gov|de|uk|fr|it|es|nl|be|ch|at|se|no|"
+            r"dk|fi|pl|cz|hu|ro|gr|pt|ie|lu|mt|cy|sk|si|ee|lv|lt|bg|hr"
+        )
+        signature_content_patterns = [
+            r"@.*\." + f"({email_tlds})",  # Email addresses
+            # Phone numbers (international format)
+            r"\+?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,4}" r"[-.\s]?\d{0,4}",
+            r"^www\.",
+            r"^http://",
+            r"^https://",
+            r"linkedin\.com",
+            r"facebook\.com",
+            r"twitter\.com",
+            r"xing\.com",
+            r"^\d{5}[\s-]?\w+",  # Postal codes
+            # Lines ending with comma and country/state
+            # (e.g., "Germany", "USA")
+            r",\s*\w+\s*$",
+            r"\(cellphone\)",
+            r"\(mobile\)",
+            r"\(phone\)",
+            r"Dr\.-?Ing\.",  # German academic titles
+            r"Prof\.",  # Professor
+            r"PhD",
+        ]
+
         for i, line in enumerate(lines):
             # Check if this line starts a signature
             is_signature_start = any(
@@ -481,57 +511,72 @@ class EmailPreprocessor:
 
             if is_signature_start:
                 signature_started = True
+                consecutive_blank_lines = 0
                 # Don't include this line
                 continue
 
             if signature_started:
-                # Continue skipping lines that look like signature content
-                # Stop if we hit a blank line followed by non-signature content
+                # Track consecutive blank lines - multiple blank lines might
+                # indicate end of signature, but we need to be careful
                 if line.strip() == "":
-                    # Check if next non-blank line is signature content
-                    next_non_blank_idx = i + 1
-                    while (
-                        next_non_blank_idx < len(lines)
-                        and lines[next_non_blank_idx].strip() == ""
-                    ):
-                        next_non_blank_idx += 1
-
-                    if next_non_blank_idx < len(lines):
-                        next_line = lines[next_non_blank_idx]
-                        # If next line doesn't look like signature,
-                        # we're past it
-                        if not any(
-                            re.match(pattern, next_line, re.IGNORECASE)
-                            for pattern in signature_indicators
+                    consecutive_blank_lines += 1
+                    # If we have 2+ consecutive blank lines, check if we're
+                    # past signature
+                    if consecutive_blank_lines >= 2:
+                        # Look ahead to see if there's actual content
+                        next_non_blank_idx = i + 1
+                        while (
+                            next_non_blank_idx < len(lines)
+                            and lines[next_non_blank_idx].strip() == ""
                         ):
-                            # Reset and continue
-                            signature_started = False
-                            cleaned_lines.append(line)
-                    else:
-                        # End of text, keep blank lines
-                        cleaned_lines.append(line)
+                            next_non_blank_idx += 1
+
+                        if next_non_blank_idx < len(lines):
+                            next_line = lines[next_non_blank_idx]
+                            # Check if next line looks like signature content
+                            is_signature_content = any(
+                                re.search(pattern, next_line, re.IGNORECASE)
+                                for pattern in signature_content_patterns
+                            ) or any(
+                                re.match(pattern, next_line, re.IGNORECASE)
+                                for pattern in signature_indicators
+                            )
+
+                            if not is_signature_content:
+                                # We've hit multiple blank lines followed by
+                                # non-signature content. This likely means
+                                # we're past the signature
+                                signature_started = False
+                                consecutive_blank_lines = 0
+                                # Include the blank lines as they're part of
+                                # the break
+                                cleaned_lines.append(line)
+                                continue
+
+                    # Still in signature, skip blank lines
+                    continue
                 else:
-                    # Check if line looks like signature
-                    # (contains email, phone, etc.)
-                    signature_patterns = [
-                        r"@.*\.(com|org|net|edu|gov)",
-                        r"\d{3}[-.\s]?\d{3}[-.\s]?\d{4}",  # Phone number
-                        r"^www\.",
-                        r"^http://",
-                        r"^https://",
-                    ]
-                    if any(
+                    # Reset blank line counter for non-blank lines
+                    consecutive_blank_lines = 0
+
+                    # Check if line looks like signature content
+                    is_signature_content = any(
                         re.search(pattern, line, re.IGNORECASE)
-                        for pattern in signature_patterns
-                    ):
+                        for pattern in signature_content_patterns
+                    )
+
+                    if is_signature_content:
+                        # Definitely signature content, skip it
                         continue
-                    # After signature delimiter, continue skipping lines
-                    # even if they don't match patterns (names, titles, etc.)
-                    # Continue skipping all lines after signature start
-                    # until we explicitly see content that breaks the pattern
-                    # (e.g., a full paragraph of non-signature text)
+
+                    # Line doesn't match signature patterns, but we're after
+                    # a signature delimiter. Continue skipping unless we see
+                    # a clear break (handled by blank line logic above).
+                    # This handles names, titles, and other signature
+                    # elements that don't match patterns
                     continue
             else:
+                consecutive_blank_lines = 0
                 cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines).strip()
