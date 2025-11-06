@@ -22,7 +22,13 @@ from .email_preprocessor import EmailPreprocessor
 from .embedding_engine import EmbeddingEngine
 from .filters import FilterBuilder
 from .knowledge_base_manager import KnowledgeBaseManager, SearchResult, SearchStrategy
-from .models import RetrievalMetadata, RetrievalResultItem, SearchResultItem
+from .models import (
+    EmailListResult,
+    EmailMessageModel,
+    RetrievalMetadata,
+    RetrievalResultItem,
+    SearchResultItem,
+)
 from .retriever import Retriever
 from .vector_store import VectorStore
 
@@ -40,6 +46,8 @@ __all__ = [
     "DocumentPreprocessor",
     "EmailPreprocessor",
     "EmbeddingEngine",
+    "EmailMessageModel",
+    "EmailListResult",
     "FilterBuilder",
     "KnowledgeBaseManager",
     "SearchStrategy",

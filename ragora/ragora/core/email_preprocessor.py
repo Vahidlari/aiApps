@@ -15,7 +15,7 @@ fed to the embedding engine for vector database storage.
 """
 
 import re
-from typing import List
+from typing import List, Union
 
 try:
     import html2text
@@ -33,6 +33,7 @@ except ImportError:
     EmailReplyParser = None
 
 from ragora.core.chunking import ChunkingContextBuilder, DataChunk, DataChunker
+from ragora.core.models import EmailMessageModel
 from ragora.utils.email_utils.models import EmailMessage
 
 
@@ -101,7 +102,7 @@ class EmailPreprocessor:
         """
         return self._email_to_chunks(email, start_sequence_idx)
 
-    def clean_email_body(self, email: EmailMessage) -> str:
+    def clean_email_body(self, email: Union[EmailMessage, EmailMessageModel]) -> str:
         """Clean email body by converting HTML, stripping replies,
         and removing signatures.
 
@@ -117,7 +118,8 @@ class EmailPreprocessor:
         chunking the content.
 
         Args:
-            email: EmailMessage object to clean
+            email: EmailMessage or EmailMessageModel object to clean (both have
+                the same interface: get_body(), body_html, body_text)
 
         Returns:
             Cleaned plain text content. Returns empty string if email
@@ -126,9 +128,13 @@ class EmailPreprocessor:
         Example:
             >>> from ragora import EmailPreprocessor
             >>> from ragora.utils.email_utils.models import EmailMessage
+            >>> from ragora.core.models import EmailMessageModel
             >>>
             >>> preprocessor = EmailPreprocessor()
-            >>> clean_text = preprocessor.clean_email_body(email)
+            >>> # Works with EmailMessage
+            >>> clean_text = preprocessor.clean_email_body(email_message)
+            >>> # Also works with EmailMessageModel
+            >>> clean_text = preprocessor.clean_email_body(email_item)
             >>> # Use clean_text with LLM or other processing
         """
         # Step 1: Extract body (HTML preferred, fallback to text)

@@ -362,14 +362,12 @@ def example_email_database_creation():
             limit=5,
         )
 
-        if new_emails_info["count"] > 0:
+        if new_emails_info.count > 0:
             # Process unread emails only
             print("\n\nProcessing new unread emails...")
             new_stored = kbm.process_new_emails(
                 email_provider=provider,
-                email_ids=[
-                    email["email_id"] for email in new_emails_info["emails"][:3]
-                ],
+                email_ids=[email.message_id for email in new_emails_info.emails[:3]],
                 collection="Email",
             )
             print(f"Stored {len(new_stored)} new email chunks")
@@ -426,16 +424,18 @@ def example_email_answer_drafting_workflow():
         new_emails_info = kbm.check_new_emails(
             email_provider=provider, folder="INBOX", include_body=True, limit=5
         )
-        print(f"Found {new_emails_info['count']} new emails")
+        print(f"Found {new_emails_info.count} new emails")
 
         # Step 2: For each email, find relevant context from knowledge base
         print("\nStep 2: Finding relevant context for drafting replies...")
-        for email_data in new_emails_info["emails"][:3]:  # Process first 3
-            print(f"\n--- Processing: {email_data['subject']} ---")
-            print(f"From: {email_data['sender']}")
+        for email_item in new_emails_info.emails[:3]:  # Process first 3
+            print(f"\n--- Processing: {email_item.subject} ---")
+            print(
+                f"From: {email_item.sender.get('name', '')} <{email_item.sender.get('email', '')}>"
+            )
 
             # Search for relevant context in knowledge base
-            query = email_data["subject"] + " " + email_data.get("body", "")[:100]
+            query = email_item.subject + " " + email_item.get_body()[:100]
             context_results = kbm.search(query=query, collection="Email", top_k=2)
 
             print(f"Found {context_results.total_found} relevant context items")
@@ -450,9 +450,7 @@ def example_email_answer_drafting_workflow():
         # Step 3: After handling emails, index them in knowledge base
         print("\n\nStep 3: Indexing processed emails...")
         # Extract email IDs from the emails we processed
-        processed_email_ids = [
-            email["email_id"] for email in new_emails_info["emails"][:3]
-        ]
+        processed_email_ids = [email.message_id for email in new_emails_info.emails[:3]]
         stored_ids = kbm.process_new_emails(
             email_provider=provider, email_ids=processed_email_ids, collection="Email"
         )
