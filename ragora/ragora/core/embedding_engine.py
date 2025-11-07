@@ -1,20 +1,4 @@
-"""Embedding engine for RAG system.
-
-This module provides the EmbeddingEngine class that handles the conversion of
-text chunks into vector embeddings using Sentence Transformers. It serves as
-the bridge between processed text chunks and the vector database storage.
-
-Key responsibilities:
-- Convert text chunks into high-dimensional vector embeddings
-- Support multiple embedding models (all-mpnet-base-v2, multi-qa-MiniLM-L6-v2)
-- Handle batch processing for efficient embedding generation
-- Provide configuration options for different use cases
-- Integrate with the DataChunk objects from document preprocessing
-
-The embedding engine uses Sentence Transformers locally to generate embeddings
-without requiring external API calls, making it cost-effective and
-privacy-preserving.
-"""
+"""Client-side embedding helpers built on top of Sentence Transformers."""
 
 import logging
 from typing import List, Optional
@@ -27,17 +11,21 @@ from .chunking import DataChunk
 
 
 class EmbeddingEngine:
-    """Embedding engine for converting text chunks to vector embeddings.
-
-    This class handles the conversion of text chunks into vector embeddings
-    using Sentence Transformers. It supports multiple models and provides
-    efficient batch processing capabilities.
+    """Convert raw text into dense vector embeddings.
 
     Attributes:
-        model: SentenceTransformer model instance
-        model_name: Name of the loaded model
-        embedding_dimension: Dimension of the generated embeddings
-        logger: Logger instance for debugging and monitoring
+        model: Loaded `SentenceTransformer` instance.
+        model_name: Name used to initialize the model.
+        embedding_dimension: Dimensionality of the produced vectors.
+        logger: Module logger.
+
+    Examples:
+        ```python
+        from ragora.core.embedding_engine import EmbeddingEngine
+
+        engine = EmbeddingEngine(model_name="all-mpnet-base-v2")
+        vector = engine.embed_text("Ragora makes RAG pipelines easier.")
+        ```
     """
 
     # Supported models with their specifications

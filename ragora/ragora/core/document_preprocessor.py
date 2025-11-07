@@ -1,19 +1,7 @@
-"""Document preprocessor for different formats of documents in the RAG system.
+"""Utilities for parsing and chunking raw documents prior to ingestion.
 
-This module handles the preprocessing pipeline for different formats of document, including
-LaTeX documents before they are used before they are used in the RAG (Retrieval-Augmented Generation) system.
-It orchestrates the parsing of documents using utility modules such the LatexParser and converts the structured content into
-chunked text segments suitable for embedding and vector storage.
-
-Key responsibilities:
-- Provide a unified interface for parsing different formats of documents
-- Parse documents into structured data (chapters, sections, paragraphs, citations)
-- Chunk documents into fixed-size segments (768 tokens) with overlap (100-150 tokens)
-- Prepare clean text content for the embedding engine
-- Maintain document structure and citation relationships
-
-The preprocessor returns structured chunks with metadata that can be directly fed to
-the embedding engine for vector database storage.
+The module centralizes the logic for turning LaTeX, Markdown, and text files into
+`DataChunk` objects that the rest of the Ragora pipeline can embed and store.
 """
 
 import os
@@ -30,15 +18,21 @@ from .chunking import (
 
 
 class DocumentPreprocessor:
-    """Document preprocessor for different formats of documents in Ragora.
+    """Parse supported file formats into chunkable intermediate data.
 
-    This class orchestrates the complete preprocessing pipeline for different formats of documents,
-    from parsing to chunking, preparing them for embedding and vector storage.
+    The preprocessor delegates parsing to format-specific helpers and then feeds
+    the resulting representation through a :class:`DataChunker`.
 
     Attributes:
-        chunker: DataChunker instance for chunking documents
+        chunker: Chunking strategy that controls chunk size and overlap.
 
-    if chunker is not provided, a default chunker is created with the default chunk_size and overlap_size.
+    Examples:
+        ```python
+        from ragora.core.document_preprocessor import DocumentPreprocessor
+
+        preprocessor = DocumentPreprocessor()
+        chunks = preprocessor.preprocess_document("docs/intro.md", format="markdown")
+        ```
     """
 
     def __init__(self, chunker: DataChunker = None):
@@ -68,14 +62,22 @@ class DocumentPreprocessor:
     def preprocess_document(
         self, file_path: str, format: str = "latex"
     ) -> list[DataChunk]:
-        """Preprocess the document and return a list of DataChunks.
+        """Preprocess a single document into :class:`DataChunk` objects.
 
         Args:
-            file_path: Path to the document file
-            format: Format of the document (default: "latex")
+            file_path: Path to the document file.
+            format: Document format (``"latex"``, ``"markdown"``, or ``"text"``).
 
         Returns:
-            list[DataChunk]: List of DataChunks with metadata
+            list[DataChunk]: Chunked content ready for embedding downstream.
+
+        Raises:
+            ValueError: If an unsupported format is requested.
+
+        Examples:
+            ```python
+            chunks = preprocessor.preprocess_document("paper.tex", format="latex")
+            ```
         """
         normalized_format = format.lower()
 
@@ -95,7 +97,26 @@ class DocumentPreprocessor:
     def preprocess_documents(
         self, file_paths: list[str], format: str = "latex"
     ) -> list[DataChunk]:
-        """Preprocess the documents and return a list of DataChunks."""
+        """Preprocess multiple documents at once.
+
+        Args:
+            file_paths: Collection of paths to document files.
+            format: Document format (``"latex"``, ``"markdown"``, or ``"text"``).
+
+        Returns:
+            list[DataChunk]: Combined chunks from all input documents.
+
+        Raises:
+            ValueError: If an unsupported format is requested.
+
+        Examples:
+            ```python
+            chunks = preprocessor.preprocess_documents(
+                ["chapter1.tex", "chapter2.tex", "references.bib"],
+                format="latex",
+            )
+            ```
+        """
         normalized_format = format.lower()
 
         if normalized_format == "latex":
@@ -125,7 +146,18 @@ class DocumentPreprocessor:
     def preprocess_document_folder(
         self, folder_path: str, format: str = "latex"
     ) -> list[DataChunk]:
-        """Preprocess the documents in the folder and return a list of DataChunks."""
+        """Preprocess every supported file in a folder.
+
+        Args:
+            folder_path: Directory containing documents that should be ingested.
+            format: Document format used to interpret files within the folder.
+
+        Returns:
+            list[DataChunk]: Aggregated chunk list for the entire folder.
+
+        Raises:
+            ValueError: If ``format`` is not in the supported extension map.
+        """
         normalized_format = format.lower()
         if normalized_format not in self.file_extension_map:
             raise ValueError(f"Unsupported document format: {format}")
@@ -140,14 +172,13 @@ class DocumentPreprocessor:
         return self.preprocess_documents(file_paths, normalized_format)
 
     def _extract_document_text(self, documentList: list[LatexDocument]) -> str:
-        """Extract the text from the document.
+        """Merge one or more parsed LaTeX documents into plain text.
 
         Args:
-            documentList: list[LatexDocument]
-            Each document in the list is a separate document.
+            documentList: Collection of parsed LaTeX documents to flatten.
 
         Returns:
-            str: The text from the documents
+            str: Combined Markdown-like text used for chunking.
         """
         content_parts = []
 
@@ -187,7 +218,14 @@ class DocumentPreprocessor:
         return "\n\n".join(content_parts)
 
     def _chunk_documents(self, documentList: list[LatexDocument]) -> list[DataChunk]:
-        """Chunk the documents into a list of DataChunks."""
+        """Chunk multiple LaTeX documents.
+
+        Args:
+            documentList: Parsed LaTeX documents.
+
+        Returns:
+            list[DataChunk]: Chunked output.
+        """
         chunks = []
         if not documentList:
             return chunks
@@ -198,7 +236,14 @@ class DocumentPreprocessor:
     def _chunk_markdown_documents(
         self, document_list: list[MarkdownDocument]
     ) -> list[DataChunk]:
-        """Chunk Markdown or plain text documents."""
+        """Chunk Markdown or plain text documents.
+
+        Args:
+            document_list: Parsed Markdown documents.
+
+        Returns:
+            list[DataChunk]: Chunked output.
+        """
 
         chunks: list[DataChunk] = []
         if not document_list:
@@ -210,6 +255,17 @@ class DocumentPreprocessor:
         return chunks
 
     def _chunk_markdown_document(self, document: MarkdownDocument) -> list[DataChunk]:
+        """Chunk a single Markdown document respecting the original hierarchy.
+
+        Args:
+            document: Parsed Markdown document.
+
+        Returns:
+            list[DataChunk]: Chunked output.
+
+        Raises:
+            ValueError: If ``document`` is ``None``.
+        """
         if document is None:
             raise ValueError("Document cannot be None")
 

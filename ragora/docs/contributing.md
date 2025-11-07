@@ -458,7 +458,7 @@ Contributors are recognized in:
 
 - [Development Guide](development.md) - Development workflow
 - [Testing Guide](testing.md) - Testing standards
-- [Architecture](architecture.md) - System architecture
+- [Design Decisions](design_decisions.md) - System architecture
 
 ## 🙏 Thank You
 

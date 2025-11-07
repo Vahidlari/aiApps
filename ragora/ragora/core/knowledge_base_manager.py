@@ -1,18 +1,9 @@
-"""Knowledge base manager for document processing and retrieval.
+"""High-level orchestration entry point for the Ragora knowledge base.
 
-This module provides the KnowledgeBaseManager class that orchestrates all components
-of the knowledge base system, providing a unified interface for document processing,
-storage, and retrieval operations.
-
-Key responsibilities:
-- Orchestrate document preprocessing and chunking
-- Manage vector store operations
-- Handle retrieval and search operations
-- Provide unified query interface
-- Manage system configuration and state
-
-The knowledge base manager follows the layered architecture pattern with clear separation
-of concerns between storage, retrieval, and generation layers.
+The module exposes the `KnowledgeBaseManager` which connects the ingestion,
+chunking, vector store, and retrieval layers into a single cohesive API. It is
+typically the only component application code needs to instantiate when working
+with Ragora programmatically.
 """
 
 import logging
@@ -71,21 +62,32 @@ class SearchResult(BaseModel):
 
 
 class KnowledgeBaseManager:
-    """Knowledge base manager for document processing and retrieval.
+    """High-level façade for document ingestion and retrieval.
 
-    This class provides a unified interface for the complete knowledge base pipeline,
-    orchestrating document processing, storage, and retrieval operations. It follows
-    the layered architecture pattern with clear separation of concerns.
+    The manager wires together the lower-level components (preprocessors,
+    chunkers, embedding engine, vector store, retriever) and exposes a compact
+    API for turning raw files and emails into searchable chunks.
 
     Attributes:
-        db_manager: DatabaseManager instance for database operations
-        vector_store: VectorStore instance for document storage
-        retriever: Retriever instance for search operations
-        embedding_engine: EmbeddingEngine for vector embeddings
-        document_preprocessor: DocumentPreprocessor for document parsing
-        data_chunker: DataChunker for text chunking
-        logger: Logger instance for debugging and monitoring
-        is_initialized: Boolean indicating if system is ready
+        db_manager: Component that maintains the connection to Weaviate.
+        vector_store: Storage layer responsible for persisting chunks.
+        retriever: Retrieval layer used to execute search strategies.
+        embedding_engine: Optional embedding engine used for semantic search.
+        document_preprocessor: Parser that converts documents into chunks.
+        data_chunker: Chunking configuration used by preprocessors.
+        logger: Module logger for diagnostics.
+        is_initialized: Whether the manager completed initialization.
+
+    Examples:
+        Create a manager with default settings and ingest a LaTeX document:
+
+        ```python
+        from ragora.core.knowledge_base_manager import KnowledgeBaseManager
+
+        kb = KnowledgeBaseManager()
+        chunk_ids = kb.process_document("docs/paper.tex", document_type="latex")
+        results = kb.search("neural networks", collection="Document")
+        ```
     """
 
     def __init__(
@@ -193,6 +195,17 @@ class KnowledgeBaseManager:
             collection: Collection name to store the documents
         Returns:
             List[str]: List of chunk IDs that were stored
+
+        Raises:
+            RuntimeError: If the manager is not initialized
+            Exception: If the documents cannot be processed
+
+        Examples:
+            ```python
+            kb = KnowledgeBaseManager()
+            kb.process_documents(["notes.md", "report.tex"], document_type="markdown")
+            ```
+
         """
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")
@@ -217,7 +230,7 @@ class KnowledgeBaseManager:
         document_type: str = "latex",
         collection: str = "Document",
     ) -> List[str]:
-        """Process a LaTeX document and store it in the vector database.
+        """Process a single document and store it in the vector database.
 
         Args:
             document_path: Path to the document file
@@ -229,6 +242,12 @@ class KnowledgeBaseManager:
         Raises:
             FileNotFoundError: If document file doesn't exist
             ValueError: If document processing fails
+        Examples:
+            ```python
+            kb = KnowledgeBaseManager()
+            kb.process_document("docs/tutorial.md", document_type="markdown")
+            ```
+
         """
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")
@@ -283,6 +302,15 @@ class KnowledgeBaseManager:
         Raises:
             RuntimeError: If system not initialized
             ValueError: If invalid strategy or empty query
+
+        Examples:
+            ```python
+            kb = KnowledgeBaseManager()
+            kb.process_document("docs/tutorial.md", document_type="markdown")
+            result = kb.search("introduction", strategy=SearchStrategy.HYBRID, top_k=3)
+            for hit in result.results:
+                print(hit.metadata.title, hit.similarity_score)
+            ```
         """
         if not self.is_initialized:
             raise RuntimeError("Knowledge base manager not initialized")

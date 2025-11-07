@@ -1,0 +1,1491 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Automated and authored documentation for the Ragora project.">
+      
+      
+      
+        <link rel="canonical" href="https://vahidlari.github.io/aiApps/onboarding/">
+      
+      
+        <link rel="prev" href="../devcontainer/">
+      
+      
+        <link rel="next" href="../deployment/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>Onboarding Guide - Ragora Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/overrides.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#team-onboarding-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Ragora Documentation" class="md-header__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Ragora Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Onboarding Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Ragora Documentation" class="md-nav__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Ragora Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Development Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Release Process
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DevContainer Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Onboarding Guide
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Onboarding Guide
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-5-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Quick Start (5 minutes)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Quick Start (5 minutes)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites Check
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authentication-setup-if-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication Setup (if needed)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clone-and-open" class="md-nav__link">
+    <span class="md-ellipsis">
+      Clone and Open
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-in-devcontainer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open in DevContainer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Verify Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔐 Authentication Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔐 Authentication Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Repository Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-image-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Docker Image Access
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Running Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🧪 Running Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-document-processing-and-vectorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      LaTeX Document Processing and Vectorization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Running Tests
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🧪 Running Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-test-suites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Test Suites
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Coverage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-setup-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      🗄️ Database Setup (Optional)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔧 Development Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Development Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#code-quality-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Quality Tools
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#git-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Git Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding Dependencies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      🐛 Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🐛 Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Learning Resources
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📚 Learning Resources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-codebase" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Codebase
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Concepts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      🆘 Getting Help
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#onboarding-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Onboarding Checklist
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deployment
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design_decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Design Decisions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-5-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Quick Start (5 minutes)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Quick Start (5 minutes)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites Check
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authentication-setup-if-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication Setup (if needed)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clone-and-open" class="md-nav__link">
+    <span class="md-ellipsis">
+      Clone and Open
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-in-devcontainer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open in DevContainer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Verify Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔐 Authentication Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔐 Authentication Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Repository Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-image-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Docker Image Access
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Running Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🧪 Running Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-document-processing-and-vectorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      LaTeX Document Processing and Vectorization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Running Tests
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🧪 Running Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-test-suites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run Test Suites
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Coverage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-setup-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      🗄️ Database Setup (Optional)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔧 Development Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Development Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#code-quality-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Quality Tools
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#git-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Git Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding Dependencies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      🐛 Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🐛 Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learning-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Learning Resources
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📚 Learning Resources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-codebase" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Codebase
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Concepts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      🆘 Getting Help
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#onboarding-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Onboarding Checklist
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="team-onboarding-guide">Team Onboarding Guide<a class="headerlink" href="#team-onboarding-guide" title="Permanent link">&para;</a></h1>
+<p>Welcome to the Ragora development team! This guide will help you get up and running quickly with our development environment.</p>
+<h2 id="quick-start-5-minutes">🎯 Quick Start (5 minutes)<a class="headerlink" href="#quick-start-5-minutes" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites-check">Prerequisites Check<a class="headerlink" href="#prerequisites-check" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Docker Desktop installed and running</li>
+<li>[ ] VS Code installed</li>
+<li>[ ] Dev Containers extension installed in VS Code</li>
+<li>[ ] GitHub account with repository access</li>
+</ul>
+<h3 id="authentication-setup-if-needed">Authentication Setup (if needed)<a class="headerlink" href="#authentication-setup-if-needed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] GitHub account added as collaborator to the repository</li>
+<li>[ ] If Docker image is private, you may need a Personal Access Token (see below)</li>
+</ul>
+<h3 id="clone-and-open">Clone and Open<a class="headerlink" href="#clone-and-open" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vahidlari/aiapps.git
+<span class="nb">cd</span><span class="w"> </span>aiapps
+code<span class="w"> </span>.
+</code></pre></div>
+<h3 id="open-in-devcontainer">Open in DevContainer<a class="headerlink" href="#open-in-devcontainer" title="Permanent link">&para;</a></h3>
+<ul>
+<li>When prompted, click "Reopen in Container"</li>
+<li>Or use <code>Ctrl+Shift+P</code> → "Dev Containers: Reopen in Container"</li>
+<li>Wait for the container to build (first time takes 5-10 minutes)</li>
+</ul>
+<h3 id="verify-setup">Verify Setup<a class="headerlink" href="#verify-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check Python environment</span>
+python<span class="w"> </span>--version<span class="w">  </span><span class="c1"># Should show Python 3.11</span>
+
+<span class="c1"># Check if Ragora package is installed</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import ragora; print(&#39;✅ Ragora installed successfully&#39;)&quot;</span>
+</code></pre></div>
+<h2 id="authentication-setup">🔐 Authentication Setup<a class="headerlink" href="#authentication-setup" title="Permanent link">&para;</a></h2>
+<h3 id="repository-access">Repository Access<a class="headerlink" href="#repository-access" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Repository</strong>: The repository should be accessible to you as a collaborator</li>
+<li><strong>No additional setup needed</strong> for public repositories</li>
+<li><strong>For private repositories</strong>: Ensure you're added as a collaborator with appropriate permissions</li>
+</ul>
+<h3 id="docker-image-access">Docker Image Access<a class="headerlink" href="#docker-image-access" title="Permanent link">&para;</a></h3>
+<p>The DevContainer uses a Docker image from GitHub Container Registry. You may need authentication if the image is private:</p>
+<ol>
+<li><strong>Create a Personal Access Token:</strong></li>
+<li>Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)</li>
+<li>Click "Generate new token (classic)"</li>
+<li>Select scopes: <code>read:packages</code></li>
+<li>
+<p>Copy the token (you won't see it again!)</p>
+</li>
+<li>
+<p><strong>Authenticate Docker with GitHub:</strong>
+   <div class="highlight"><pre><span></span><code><span class="c1"># Login to GitHub Container Registry</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;YOUR_PAT_TOKEN&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>login<span class="w"> </span>ghcr.io<span class="w"> </span>-u<span class="w"> </span>YOUR_GITHUB_USERNAME<span class="w"> </span>--password-stdin
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Alternative: Configure VS Code to use GitHub token:</strong></p>
+</li>
+<li>In VS Code, go to Settings → Extensions → Dev Containers</li>
+<li>Add your GitHub token to the settings</li>
+<li>Or set environment variable: <code>GITHUB_TOKEN=your_token_here</code></li>
+</ol>
+<p><strong>Troubleshooting Authentication:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Test if you can pull the image manually</span>
+docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578
+
+<span class="c1"># If this fails with authentication error, you need the PAT setup above</span>
+</code></pre></div></p>
+<h2 id="running-examples">🧪 Running Examples<a class="headerlink" href="#running-examples" title="Permanent link">&para;</a></h2>
+<h3 id="latex-document-processing-and-vectorization">LaTeX Document Processing and Vectorization<a class="headerlink" href="#latex-document-processing-and-vectorization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Navigate to examples</span>
+<span class="nb">cd</span><span class="w"> </span>examples
+
+<span class="c1"># Run LaTeX loading example</span>
+python<span class="w"> </span>latex_loading_example.py
+
+<span class="c1"># Run LaTeX retrieval example</span>
+python<span class="w"> </span>latex_retriever_example.py
+</code></pre></div>
+<p><strong>Note:</strong> You may need to update the URL for the Weaviate server, based on your own setup. The current implementation assumes that you are running the code in a devcontainer and a server is running outside of the devcontainer.</p>
+<h2 id="running-tests">🧪 Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
+<h3 id="run-test-suites">Run Test Suites<a class="headerlink" href="#run-test-suites" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Navigate to Ragora directory</span>
+<span class="nb">cd</span><span class="w"> </span>ragora
+
+<span class="c1"># Run all tests</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest
+
+<span class="c1"># Run specific test categories</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/unit/<span class="w">          </span><span class="c1"># Unit tests only</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/integration/<span class="w">  </span><span class="c1"># Integration tests only</span>
+
+<span class="c1"># Run with verbose output</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-v
+
+<span class="c1"># Run specific test file</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_rag_system.py
+</code></pre></div>
+<h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install coverage tools (if not already installed)</span>
+pip<span class="w"> </span>install<span class="w"> </span>pytest-cov
+
+<span class="c1"># Run tests with coverage</span>
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="o">=</span>ragora<span class="w"> </span>--cov-report<span class="o">=</span>html
+
+<span class="c1"># View coverage report</span>
+open<span class="w"> </span>htmlcov/index.html<span class="w">  </span><span class="c1"># macOS</span>
+xdg-open<span class="w"> </span>htmlcov/index.html<span class="w">  </span><span class="c1"># Linux</span>
+</code></pre></div>
+<h2 id="database-setup-optional">🗄️ Database Setup (Optional)<a class="headerlink" href="#database-setup-optional" title="Permanent link">&para;</a></h2>
+<p>If you want to work with the full RAG system:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Navigate to database tools</span>
+<span class="nb">cd</span><span class="w"> </span>tools/database_server
+
+<span class="c1"># Start Weaviate database server</span>
+./database-manager.sh<span class="w"> </span>start
+
+<span class="c1"># Check if it&#39;s running</span>
+./database-manager.sh<span class="w"> </span>status
+
+<span class="c1"># Stop when done</span>
+./database-manager.sh<span class="w"> </span>stop
+</code></pre></div>
+<p>For more details, see <a href="https://github.com/vahidlari/aiApps/blob/main/tools/database_server/README.md"><code>tools/database_server/README.md</code></a>.</p>
+<h2 id="development-workflow">🔧 Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
+<h3 id="code-quality-tools">Code Quality Tools<a class="headerlink" href="#code-quality-tools" title="Permanent link">&para;</a></h3>
+<p>The environment comes pre-configured with:
+- <strong>Black</strong> for code formatting (auto-runs on save)
+- <strong>Flake8</strong> for linting
+- <strong>isort</strong> for import sorting</p>
+<h3 id="git-workflow">Git Workflow<a class="headerlink" href="#git-workflow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create a new branch for your work</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+
+<span class="c1"># Make your changes, commit them</span>
+git<span class="w"> </span>add<span class="w"> </span>.
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add your feature description&quot;</span>
+
+<span class="c1"># Push to GitHub</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
+
+<span class="c1"># Create a Pull Request on GitHub</span>
+</code></pre></div>
+<p>For commit message guidelines, see <a href="../release/"><code>docs/release.md</code></a>.</p>
+<h3 id="adding-dependencies">Adding Dependencies<a class="headerlink" href="#adding-dependencies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># For Ragora package dependencies</span>
+<span class="nb">cd</span><span class="w"> </span>ragora
+pip<span class="w"> </span>install<span class="w"> </span>your-new-package
+pip<span class="w"> </span>freeze<span class="w"> </span>&gt;<span class="w"> </span>requirements.txt
+
+<span class="c1"># For development environment dependencies</span>
+<span class="nb">cd</span><span class="w"> </span>tools/docker
+<span class="c1"># Edit Pipfile to add new packages</span>
+<span class="c1"># The GitHub Actions will automatically update the Docker image</span>
+</code></pre></div>
+<p>For more details, see <a href="../development/"><code>docs/development.md</code></a>.</p>
+<h2 id="troubleshooting">🐛 Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
+<p><strong>DevContainer won't start:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check Docker is running</span>
+docker<span class="w"> </span>info
+
+<span class="c1"># Rebuild the container</span>
+Ctrl+Shift+P<span class="w"> </span>→<span class="w"> </span><span class="s2">&quot;Dev Containers: Rebuild Container&quot;</span>
+</code></pre></div></p>
+<p><strong>Authentication errors when opening DevContainer:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Test Docker image access</span>
+docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578
+
+<span class="c1"># If authentication fails, set up Personal Access Token (see Authentication Setup section)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;YOUR_PAT_TOKEN&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>login<span class="w"> </span>ghcr.io<span class="w"> </span>-u<span class="w"> </span>YOUR_GITHUB_USERNAME<span class="w"> </span>--password-stdin
+</code></pre></div></p>
+<p><strong>Tests failing:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Verify test setup</span>
+python<span class="w"> </span>tools/scripts/verify_test_setup.py
+
+<span class="c1"># Check if all dependencies are installed</span>
+<span class="nb">cd</span><span class="w"> </span>ragora
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div></p>
+<p><strong>Database connection issues:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check if Weaviate is running</span>
+<span class="nb">cd</span><span class="w"> </span>tools/database_server
+./database-manager.sh<span class="w"> </span>status
+
+<span class="c1"># Restart if needed</span>
+./database-manager.sh<span class="w"> </span>restart
+</code></pre></div></p>
+<p><strong>Import errors:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ensure Ragora is installed in development mode</span>
+<span class="nb">cd</span><span class="w"> </span>ragora
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div></p>
+<h2 id="learning-resources">📚 Learning Resources<a class="headerlink" href="#learning-resources" title="Permanent link">&para;</a></h2>
+<h3 id="understanding-the-codebase">Understanding the Codebase<a class="headerlink" href="#understanding-the-codebase" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Start with Examples:</strong> Run the examples in <a href="https://github.com/vahidlari/aiApps/tree/main/examples"><code>examples/</code></a> directory</li>
+<li><strong>Read Ragora Docs:</strong> Continue through this site starting with the <a href="../getting_started/">Getting Started</a> guide for system architecture context</li>
+<li><strong>Explore Tests:</strong> Look at <a href="https://github.com/vahidlari/aiApps/tree/main/ragora/tests"><code>ragora/tests/</code></a> to understand expected behavior</li>
+</ol>
+<h3 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>RAG System:</strong> Retrieval-Augmented Generation for LaTeX documents</li>
+<li><strong>Three-Layer Architecture:</strong> DatabaseManager → VectorStore → Retriever</li>
+<li><strong>Weaviate Integration:</strong> Vector database for document storage</li>
+<li><strong>LaTeX Processing:</strong> Specialized document preprocessing for academic papers</li>
+</ul>
+<h2 id="getting-help">🆘 Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Documentation:</strong> Check the README files in each directory</li>
+<li><strong>Issues:</strong> Create GitHub issues for bugs or questions</li>
+<li><strong>Code Review:</strong> All changes go through Pull Request review process</li>
+<li><strong>Team Chat:</strong> Use your team's communication channels for quick questions</li>
+</ul>
+<h2 id="onboarding-checklist">✅ Onboarding Checklist<a class="headerlink" href="#onboarding-checklist" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] DevContainer opens successfully</li>
+<li>[ ] Python 3.11 environment is active</li>
+<li>[ ] Ragora package imports without errors</li>
+<li>[ ] Examples run successfully</li>
+<li>[ ] Tests pass (at least the basic ones)</li>
+<li>[ ] Git is configured with your name and email</li>
+<li>[ ] You can create and push branches</li>
+<li>[ ] You understand the project structure</li>
+</ul>
+<p><strong>🎉 Welcome to the team! You're ready to start contributing to Ragora.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "toc.follow", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -160,7 +160,7 @@ def test_chunker_basic():
     assert all(isinstance(chunk, DataChunk) for chunk in chunks)
 ```
 
-For more details, see [`ragora/docs/testing.md`](../ragora/docs/testing.md).
+For more details, see [testing.md](testing.md).
 
 ## 📦 Managing Dependencies
 
@@ -313,7 +313,7 @@ python -m memory_profiler your_script.py
 - [Onboarding Guide](onboarding.md) - Getting started for new team members
 - [DevContainer Guide](devcontainer.md) - Development environment setup
 - [Release Process](release.md) - How to create releases
-- [Contributing Guide](../ragora/docs/contributing.md) - Contribution guidelines
+- [Contributing Guide](contributing.md) - Contribution guidelines
 
 ## 🆘 Getting Help
 

@@ -171,6 +171,24 @@ Each release publishes the following artifacts:
    - `ragora-database-server.zip` - Windows-friendly format
    - Users download this to deploy Weaviate locally
 5. **Installation instructions**: Added to release notes
+6. **GitHub Pages site**: The MkDocs workflow rebuilds and commits the static site into `docs/`
+
+## 📚 Documentation Publishing
+
+When a release is published (or the workflow is triggered manually), the
+`Generate Documentation` GitHub Action:
+
+1. Checks out the release tag to ensure the docs match the shipped code.
+2. Installs the MkDocs toolchain via `pip install -e "ragora[docs]"`.
+3. Builds the site with `mkdocs build`, which renders this documentation plus the
+   API reference generated from docstrings.
+4. Switches back to the default branch, replaces the contents of the `docs/`
+   directory, and commits the changes with a message derived from the release
+   tag.
+
+After the workflow finishes, the updated `docs/` directory is available on the
+default branch, and GitHub Pages automatically serves the new version at
+[https://vahidlari.github.io/aiApps](https://vahidlari.github.io/aiApps).
 
 ## 📦 Installing Released Packages
 

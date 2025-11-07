@@ -267,7 +267,7 @@ results = kbm.search("query", filter=raw_filter)
 - **Filter by email sender**: `FilterBuilder.by_email_sender("sender@example.com")`
 - **Combine filters**: `FilterBuilder.combine_and(filter1, filter2)`
 
-For more details, see the [API Reference - FilterBuilder](../docs/api_reference.md#ragorafilterbuilder).
+For more details, see the [API Reference - Filters](api-reference.md#filters).
 
 ## 🔧 Configuration
 
@@ -380,7 +380,7 @@ print(f"Total chunks: {stats['vector_store']['total_objects']}")
 
 ### Example 3: Custom Pipeline
 
-See the [examples directory](../../../examples/) for more detailed examples:
+See the [examples directory](https://github.com/vahidlari/aiApps/tree/main/examples) for more detailed examples:
 - `latex_loading_example.py` - Document loading and processing
 - `latex_retriever_example.py` - Search and retrieval
 - `advanced_usage.py` - Advanced features
@@ -435,10 +435,10 @@ kbm = KnowledgeBaseManager(
 
 ## 📖 Next Steps
 
-- **Read the [Architecture](architecture.md)** to understand how Ragora works
+- **Read the [Design Decisions](design_decisions.md)** to understand how Ragora works
 - **Explore [Design Decisions](design_decisions.md)** to learn about design choices
-- **Check [API Reference](api_reference.md)** for detailed API documentation
-- **See [Examples](../../../examples/)** for more usage examples
+- **Check [API Reference](api-reference.md)** for detailed API documentation
+- **See [Examples](https://github.com/vahidlari/aiApps/tree/main/examples)** for more usage examples
 - **Read [Testing](testing.md)** to learn about testing your RAG system
 
 ## 🆘 Getting Help
@@ -450,8 +450,8 @@ kbm = KnowledgeBaseManager(
 
 ## 🔗 Related Documentation
 
-- [Architecture](architecture.md) - System architecture
+- [Design Decisions](design_decisions.md) - System architecture
 - [Design Decisions](design_decisions.md) - Design rationale
-- [API Reference](api_reference.md) - Complete API docs
+- [API Reference](api-reference.md) - Complete API docs
 - [Contributing](contributing.md) - How to contribute
 

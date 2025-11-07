@@ -1,0 +1,67 @@
+site_name: Ragora Documentation
+site_description: "Automated and authored documentation for the Ragora project."
+site_url: https://vahidlari.github.io/aiApps
+repo_url: https://github.com/vahidlari/aiApps
+repo_name: vahidlari/aiApps
+
+docs_dir: ragora/docs
+site_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - toc.follow
+    - search.highlight
+    - search.share
+
+extra_css:
+  - stylesheets/overrides.css
+
+markdown_extensions:
+  - admonition
+  - def_list
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.magiclink
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - ragora
+          options:
+            docstring_style: google
+            show_submodules: true
+            show_source: true
+            inherited_members: true
+            filters:
+              - "!^__"
+          setup_commands:
+            - import sys
+            - from pathlib import Path
+            - sys.path.insert(0, str(Path("ragora").resolve()))
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Guides:
+      - Development Workflow: development.md
+      - Release Process: release.md
+      - DevContainer Setup: devcontainer.md
+      - Onboarding Guide: onboarding.md
+      - Deployment: deployment.md
+      - Testing: testing.md
+      - Design Decisions: design_decisions.md
+      - Contributing: contributing.md
+  - Reference:
+      - API Reference: api-reference.md

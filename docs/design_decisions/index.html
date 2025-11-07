@@ -1,0 +1,1582 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Automated and authored documentation for the Ragora project.">
+      
+      
+      
+        <link rel="canonical" href="https://vahidlari.github.io/aiApps/design_decisions/">
+      
+      
+        <link rel="prev" href="../testing/">
+      
+      
+        <link rel="next" href="../contributing/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>Design Decisions - Ragora Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/overrides.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#design-decisions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Ragora Documentation" class="md-header__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Ragora Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Design Decisions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Ragora Documentation" class="md-nav__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Ragora Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Development Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Release Process
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DevContainer Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Onboarding Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deployment
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Design Decisions
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Design Decisions
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Architecture Decisions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Architecture Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-layer-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Three-Layer Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-weaviate-api-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Direct Weaviate API Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vector-store-schema-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      🗄️ Vector Store Schema Design
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🗄️ Vector Store Schema Design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-metadata-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hybrid Metadata Approach
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#content-type-agnostic-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content-Type Agnostic Design
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#document-processing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      📄 Document Processing Strategy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📄 Document Processing Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      LaTeX Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunking-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chunking Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embedding-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔢 Embedding &amp; Storage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔢 Embedding &amp; Storage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embedding-model-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embedding Model Selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-database-choice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Database Choice
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retrieval-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔍 Retrieval Strategy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 Retrieval Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hybrid Search
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Processing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generation-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      🤖 Generation System
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤖 Generation System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llm-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      📊 Performance Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📊 Performance Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chunk-size-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chunk Size Optimization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Batch Processing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Testing Strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔄 Future Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔄 Future Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planned-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Planned Improvements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extensibility-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extensibility Points
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔗 Related Documentation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Architecture Decisions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Architecture Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-layer-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Three-Layer Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-weaviate-api-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Direct Weaviate API Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vector-store-schema-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      🗄️ Vector Store Schema Design
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🗄️ Vector Store Schema Design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-metadata-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hybrid Metadata Approach
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#content-type-agnostic-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content-Type Agnostic Design
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#document-processing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      📄 Document Processing Strategy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📄 Document Processing Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      LaTeX Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunking-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chunking Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embedding-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔢 Embedding &amp; Storage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔢 Embedding &amp; Storage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embedding-model-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embedding Model Selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-database-choice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Database Choice
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retrieval-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔍 Retrieval Strategy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 Retrieval Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hybrid Search
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Processing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generation-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      🤖 Generation System
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤖 Generation System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llm-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      📊 Performance Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📊 Performance Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chunk-size-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chunk Size Optimization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Batch Processing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      🧪 Testing Strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔄 Future Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔄 Future Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planned-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Planned Improvements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extensibility-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extensibility Points
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔗 Related Documentation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h1>
+<p>This document explains the key design decisions made in building Ragora and the rationale behind them.</p>
+<h2 id="architecture-decisions">🎯 Architecture Decisions<a class="headerlink" href="#architecture-decisions" title="Permanent link">&para;</a></h2>
+<h3 id="three-layer-architecture">Three-Layer Architecture<a class="headerlink" href="#three-layer-architecture" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Implement a three-layer architecture (DatabaseManager → VectorStore → Retriever)</p>
+<p><strong>Rationale:</strong>
+- <strong>Maintainability:</strong> Each layer has a single, clear responsibility
+- <strong>Testability:</strong> Components can be tested independently with clear mocking boundaries
+- <strong>Flexibility:</strong> Easy to swap database backends by changing DatabaseManager
+- <strong>Performance:</strong> Direct Weaviate API usage without unnecessary abstractions
+- <strong>Clarity:</strong> Clear separation between infrastructure, storage, and search concerns</p>
+<p><strong>Alternatives Considered:</strong>
+- <strong>Two-layer approach:</strong> Combining VectorStore and Retriever would have been simpler but less flexible
+- <strong>Single unified class:</strong> Would have been easier to use but harder to test and maintain
+- <strong>Four+ layers:</strong> Additional abstraction would have added complexity without clear benefits</p>
+<h3 id="direct-weaviate-api-usage">Direct Weaviate API Usage<a class="headerlink" href="#direct-weaviate-api-usage" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Use Weaviate APIs directly in the Retriever layer instead of abstracting them</p>
+<p><strong>Rationale:</strong>
+- <strong>Performance:</strong> Direct API access is faster than additional abstraction layers
+- <strong>Features:</strong> Full access to Weaviate's rich query capabilities
+- <strong>Simplicity:</strong> Less code to maintain
+- <strong>Flexibility:</strong> Easy to leverage new Weaviate features as they're released</p>
+<p><strong>Trade-offs:</strong>
+- Tighter coupling to Weaviate (acceptable for our use case)
+- Would require more work to support other vector databases (not a current requirement)</p>
+<h2 id="vector-store-schema-design">🗄️ Vector Store Schema Design<a class="headerlink" href="#vector-store-schema-design" title="Permanent link">&para;</a></h2>
+<h3 id="hybrid-metadata-approach">Hybrid Metadata Approach<a class="headerlink" href="#hybrid-metadata-approach" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Implement a hybrid approach combining dedicated fields with JSON blob for custom metadata</p>
+<p><strong>Rationale:</strong>
+- <strong>Query Performance:</strong> Dedicated fields enable efficient filtering and indexing
+- <strong>Flexibility:</strong> JSON blob supports arbitrary custom metadata without schema changes
+- <strong>Type Safety:</strong> Dedicated fields provide compile-time validation for common use cases
+- <strong>Future-Proof:</strong> New content types can be added without breaking existing data
+- <strong>Industry Standard:</strong> 24 fields is well within production RAG system norms (typically 30-80+ fields)</p>
+<p><strong>Schema Organization:</strong></p>
+<p><strong>Core Fields (6):</strong> Essential fields present in all chunk types
+- <code>content</code>, <code>chunk_id</code>, <code>chunk_key</code>, <code>source_document</code>, <code>chunk_type</code>, <code>created_at</code></p>
+<p><strong>Content-Type Specific Fields (12):</strong> 
+- <strong>Document fields (6):</strong> <code>metadata_*</code>, <code>page_number</code>, <code>section_title</code>
+- <strong>Email fields (6):</strong> <code>email_*</code> fields for sender, recipient, subject, etc.</p>
+<p><strong>Custom Metadata Fields (7):</strong>
+- <strong>JSON blob:</strong> <code>custom_metadata</code> for arbitrary data
+- <strong>Common fields:</strong> <code>language</code>, <code>domain</code>, <code>confidence</code>, <code>tags</code>, <code>priority</code>, <code>content_category</code></p>
+<p><strong>Design Benefits:</strong>
+- <strong>Sparse Storage:</strong> Unused fields don't consume significant space
+- <strong>Efficient Filtering:</strong> Common queries use indexed dedicated fields
+- <strong>Extensibility:</strong> New chunk types don't require schema changes
+- <strong>Backward Compatibility:</strong> Sensible defaults prevent breaking changes</p>
+<p><strong>Alternatives Considered:</strong>
+- <strong>Pure JSON approach:</strong> Would lose query performance benefits
+- <strong>Fully normalized:</strong> Would require complex joins and lose simplicity
+- <strong>Separate collections:</strong> Would complicate cross-type queries</p>
+<h3 id="content-type-agnostic-design">Content-Type Agnostic Design<a class="headerlink" href="#content-type-agnostic-design" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Single collection supporting multiple content types rather than separate collections</p>
+<p><strong>Rationale:</strong>
+- <strong>Unified Search:</strong> Enable cross-type queries (e.g., search emails and documents together)
+- <strong>Simplified Management:</strong> Single schema to maintain and backup
+- <strong>Consistent API:</strong> Same methods work for all content types
+- <strong>Resource Efficiency:</strong> Shared vectorizer and indexing infrastructure</p>
+<p><strong>Trade-offs:</strong>
+- <strong>Schema Size:</strong> 24 fields vs. smaller per-type schemas
+- <strong>Query Complexity:</strong> Some fields irrelevant for certain content types
+- <strong>Storage:</strong> Sparse fields still consume some space</p>
+<p><strong>Mitigation Strategies:</strong>
+- Sensible defaults (empty strings, 0, null) minimize storage impact
+- Weaviate handles sparse fields efficiently
+- Clear field organization makes schema understandable</p>
+<h2 id="document-processing-strategy">📄 Document Processing Strategy<a class="headerlink" href="#document-processing-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="latex-handling">LaTeX Handling<a class="headerlink" href="#latex-handling" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Specialized LaTeX processing with equation preservation</p>
+<p><strong>Rationale:</strong>
+- <strong>Target Audience:</strong> Primary use case is academic/scientific documents
+- <strong>Mathematical Content:</strong> Equations contain critical semantic information
+- <strong>Citation Tracking:</strong> Academic documents rely heavily on citations
+- <strong>Format Complexity:</strong> LaTeX has specific structures that generic parsers miss</p>
+<p><strong>Implementation Details:</strong></p>
+<ol>
+<li><strong>Equation Preservation</strong></li>
+<li>Keep mathematical equations intact (e.g., <code>$E = mc^2$</code>)</li>
+<li>Preserve both inline and display equations</li>
+<li>
+<p>Maintain LaTeX math notation in embeddings</p>
+</li>
+<li>
+<p><strong>Citation Strategy</strong></p>
+</li>
+<li>Extract citations as separate entities</li>
+<li>Store with rich metadata (author, year, title, DOI)</li>
+<li>Link citations to source chunks</li>
+<li>
+<p>Enable citation-based search</p>
+</li>
+<li>
+<p><strong>Command Removal</strong></p>
+</li>
+<li>Strip formatting commands (<code>\textbf{}</code>, <code>\section{}</code>, etc.)</li>
+<li>Preserve semantic content</li>
+<li>Maintain document structure in metadata</li>
+</ol>
+<p><strong>Citation Metadata Structure:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;citation&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="s2">&quot;Einstein, A.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="mi">1905</span><span class="p">,</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;On the Electrodynamics of Moving Bodies&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;doi&quot;</span><span class="p">:</span> <span class="s2">&quot;10.1002/andp.19053221004&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;The theory of relativity...&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;source_document&quot;</span><span class="p">:</span> <span class="s2">&quot;chapter_1.tex&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;page_reference&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="s2">&quot;chunk_id&quot;</span><span class="p">:</span> <span class="s2">&quot;chunk_001&quot;</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="chunking-strategy">Chunking Strategy<a class="headerlink" href="#chunking-strategy" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Adaptive fixed-size chunking with configurable overlap</p>
+<p><strong>Rationale:</strong>
+- <strong>Predictability:</strong> Fixed size ensures consistent embedding quality
+- <strong>Optimization:</strong> Can tune chunk size for specific embedding models
+- <strong>Context:</strong> Overlap preserves context across chunk boundaries
+- <strong>Flexibility:</strong> Token-based with line boundary respect</p>
+<p><strong>Parameters:</strong>
+- <strong>Default Chunk Size:</strong> 768 tokens (matches common embedding model limits)
+- <strong>Default Overlap:</strong> 100-150 tokens (provides sufficient context)
+- <strong>Boundary Respect:</strong> Respect line boundaries when possible</p>
+<p><strong>Alternatives Considered:</strong>
+- <strong>Semantic chunking:</strong> More intelligent but less predictable
+- <strong>Paragraph-based:</strong> Simple but variable sizes hurt embedding quality
+- <strong>Sentence-based:</strong> Too granular, loses context
+- <strong>Sliding window:</strong> More overlap but increased storage</p>
+<p><strong>Object-Oriented Design:</strong>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DataChunker</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">768</span><span class="p">,</span> <span class="n">overlap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">chunk_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Chunk</span><span class="p">]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">chunk_with_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Chunk</span><span class="p">]</span>
+</code></pre></div></p>
+<p>Benefits:
+- Format-agnostic (works with any text)
+- Easily configurable
+- Reusable across different document types
+- Testable in isolation</p>
+<h2 id="embedding-storage">🔢 Embedding &amp; Storage<a class="headerlink" href="#embedding-storage" title="Permanent link">&para;</a></h2>
+<h3 id="embedding-model-selection">Embedding Model Selection<a class="headerlink" href="#embedding-model-selection" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Sentence Transformers with <code>all-mpnet-base-v2</code> as default</p>
+<p><strong>Rationale:</strong>
+- <strong>Local Deployment:</strong> No API costs or rate limits
+- <strong>Privacy:</strong> Data never leaves your infrastructure
+- <strong>Performance:</strong> Good balance of quality and speed
+- <strong>Dimensions:</strong> 768 dimensions suitable for most use cases
+- <strong>Technical Content:</strong> MPNet models perform well on scientific text</p>
+<p><strong>Alternative Models:</strong>
+- <code>multi-qa-MiniLM-L6-v2</code>: Smaller, faster, optimized for Q&amp;A
+- <code>all-MiniLM-L12-v2</code>: Good general-purpose alternative
+- <code>sentence-transformers/allenai-specter</code>: Specialized for scientific papers</p>
+<p><strong>Configuration:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;all-mpnet-base-v2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pooling_strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;normalize_embeddings&quot;</span><span class="p">:</span> <span class="kc">True</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="vector-database-choice">Vector Database Choice<a class="headerlink" href="#vector-database-choice" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Weaviate as the vector database</p>
+<p><strong>Rationale:</strong>
+- <strong>Rich Features:</strong> Hybrid search, filtering, graphQL API
+- <strong>Modularity:</strong> Built-in vectorizer modules
+- <strong>Performance:</strong> HNSW index for fast similarity search
+- <strong>Schema Flexibility:</strong> Dynamic schema with rich property types
+- <strong>Active Development:</strong> Regular updates and improvements
+- <strong>Open Source:</strong> Can self-host</p>
+<p><strong>Weaviate Configuration:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;vectorizer&quot;</span><span class="p">:</span> <span class="s2">&quot;text2vec-transformers&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;moduleConfig&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;text2vec-transformers&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;all-mpnet-base-v2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;poolingStrategy&quot;</span><span class="p">:</span> <span class="s2">&quot;masked_mean&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;vectorizeClassName&quot;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Alternatives Considered:</strong>
+- <strong>ChromaDB:</strong> Simpler but less features
+- <strong>Qdrant:</strong> Good alternative but less mature at time of decision
+- <strong>Pinecone:</strong> Cloud-only, not suitable for self-hosted requirement
+- <strong>FAISS:</strong> Lower-level, would need more custom implementation</p>
+<h2 id="retrieval-strategy">🔍 Retrieval Strategy<a class="headerlink" href="#retrieval-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="hybrid-search">Hybrid Search<a class="headerlink" href="#hybrid-search" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Support multiple search modes (vector, keyword, hybrid)</p>
+<p><strong>Rationale:</strong>
+- <strong>Flexibility:</strong> Different queries benefit from different search strategies
+- <strong>Semantic + Exact:</strong> Hybrid combines best of both worlds
+- <strong>Technical Terms:</strong> Keyword search catches exact technical terms
+- <strong>Natural Language:</strong> Vector search handles conceptual queries</p>
+<p><strong>Search Modes:</strong></p>
+<ol>
+<li><strong>Vector Search (Semantic)</strong></li>
+<li>Dense embeddings for semantic similarity</li>
+<li>Best for conceptual queries</li>
+<li>
+<p>Example: "What is quantum entanglement?"</p>
+</li>
+<li>
+<p><strong>Keyword Search (BM25)</strong></p>
+</li>
+<li>Sparse keyword matching</li>
+<li>Best for exact terms</li>
+<li>
+<p>Example: "Schrödinger equation"</p>
+</li>
+<li>
+<p><strong>Hybrid Search</strong></p>
+</li>
+<li>Combines vector and keyword</li>
+<li>Configurable alpha parameter (0.0-1.0)</li>
+<li>Best for general use</li>
+<li>Example: "explain machine learning algorithms"</li>
+</ol>
+<p><strong>Alpha Parameter:</strong>
+- <code>alpha=1.0</code>: Pure vector search
+- <code>alpha=0.0</code>: Pure keyword search
+- <code>alpha=0.5</code>: Balanced hybrid (default)
+- <code>alpha=0.7</code>: Favor semantic (recommended for most queries)</p>
+<h3 id="query-processing">Query Processing<a class="headerlink" href="#query-processing" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Minimal query preprocessing</p>
+<p><strong>Rationale:</strong>
+- <strong>Preserve Intent:</strong> Heavy preprocessing can distort query meaning
+- <strong>Technical Terms:</strong> Preserve mathematical notation and technical terms
+- <strong>Simplicity:</strong> Less processing means faster queries
+- <strong>Let Model Handle:</strong> Modern embedding models handle variations well</p>
+<p><strong>What We Do:</strong>
+- Preserve exact technical terms
+- Keep mathematical notation
+- Pass queries through largely unchanged</p>
+<p><strong>What We Don't Do:</strong>
+- Heavy stemming/lemmatization
+- Aggressive stopword removal
+- Query expansion (let the embedding handle it)</p>
+<h2 id="generation-system">🤖 Generation System<a class="headerlink" href="#generation-system" title="Permanent link">&para;</a></h2>
+<h3 id="llm-integration">LLM Integration<a class="headerlink" href="#llm-integration" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Support multiple LLM backends (Ollama, OpenAI, etc.)</p>
+<p><strong>Rationale:</strong>
+- <strong>Flexibility:</strong> Users can choose based on their needs
+- <strong>Local Option:</strong> Ollama for privacy-sensitive use cases
+- <strong>Cloud Option:</strong> OpenAI/Anthropic for best quality
+- <strong>Cost Control:</strong> Local models have no per-token costs</p>
+<p><strong>Default: Ollama with Mistral 7B</strong>
+- Free and local
+- Good performance on technical content
+- 4096 token context window
+- Easy to self-host</p>
+<p><strong>Prompt Engineering:</strong>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_rag_prompt</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;Based on the following context, answer the question.</span>
+
+<span class="s2">Context:</span>
+<span class="si">{</span><span class="n">format_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span><span class="si">}</span>
+
+<span class="s2">Question: </span><span class="si">{</span><span class="n">query</span><span class="si">}</span>
+
+<span class="s2">Answer: &quot;&quot;&quot;</span>
+</code></pre></div></p>
+<p><strong>Design Principles:</strong>
+- Include citation information in responses
+- Preserve mathematical notation
+- Indicate confidence level
+- Cite sources when possible</p>
+<h2 id="performance-considerations">📊 Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="chunk-size-optimization">Chunk Size Optimization<a class="headerlink" href="#chunk-size-optimization" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Default 768 tokens with ability to configure</p>
+<p><strong>Rationale:</strong>
+- <strong>Embedding Models:</strong> Most models work best with 512-768 tokens
+- <strong>Context Balance:</strong> Large enough for context, small enough for relevance
+- <strong>Retrieval Quality:</strong> Empirical testing showed good results
+- <strong>Flexibility:</strong> Users can tune for their specific use case</p>
+<p><strong>Testing Strategy:</strong>
+- Test range: 256, 512, 768, 1024 tokens
+- Measure retrieval quality (MRR, Precision@K)
+- Consider domain-specific optimization</p>
+<h3 id="batch-processing">Batch Processing<a class="headerlink" href="#batch-processing" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> Batch embedding and storage operations</p>
+<p><strong>Rationale:</strong>
+- <strong>Performance:</strong> 5-10x faster than individual operations
+- <strong>GPU Utilization:</strong> Better GPU usage with batched inference
+- <strong>Network Efficiency:</strong> Fewer round trips to database
+- <strong>Resource Usage:</strong> More efficient memory usage</p>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Batch size tuned for typical GPU memory</span>
+<span class="n">EMBEDDING_BATCH_SIZE</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">STORAGE_BATCH_SIZE</span> <span class="o">=</span> <span class="mi">100</span>
+</code></pre></div></p>
+<h2 id="testing-strategy">🧪 Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
+<p><strong>Decision:</strong> Comprehensive three-tier testing approach</p>
+<p><strong>Test Layers:</strong>
+1. <strong>Unit Tests:</strong> Individual component testing
+2. <strong>Integration Tests:</strong> Component interaction testing
+3. <strong>End-to-End Tests:</strong> Complete workflow testing</p>
+<p><strong>Rationale:</strong>
+- <strong>Quality Assurance:</strong> Catch issues early
+- <strong>Refactoring Safety:</strong> Confident code changes
+- <strong>Documentation:</strong> Tests serve as usage examples
+- <strong>CI/CD:</strong> Automated testing in pipeline</p>
+<p>For more details, see <a href="../testing/">testing.md</a>.</p>
+<h2 id="future-considerations">🔄 Future Considerations<a class="headerlink" href="#future-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="planned-improvements">Planned Improvements<a class="headerlink" href="#planned-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Multi-modal Support:</strong> Images, tables, diagrams</li>
+<li><strong>Advanced Chunking:</strong> Semantic chunking options</li>
+<li><strong>Fine-tuning:</strong> Domain-specific embedding models</li>
+<li><strong>Caching:</strong> Query result caching</li>
+<li><strong>Streaming:</strong> Streaming LLM responses</li>
+</ol>
+<h3 id="extensibility-points">Extensibility Points<a class="headerlink" href="#extensibility-points" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Plugin system for custom document processors</li>
+<li>Custom embedding model integration</li>
+<li>Alternative vector database backends</li>
+<li>Custom retrieval algorithms</li>
+</ul>
+<h2 id="related-documentation">🔗 Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./">Design Decisions</a> - System architecture overview</li>
+<li><a href="../getting_started/">Getting Started</a> - Setup and usage guide</li>
+<li><a href="../testing/">Testing</a> - Testing guidelines</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "toc.follow", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>

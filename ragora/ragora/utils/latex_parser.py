@@ -1,3 +1,5 @@
+"""Parse LaTeX sources into structured Ragora data classes."""
+
 import logging
 import os
 import re
@@ -164,11 +166,18 @@ class LatexDocument:
 
 
 class LatexParser:
-    """A helper class to parse Latex documents hierarchically.
+    """Parse LaTeX sources into structured document objects.
 
-    Args:
-        document_path: The path to the Latex document.
-        bibliography_path: Optional path to .bib file for enhanced citation parsing.
+    The parser extracts citations, tables, figures, and hierarchical document
+    structure (chapters/sections) that downstream components convert into
+    chunks.
+
+    Examples:
+        ```python
+        parser = LatexParser()
+        doc = parser.parse_document("paper.tex")
+        print(doc.title)
+        ```
     """
 
     def __init__(self, document_path: str = None, bibliography_path: str = None):
@@ -264,7 +273,20 @@ class LatexParser:
         return match.group(1).strip() if match else default
 
     def parse_document(self, document_path: str) -> LatexDocument:
-        """Parse a Latex file into a LatexDocument object."""
+        """Parse a LaTeX file into a :class:`LatexDocument`.
+
+        Args:
+            document_path: Path to the `.tex` file.
+
+        Returns:
+            LatexDocument | None: Parsed representation, or ``None`` if parsing fails.
+
+        Examples:
+            ```python
+            parser = LatexParser()
+            document = parser.parse_document("thesis.tex")
+            ```
+        """
         try:
             if not self.document_path:
                 self.document_path = document_path
@@ -276,7 +298,22 @@ class LatexParser:
             return None
 
     def parse_document_text(self, document_text: str) -> LatexDocument:
-        """Parse a LaTeX document text into a LatexDocument object."""
+        """Parse in-memory LaTeX text into a :class:`LatexDocument`.
+
+        Args:
+            document_text: Raw LaTeX content.
+
+        Returns:
+            LatexDocument: Parsed representation suitable for chunking.
+
+        Examples:
+            ```python
+            parser = LatexParser()
+            doc = parser.parse_document_text(
+                "\\title{Sample}\\n\\begin{document}Hello\\end{document}"
+            )
+            ```
+        """
         # Extract document metadata
         title = self._extract_title(document_text)
         author = self._extract_author(document_text)

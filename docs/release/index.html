@@ -1,0 +1,1691 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Automated and authored documentation for the Ragora project.">
+      
+      
+      
+        <link rel="canonical" href="https://vahidlari.github.io/aiApps/release/">
+      
+      
+        <link rel="prev" href="../development/">
+      
+      
+        <link rel="next" href="../devcontainer/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>Release Process - Ragora Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/overrides.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-process-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Ragora Documentation" class="md-header__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Ragora Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release Process
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Ragora Documentation" class="md-nav__button md-logo" aria-label="Ragora Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Ragora Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vahidlari/aiApps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    vahidlari/aiApps
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Development Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Release Process
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Release Process
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-write-commit-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      📝 How to Write Commit Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📝 How to Write Commit Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#understanding-conventional-commits" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Conventional Commits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-types-and-their-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Types and Their Impact
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes-major-version-bump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Breaking Changes (Major Version Bump)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#good-vs-bad-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Good vs. Bad Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-trigger-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      🚀 How to Trigger Releases
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚀 How to Trigger Releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#method-1-automatic-release-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 1: Automatic Release (Recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-manual-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 2: Manual Release
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-3-dry-run-testing-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 3: Dry Run (Testing Mode)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-happens-during-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔍 What Happens During a Release
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 What Happens During a Release">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-commit-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1: Commit Analysis
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-version-determination" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2: Version Determination
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-release-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3: Release Creation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-what-gets-published" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4: What Gets Published
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Documentation Publishing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing-released-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      📦 Installing Released Packages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📦 Installing Released Packages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-ragora-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Install Ragora Package
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-download-database-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Download Database Server
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔧 Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-release-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      No Release Created?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrong-version-bump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wrong Version Bump?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Failed?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      💡 Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commit-message-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Message Tips
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-planning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Planning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Quick Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📚 Quick Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commit-types-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Types Quick Guide
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Workflow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      🆘 Getting Help
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DevContainer Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Onboarding Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deployment
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design_decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Design Decisions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-write-commit-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      📝 How to Write Commit Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📝 How to Write Commit Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#understanding-conventional-commits" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Conventional Commits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-types-and-their-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Types and Their Impact
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes-major-version-bump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Breaking Changes (Major Version Bump)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#good-vs-bad-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Good vs. Bad Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-trigger-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      🚀 How to Trigger Releases
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚀 How to Trigger Releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#method-1-automatic-release-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 1: Automatic Release (Recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-manual-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 2: Manual Release
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-3-dry-run-testing-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 3: Dry Run (Testing Mode)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-happens-during-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔍 What Happens During a Release
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔍 What Happens During a Release">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-commit-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1: Commit Analysis
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-version-determination" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2: Version Determination
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-release-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3: Release Creation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-what-gets-published" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4: What Gets Published
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Documentation Publishing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing-released-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      📦 Installing Released Packages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📦 Installing Released Packages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-ragora-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Install Ragora Package
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-download-database-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Download Database Server
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔧 Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-release-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      No Release Created?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrong-version-bump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wrong Version Bump?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Failed?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      💡 Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commit-message-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Message Tips
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-planning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Planning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Quick Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📚 Quick Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commit-types-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Types Quick Guide
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Workflow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      🆘 Getting Help
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-process-guide">Release Process Guide<a class="headerlink" href="#release-process-guide" title="Permanent link">&para;</a></h1>
+<p>This guide explains how to use the milestone-driven release system for the Ragora project. The system automatically handles versioning, package publishing, and release management based on your commit messages.</p>
+<h2 id="overview">🎯 Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The release system works by:
+1. <strong>Analyzing your commits</strong> using conventional commit format
+2. <strong>Determining version bumps</strong> automatically
+3. <strong>Triggering releases</strong> when you close a milestone
+4. <strong>Publishing packages</strong> to GitHub Package Registry and PyPI</p>
+<h2 id="how-to-write-commit-messages">📝 How to Write Commit Messages<a class="headerlink" href="#how-to-write-commit-messages" title="Permanent link">&para;</a></h2>
+<h3 id="understanding-conventional-commits">Understanding Conventional Commits<a class="headerlink" href="#understanding-conventional-commits" title="Permanent link">&para;</a></h3>
+<p>Your commit messages should follow this format:
+<div class="highlight"><pre><span></span><code>type(scope): description
+
+[optional body]
+
+[optional footer(s)]
+</code></pre></div></p>
+<h3 id="commit-types-and-their-impact">Commit Types and Their Impact<a class="headerlink" href="#commit-types-and-their-impact" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Version Bump</th>
+<th>When to Use</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>feat:</code></td>
+<td><strong>Minor</strong> (0.1.0 → 0.2.0)</td>
+<td>New features for users</td>
+<td><code>feat: add user authentication</code></td>
+</tr>
+<tr>
+<td><code>fix:</code></td>
+<td><strong>Patch</strong> (0.1.0 → 0.1.1)</td>
+<td>Bug fixes</td>
+<td><code>fix: resolve login timeout issue</code></td>
+</tr>
+<tr>
+<td><code>perf:</code></td>
+<td><strong>Patch</strong></td>
+<td>Performance improvements</td>
+<td><code>perf: optimize database queries</code></td>
+</tr>
+<tr>
+<td><code>refactor:</code></td>
+<td><strong>Patch</strong></td>
+<td>Code restructuring</td>
+<td><code>refactor: simplify API endpoints</code></td>
+</tr>
+<tr>
+<td><code>style:</code></td>
+<td><strong>Patch</strong></td>
+<td>Code formatting, no logic changes</td>
+<td><code>style: format code with black</code></td>
+</tr>
+<tr>
+<td><code>docs:</code></td>
+<td><strong>Patch</strong></td>
+<td>Documentation updates</td>
+<td><code>docs: update API documentation</code></td>
+</tr>
+<tr>
+<td><code>test:</code></td>
+<td><strong>Patch</strong></td>
+<td>Adding or updating tests</td>
+<td><code>test: add unit tests for auth module</code></td>
+</tr>
+<tr>
+<td><code>build:</code></td>
+<td><strong>Patch</strong></td>
+<td>Build system changes</td>
+<td><code>build: update webpack configuration</code></td>
+</tr>
+<tr>
+<td><code>ci:</code></td>
+<td><strong>Patch</strong></td>
+<td>CI/CD pipeline changes</td>
+<td><code>ci: add automated testing workflow</code></td>
+</tr>
+<tr>
+<td><code>chore:</code></td>
+<td><strong>Patch</strong></td>
+<td>Maintenance tasks</td>
+<td><code>chore: update dependencies</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="breaking-changes-major-version-bump">Breaking Changes (Major Version Bump)<a class="headerlink" href="#breaking-changes-major-version-bump" title="Permanent link">&para;</a></h3>
+<p>For breaking changes that require a <strong>major version bump</strong> (0.1.0 → 1.0.0), use one of these formats:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Option 1: Use exclamation mark</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat!: redesign user API&quot;</span>
+
+<span class="c1"># Option 2: Use BREAKING CHANGE footer</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new authentication system</span>
+
+<span class="s2">BREAKING CHANGE: All API endpoints now require v2 authentication&quot;</span>
+</code></pre></div>
+<h3 id="good-vs-bad-examples">Good vs. Bad Examples<a class="headerlink" href="#good-vs-bad-examples" title="Permanent link">&para;</a></h3>
+<p>✅ <strong>Good commit messages:</strong>
+<div class="highlight"><pre><span></span><code>feat:<span class="w"> </span>add<span class="w"> </span>email<span class="w"> </span>notification<span class="w"> </span>system
+fix:<span class="w"> </span>resolve<span class="w"> </span>memory<span class="w"> </span>leak<span class="w"> </span><span class="k">in</span><span class="w"> </span>data<span class="w"> </span>processor
+docs:<span class="w"> </span>update<span class="w"> </span>installation<span class="w"> </span>instructions
+perf:<span class="w"> </span>optimize<span class="w"> </span>vector<span class="w"> </span>search<span class="w"> </span>algorithm
+feat!:<span class="w"> </span>redesign<span class="w"> </span>API<span class="w"> </span>endpoints
+
+BREAKING<span class="w"> </span>CHANGE:<span class="w"> </span>Removed<span class="w"> </span>deprecated<span class="w"> </span>endpoints
+</code></pre></div></p>
+<p>❌ <strong>Bad commit messages:</strong>
+<div class="highlight"><pre><span></span><code>fixed<span class="w"> </span>bug
+updated<span class="w"> </span>stuff
+changes
+WIP
+more<span class="w"> </span>work
+</code></pre></div></p>
+<h2 id="how-to-trigger-releases">🚀 How to Trigger Releases<a class="headerlink" href="#how-to-trigger-releases" title="Permanent link">&para;</a></h2>
+<h3 id="method-1-automatic-release-recommended">Method 1: Automatic Release (Recommended)<a class="headerlink" href="#method-1-automatic-release-recommended" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Create a milestone</strong> on GitHub:</li>
+<li>Go to Issues → Milestones</li>
+<li>Create a new milestone (e.g., "v1.2.0")</li>
+<li>
+<p>Add relevant issues and PRs to the milestone</p>
+</li>
+<li>
+<p><strong>Make your commits</strong> using conventional commit format:
+   <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>.
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new feature&quot;</span>
+git<span class="w"> </span>push
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Close the milestone</strong>:</p>
+</li>
+<li>Go to the milestone page</li>
+<li>Click "Close milestone"</li>
+<li>The release will trigger automatically</li>
+</ol>
+<h3 id="method-2-manual-release">Method 2: Manual Release<a class="headerlink" href="#method-2-manual-release" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <strong>Actions</strong> → <strong>Milestone-Driven Release</strong></li>
+<li>Click <strong>Run workflow</strong></li>
+<li>Optionally specify a milestone title</li>
+<li>Click <strong>Run workflow</strong></li>
+</ol>
+<h3 id="method-3-dry-run-testing-mode">Method 3: Dry Run (Testing Mode)<a class="headerlink" href="#method-3-dry-run-testing-mode" title="Permanent link">&para;</a></h3>
+<p>For testing the release workflow without actually publishing to PyPI:</p>
+<ol>
+<li>Go to <strong>Actions</strong> → <strong>Milestone-Driven Release</strong></li>
+<li>Click <strong>Run workflow</strong></li>
+<li><strong>Check the "Dry run mode" checkbox</strong></li>
+<li>Optionally specify a milestone title</li>
+<li>Click <strong>Run workflow</strong></li>
+</ol>
+<p><strong>What happens in dry run mode:</strong>
+- ✅ Analyzes commits and determines the next version
+- ✅ Builds Python packages (wheel + source distribution)
+- ✅ Creates database server archives (tar.gz and zip)
+- ✅ Uploads artifacts to GitHub Actions (downloadable for 90 days)
+- ✅ Shows in logs what release notes would be generated
+- ❌ <strong>DOES NOT</strong> create git tags
+- ❌ <strong>DOES NOT</strong> create GitHub releases
+- ❌ <strong>DOES NOT</strong> publish to PyPI
+- ❌ <strong>DOES NOT</strong> update CHANGELOG.md in the repository</p>
+<p><strong>Perfect for:</strong>
+- Testing the workflow without making any permanent changes
+- Verifying package builds correctly
+- Previewing what version would be released
+- Checking release notes generation
+- Training team members on the release process</p>
+<blockquote>
+<p><strong>Note:</strong> Dry run mode does NOT create any releases or tags. All artifacts are uploaded to GitHub Actions and can be downloaded for inspection.</p>
+</blockquote>
+<h2 id="what-happens-during-a-release">🔍 What Happens During a Release<a class="headerlink" href="#what-happens-during-a-release" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-commit-analysis">Step 1: Commit Analysis<a class="headerlink" href="#step-1-commit-analysis" title="Permanent link">&para;</a></h3>
+<p>The system checks commits since the last tag for:
+- Conventional commit format
+- Breaking changes
+- Feature additions
+- Bug fixes</p>
+<h3 id="step-2-version-determination">Step 2: Version Determination<a class="headerlink" href="#step-2-version-determination" title="Permanent link">&para;</a></h3>
+<p>Based on your commits, it determines the new version:
+- <code>feat:</code> → Minor version bump
+- <code>fix:</code> → Patch version bump<br />
+- <code>BREAKING CHANGE</code> → Major version bump</p>
+<h3 id="step-3-release-creation">Step 3: Release Creation<a class="headerlink" href="#step-3-release-creation" title="Permanent link">&para;</a></h3>
+<p>The system automatically:
+- Creates a Git tag (e.g., <code>v1.2.3</code>)
+- Builds Python packages (wheel + source)
+- Creates GitHub release with notes
+- Publishes to GitHub Package Registry
+- Publishes to PyPI (if configured)
+- Creates database server archive
+- Attaches milestone summary</p>
+<h3 id="step-4-what-gets-published">Step 4: What Gets Published<a class="headerlink" href="#step-4-what-gets-published" title="Permanent link">&para;</a></h3>
+<p>Each release publishes the following artifacts:</p>
+<ol>
+<li><strong>Git tag</strong>: <code>v1.2.3</code></li>
+<li><strong>GitHub Release</strong>: With auto-generated notes and release assets</li>
+<li><strong>Python Package</strong> (Ragora):</li>
+<li>Published to PyPI (<code>pip install ragora</code>)</li>
+<li>Attached to GitHub release as <code>.whl</code> and <code>.tar.gz</code> files</li>
+<li><strong>Database Server Package</strong>:</li>
+<li><code>ragora-database-server.tar.gz</code> - Complete database server setup</li>
+<li><code>ragora-database-server.zip</code> - Windows-friendly format</li>
+<li>Users download this to deploy Weaviate locally</li>
+<li><strong>Installation instructions</strong>: Added to release notes</li>
+<li><strong>GitHub Pages site</strong>: The MkDocs workflow rebuilds and commits the static site into <code>docs/</code></li>
+</ol>
+<h2 id="documentation-publishing">📚 Documentation Publishing<a class="headerlink" href="#documentation-publishing" title="Permanent link">&para;</a></h2>
+<p>When a release is published (or the workflow is triggered manually), the
+<code>Generate Documentation</code> GitHub Action:</p>
+<ol>
+<li>Checks out the release tag to ensure the docs match the shipped code.</li>
+<li>Installs the MkDocs toolchain via <code>pip install -e "ragora[docs]"</code>.</li>
+<li>Builds the site with <code>mkdocs build</code>, which renders this documentation plus the
+   API reference generated from docstrings.</li>
+<li>Switches back to the default branch, replaces the contents of the <code>docs/</code>
+   directory, and commits the changes with a message derived from the release
+   tag.</li>
+</ol>
+<p>After the workflow finishes, the updated <code>docs/</code> directory is available on the
+default branch, and GitHub Pages automatically serves the new version at
+<a href="https://vahidlari.github.io/aiApps">https://vahidlari.github.io/aiApps</a>.</p>
+<h2 id="installing-released-packages">📦 Installing Released Packages<a class="headerlink" href="#installing-released-packages" title="Permanent link">&para;</a></h2>
+<p>After a release, users can install Ragora and set up the database:</p>
+<h3 id="1-install-ragora-package">1. Install Ragora Package<a class="headerlink" href="#1-install-ragora-package" title="Permanent link">&para;</a></h3>
+<p><strong>From PyPI (Recommended):</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install latest version</span>
+pip<span class="w"> </span>install<span class="w"> </span>ragora
+
+<span class="c1"># Install specific version</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">ragora</span><span class="o">==</span><span class="m">1</span>.2.3
+</code></pre></div></p>
+<p><strong>From GitHub Releases:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install wheel directly</span>
+pip<span class="w"> </span>install<span class="w"> </span>https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragora-1.2.3-py3-none-any.whl
+</code></pre></div></p>
+<h3 id="2-download-database-server">2. Download Database Server<a class="headerlink" href="#2-download-database-server" title="Permanent link">&para;</a></h3>
+<p>Download the pre-configured database server from the release:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Download from GitHub releases</span>
+wget<span class="w"> </span>https://github.com/vahidlari/aiapps/releases/download/v1.2.3/ragora-database-server.tar.gz
+
+<span class="c1"># Extract and run</span>
+tar<span class="w"> </span>-xzf<span class="w"> </span>ragora-database-server.tar.gz
+<span class="nb">cd</span><span class="w"> </span>ragora-database-server
+./database-manager.sh<span class="w"> </span>start
+</code></pre></div>
+<p><strong>Windows users:</strong> Download <code>ragora-database-server.zip</code> instead and extract using Windows tools.</p>
+<h2 id="troubleshooting">🔧 Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="no-release-created">No Release Created?<a class="headerlink" href="#no-release-created" title="Permanent link">&para;</a></h3>
+<p>Check these common issues:</p>
+<ol>
+<li>
+<p><strong>Commit format</strong>: Ensure commits follow conventional format
+   <div class="highlight"><pre><span></span><code><span class="c1"># Check recent commits</span>
+git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>-5
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Milestone status</strong>: Verify the milestone is closed</p>
+</li>
+<li><strong>Workflow logs</strong>: Check Actions tab for error details</li>
+</ol>
+<h3 id="wrong-version-bump">Wrong Version Bump?<a class="headerlink" href="#wrong-version-bump" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>feat:</code> commits should trigger minor version bumps</li>
+<li><code>fix:</code> commits should trigger patch version bumps</li>
+<li><code>BREAKING CHANGE</code> should trigger major version bumps</li>
+</ul>
+<h3 id="release-failed">Release Failed?<a class="headerlink" href="#release-failed" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Check GitHub Actions logs for specific errors</li>
+<li>Verify you have push permissions to the repository</li>
+<li>Ensure no conflicting tags exist</li>
+<li>Check PyPI credentials are configured correctly</li>
+</ol>
+<h2 id="best-practices">💡 Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="commit-message-tips">Commit Message Tips<a class="headerlink" href="#commit-message-tips" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Be descriptive but concise</li>
+<li>Use present tense ("add feature" not "added feature")</li>
+<li>Include scope when helpful: <code>feat(auth): add OAuth support</code></li>
+<li>Reference issues when relevant: <code>fix: resolve login bug (#123)</code></li>
+</ul>
+<h3 id="release-planning">Release Planning<a class="headerlink" href="#release-planning" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Group related changes into milestones</li>
+<li>Test thoroughly before closing milestones</li>
+<li>Use meaningful milestone names (e.g., "v1.2.0 - User Management")</li>
+<li>Keep milestones focused on single themes</li>
+</ul>
+<h3 id="version-strategy">Version Strategy<a class="headerlink" href="#version-strategy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Use semantic versioning for API compatibility</li>
+<li>Reserve major versions for breaking changes</li>
+<li>Use minor versions for new features</li>
+<li>Use patch versions for bug fixes</li>
+</ul>
+<h2 id="quick-reference">📚 Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
+<h3 id="commit-types-quick-guide">Commit Types Quick Guide<a class="headerlink" href="#commit-types-quick-guide" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># New feature (minor version)</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add user dashboard&quot;</span>
+
+<span class="c1"># Bug fix (patch version)</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: resolve authentication bug&quot;</span>
+
+<span class="c1"># Breaking change (major version)</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat!: redesign API&quot;</span>
+
+<span class="c1"># Documentation update (patch version)</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: update installation guide&quot;</span>
+
+<span class="c1"># Performance improvement (patch version)</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;perf: optimize database queries&quot;</span>
+</code></pre></div>
+<h3 id="release-workflow">Release Workflow<a class="headerlink" href="#release-workflow" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Write conventional commits</li>
+<li>Create and assign milestone</li>
+<li>Close milestone → Automatic release</li>
+<li>Check GitHub Releases for new version</li>
+<li>Verify package on PyPI</li>
+</ol>
+<p><strong>Testing the release workflow:</strong>
+- Use <strong>dry run mode</strong> to test without creating releases or publishing
+- Artifacts are built and uploaded to GitHub Actions for inspection
+- No tags, releases, or repository changes are made</p>
+<h2 id="getting-help">🆘 Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Workflow logs</strong>: Check Actions tab for detailed error messages</li>
+<li><strong>Conventional Commits</strong>: <a href="https://www.conventionalcommits.org/">Official specification</a></li>
+<li><strong>Semantic Versioning</strong>: <a href="https://semver.org/">SemVer guide</a></li>
+<li><strong>GitHub Issues</strong>: Create an issue for bugs or questions</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "toc.follow", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>

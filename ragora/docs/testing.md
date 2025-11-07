@@ -536,7 +536,7 @@ pre-commit run --all-files
 
 - [Contributing Guide](contributing.md) - How to contribute
 - [Development Guide](development.md) - Development workflow
-- [Architecture](architecture.md) - System architecture
+- [Design Decisions](design_decisions.md) - System architecture
 
 ## 🆘 Getting Help
 

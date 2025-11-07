@@ -23,17 +23,14 @@ class FilterBuilder:
     the chance of errors from using incorrect property names.
 
     Examples:
-        # Filter by chunk type
-        filter = FilterBuilder.by_chunk_type("text")
-
-        # Filter by date range
-        filter = FilterBuilder.by_date_range(start="2024-01-01", end="2024-12-31")
-
-        # Combine filters
-        filter = FilterBuilder.combine_and(
+        ```python
+        FilterBuilder.by_chunk_type("text")
+        FilterBuilder.by_date_range(start="2024-01-01", end="2024-12-31")
+        FilterBuilder.combine_and(
             FilterBuilder.by_chunk_type("text"),
-            FilterBuilder.by_source_document("document.pdf")
+            FilterBuilder.by_source_document("document.pdf"),
         )
+        ```
     """
 
     @staticmethod

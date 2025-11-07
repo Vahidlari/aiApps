@@ -39,7 +39,7 @@ cd tools/docker
 
 **Note:** The devContainer fetches the image from a GitHub registry, therefore, a local image build is normally not needed. In order to update the image, create a PR with changes in Dockerfile or Pipfile. A GitHub action is invoked to update the image. Once the image is updated, update the image tag in `.devcontainer/devcontainer.json`.
 
-For detailed instructions, see [`tools/docker/README.md`](../tools/docker/README.md).
+For detailed instructions, see [`tools/docker/README.md`](https://github.com/vahidlari/aiApps/blob/main/tools/docker/README.md).
 
 ## 🔧 Development Environment Features
 
@@ -129,5 +129,5 @@ To add Python packages:
 
 - [Onboarding Guide](onboarding.md) - Getting started for new team members
 - [Development Guide](development.md) - Development workflow and best practices
-- [Docker Tools](../tools/docker/README.md) - Docker image build scripts
+- [Docker Tools](https://github.com/vahidlari/aiApps/blob/main/tools/docker/README.md) - Docker image build scripts
 

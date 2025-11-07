@@ -1,0 +1,10 @@
+/* Ensure the right-hand table of contents remains scrollable and collapsible. */
+.md-sidebar--secondary .md-nav__list {
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+}
+
+/* Improve visibility of collapsible TOC sections toggled by toc.follow. */
+.md-nav--secondary .md-nav__item .md-nav__toggle {
+    display: inline-flex;
+}

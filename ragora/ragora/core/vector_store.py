@@ -1,20 +1,4 @@
-"""Vector store implementation for RAG system using Weaviate.
-
-This module provides the VectorStore class that handles the storage and
-retrieval of document embeddings using Weaviate as the vector database.
-It focuses solely on storage operations, with search functionality
-delegated to the Retriever class.
-
-Key responsibilities:
-- Store document chunks with embeddings and metadata
-- Handle batch operations for efficient indexing
-- Provide schema management for different document types
-- Integrate with the DataChunk objects from document preprocessing
-- Use DatabaseManager for low-level database operations
-
-The vector store uses Weaviate's built-in text2vec-transformers module for
-consistent embedding generation and supports rich metadata filtering.
-"""
+"""Adapter that persists Ragora chunks inside a Weaviate collection."""
 
 import json
 import logging
@@ -31,18 +15,23 @@ from .models import RetrievalMetadata, RetrievalResultItem
 
 
 class VectorStore:
-    """Vector store implementation using Weaviate for document storage.
-
-    This class provides a focused interface for storing and retrieving
-    document embeddings using Weaviate as the vector database. It handles
-    only storage operations, with search functionality delegated to the
-    Retriever class.
+    """Persist and retrieve :class:`DataChunk` objects from Weaviate.
 
     Attributes:
-        db_manager: DatabaseManager instance for database operations
-        collection: Name of the Weaviate class for document storage
-        embedding_engine: EmbeddingEngine instance for generating embeddings
-        logger: Logger instance for debugging and monitoring
+        db_manager: Database connection manager.
+        collection: Weaviate class name that stores chunks.
+        embedding_engine: Optional embedding engine for client-side vectors.
+        logger: Module logger.
+
+    Examples:
+        ```python
+        from ragora.core.database_manager import DatabaseManager
+        from ragora.core.vector_store import VectorStore
+
+        db = DatabaseManager(url="http://localhost:8080")
+        store = VectorStore(db_manager=db, collection="Document")
+        store.create_schema("Document")
+        ```
     """
 
     def __init__(

@@ -148,7 +148,7 @@ cd tools/database_server
 ./database-manager.sh stop
 ```
 
-For more details, see [`tools/database_server/README.md`](../tools/database_server/README.md).
+For more details, see [`tools/database_server/README.md`](https://github.com/vahidlari/aiApps/blob/main/tools/database_server/README.md).
 
 ## 🔧 Development Workflow
 
@@ -246,9 +246,9 @@ pip install -e .
 
 ### Understanding the Codebase
 
-1. **Start with Examples:** Run the examples in [`examples/`](../examples/) directory
-2. **Read Ragora Docs:** Check [`ragora/docs/`](../ragora/docs/) for detailed system architecture
-3. **Explore Tests:** Look at [`ragora/tests/`](../ragora/tests/) to understand expected behavior
+1. **Start with Examples:** Run the examples in [`examples/`](https://github.com/vahidlari/aiApps/tree/main/examples) directory
+2. **Read Ragora Docs:** Continue through this site starting with the [Getting Started](getting_started.md) guide for system architecture context
+3. **Explore Tests:** Look at [`ragora/tests/`](https://github.com/vahidlari/aiApps/tree/main/ragora/tests) to understand expected behavior
 
 ### Key Concepts
 
