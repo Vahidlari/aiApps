@@ -145,7 +145,7 @@ def create_knowledge_base_manager_config() -> KnowledgeBaseManagerConfig:
 def demonstrate_document_processing(kbm: KnowledgeBaseManager) -> None:
     """Demonstrate document processing and ingestion across formats."""
 
-    collection_name = "latex_loading_example"
+    collection_name = "Latex_loading_example"
     print_step(2, "Processing Documents")
 
     try:
@@ -216,7 +216,7 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
         },
         {
             "category": "Questions from the Markdown document",
-            "query": "How does arkdown processing workds in Ragora?",
+            "query": "How does markdown processing works in Ragora?",
             "description": "Question about Markdown processing",
         },
     ]
