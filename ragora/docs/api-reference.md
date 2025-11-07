@@ -10,8 +10,6 @@ sync so the published documentation reflects the latest release.
 ::: ragora.cli.main
     options:
       heading_level: 3
-      
-      
 ## Core
 
 ### Knowledge Base Manager
