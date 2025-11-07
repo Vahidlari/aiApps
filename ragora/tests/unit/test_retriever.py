@@ -285,9 +285,22 @@ class TestRetriever:
         assert len(result) == 1
         assert isinstance(result[0], SearchResultItem)
         assert result[0].bm25_score == 0.8
-        assert result[0].similarity_score == 0.8
+        assert result[0].similarity_score is None
         assert result[0].retrieval_method == "keyword_search"
         assert result[0].retrieval_timestamp is not None
+
+    def test_process_keyword_results_keeps_raw_bm25_scores(
+        self, retriever, mock_search_result
+    ):
+        """Ensure high BM25 scores are preserved without normalization."""
+        mock_search_result.metadata.score = 10.0
+        objects = [mock_search_result]
+
+        result = retriever._process_keyword_results(objects, score_threshold=0.1)
+
+        assert len(result) == 1
+        assert result[0].bm25_score == 10.0
+        assert result[0].similarity_score is None
 
     def test_get_current_timestamp(self, retriever):
         """Test getting current timestamp."""
@@ -385,6 +398,21 @@ class TestRetriever:
         result_json = result.model_dump_json()
         assert "Test content" in result_json
         assert "test_001" in result_json
+
+    def test_search_result_item_allows_keyword_scores_without_similarity(self):
+        """Keyword search results may omit similarity scores."""
+
+        raw_score = 3.675478458404541
+        result = SearchResultItem(
+            content="Test content",
+            chunk_id="test_001",
+            properties={"content": "Test content", "chunk_id": "test_001"},
+            similarity_score=None,
+            bm25_score=raw_score,
+            retrieval_method="keyword_search",
+        )
+
+        assert result.similarity_score is None
 
     def test_retrieval_result_item_base_class(self):
         """Test RetrievalResultItem base class functionality."""

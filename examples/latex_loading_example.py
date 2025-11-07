@@ -128,8 +128,16 @@ def demonstrate_document_processing(
     print(f"📖 Loading document: {file_path}")
 
     try:
+        # Delete the collection if it exists
+        collectionlist = kbm.list_collections()
+        if "latex_loading_example" in collectionlist:
+            kbm.delete_collection("latex_loading_example")
+            print("✅ Latex loading example collection deleted successfully!")
+
         # Process the LaTeX document
-        result = kbm.process_documents([file_path, bibliography_path])
+        result = kbm.process_documents(
+            [file_path, bibliography_path], collection="latex_loading_example"
+        )
         print("✅ Document processed successfully!")
         print(f"📊 Processing result: {result}")
 
@@ -174,7 +182,11 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
 
         try:
             # Execute the search
-            response = kbm.search(query_info["query"], strategy=SearchStrategy.HYBRID)
+            response = kbm.search(
+                query_info["query"],
+                strategy=SearchStrategy.HYBRID,
+                collection="latex_loading_example",
+            )
 
             # Format the response nicely
             print("   📝 Answer:")
@@ -240,7 +252,12 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
         print(f'\n🔎 Searching for: "{term}"')
         try:
             # Use the search method with SIMILAR strategy
-            response = kbm.search(term, strategy=SearchStrategy.SIMILAR, top_k=3)
+            response = kbm.search(
+                term,
+                strategy=SearchStrategy.SIMILAR,
+                top_k=3,
+                collection="latex_loading_example",
+            )
             results = response.results
 
             if results:
@@ -269,6 +286,57 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
             break
         except Exception as e:
             print(f"   ❌ Error in similarity search: {e}")
+
+
+def demonstrate_keyword_search(kbm: KnowledgeBaseManager) -> None:
+    """Demonstrate keyword search capabilities."""
+    print_step(5, "Demonstrating Keyword Search")
+
+    # Use search terms relevant to the quantum mechanics content in the sample
+    search_terms = [
+        "Schrödinger equation",
+        "quantum mechanics",
+        "uncertainty principle",
+        "energy conservation",  # This should return fewer/no results as it's
+        # not in the document
+    ]
+
+    for term in search_terms:
+        print(f'\n🔎 Searching for: "{term}"')
+        try:
+            # Use the search method with KEYWORD strategy
+            response = kbm.search(
+                term,
+                strategy=SearchStrategy.KEYWORD,
+                top_k=3,
+                collection="latex_loading_example",
+            )
+            results = response.results
+
+            if results:
+                print(f"   Found {len(results)} similar documents:")
+                for i, result in enumerate(results, 1):
+                    # Extract content from the result
+                    content = result.content
+                    bm25_score = result.bm25_score
+                    content_preview = content[:100]
+                    if len(content) > 100:
+                        content_preview += "..."
+                    print(f"   {i}. {content_preview} (BM25 score: {bm25_score:.3f})")
+            else:
+                print("   No similar documents found.")
+                if term == "energy conservation":
+                    print("   ℹ️  Note: 'Energy conservation' not in document")
+                    print("      in this quantum mechanics document, so no")
+                    print("      results are expected.")
+
+        except AttributeError:
+            print(
+                "   ⚠️  Keyword search not available in this Knowledge Base Manager system"
+            )
+            break
+        except Exception as e:
+            print(f"   ❌ Error in keyword search: {e}")
 
 
 def main():
@@ -306,6 +374,9 @@ def main():
 
         # Step 5: Demonstrate similarity search (if available)
         demonstrate_similarity_search(kbm)
+
+        # Step 6: Demonstrate keyword search
+        demonstrate_keyword_search(kbm)
 
         # Final summary
         print_section_header("🎉 Demo Completed Successfully")
