@@ -393,7 +393,7 @@ For more details, see [testing.md](testing.md).
 
 ## 🔗 Related Documentation
 
-- [Architecture](architecture.md) - System architecture overview
+- [Design Decisions](design_decisions.md) - System architecture overview
 - [Getting Started](getting_started.md) - Setup and usage guide
 - [Testing](testing.md) - Testing guidelines
 

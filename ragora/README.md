@@ -134,7 +134,7 @@ chunks = chunker.chunk(document.content, context)
 - **[Getting Started](docs/getting_started.md)**: Detailed installation and setup guide
 - **[Architecture](docs/architecture.md)**: System design and components
 - **[Design Decisions](docs/design_decisions.md)**: Rationale behind key choices
-- **[API Reference](docs/api_reference.md)**: Complete API documentation
+- **[API Reference](docs/api-reference.md)**: Complete API documentation
 - **[Deployment](docs/deployment.md)**: Production deployment guide
 - **[Testing](docs/testing.md)**: Testing guidelines
 - **[Contributing](docs/contributing.md)**: How to contribute

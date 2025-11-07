@@ -314,7 +314,7 @@ After running the examples, you can:
 
 - **[Getting Started Guide](../ragora/docs/getting_started.md)**: Comprehensive setup guide
 - **[Architecture Overview](../ragora/docs/architecture.md)**: Understanding Ragora's design
-- **[API Reference](../ragora/docs/api_reference.md)**: Complete API documentation
+- **[API Reference](../ragora/docs/api-reference.md)**: Complete API documentation
 - **[Main Repository](../README.md)**: Repository overview and setup
 
 ## 🆘 Getting Help

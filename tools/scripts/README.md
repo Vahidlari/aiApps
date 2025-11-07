@@ -4,6 +4,23 @@ This directory contains utility scripts for the AI Apps project.
 
 ## Available Scripts
 
+### `build-docs.sh`
+
+Builds the MkDocs documentation site into the published `docs/` directory.
+
+**Usage:**
+```bash
+# From repository root
+./tools/scripts/build-docs.sh
+```
+
+**Prerequisites:**
+- Install documentation dependencies: `pip install -e "ragora[docs]"`
+
+**What it does:**
+- Runs `mkdocs build` using the configuration at the repo root
+- Outputs the static site to `docs/` for GitHub Pages serving
+
 ### `verify_test_setup.py`
 
 Verifies that the test environment is working correctly for the RAG system.

@@ -502,9 +502,9 @@ locust -f locustfile.py --host=http://localhost:8000
 ## 🔗 Related Documentation
 
 - [Getting Started](getting_started.md) - Initial setup
-- [Architecture](architecture.md) - System architecture
+- [Design Decisions](design_decisions.md) - System architecture
 - [Contributing](contributing.md) - Development guidelines
-- [Database Server](../../../tools/database_server/README.md) - Database setup
+- [Database Server](https://github.com/vahidlari/aiApps/blob/main/tools/database_server/README.md) - Database setup
 
 ## 📝 Production Checklist
 

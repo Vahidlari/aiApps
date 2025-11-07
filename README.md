@@ -160,7 +160,7 @@ See [ragora/docs/testing.md](ragora/docs/testing.md) for testing guidelines.
 - **[Getting Started](ragora/docs/getting_started.md)** - Installation and setup
 - **[Architecture](ragora/docs/architecture.md)** - System design and components
 - **[Design Decisions](ragora/docs/design_decisions.md)** - Design rationale
-- **[API Reference](ragora/docs/api_reference.md)** - Complete API documentation
+- **[API Reference](ragora/docs/api-reference.md)** - Complete API documentation
 - **[Deployment](ragora/docs/deployment.md)** - Production deployment guide
 - **[Testing](ragora/docs/testing.md)** - Testing strategy and guidelines
 - **[Contributing](ragora/docs/contributing.md)** - How to contribute
