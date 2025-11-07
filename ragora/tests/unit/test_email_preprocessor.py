@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from ragora.core.chunking import DataChunk, DataChunker
+from ragora.core.chunking import ChunkMetadata, DataChunk, DataChunker
 from ragora.core.email_preprocessor import EmailPreprocessor
 from ragora.core.models import EmailListResult, EmailMessageModel
 from ragora.utils.email_utils.models import EmailAddress, EmailMessage
@@ -480,6 +480,49 @@ Sent from my iPhone"""
         assert "Main content." in result
         assert "Sent from my iPhone" not in result
 
+        # Test escaped delimiter produced by HTML to text conversion
+        text = """Content before signature.
+
+\\-- 
+Dr.-Ing. Marc Müller
+Unbekanntenstraße 666, 70839 Gerlingen, Germany
++49 876 98761234 (cellphone)
+https://de.linkedin.com/in/marcmuller"""
+        result = preprocessor._strip_signatures(text)
+        assert "Content before signature." in result
+        assert "\\--" not in result
+        assert "Marc" not in result
+        assert "70839" not in result
+        assert "linkedin.com" not in result
+
+        # Test signature with line break symbols right before the signature
+        text = """Content before signature.\n\n--\nDr.-Ing. Marc Müller\nUnbekanntenstraße 666, 70839 Gerlingen, Germany\n
++49 876 98761234 (cellphone)\nhttps://de.linkedin.com/in/marcmuller\n+49 876 98761234 (cellphone)
+https://de.linkedin.com/in/marcmuller\n+49 876 98761234 (cellphone)
+https://de.linkedin.com/in/marcmuller"""
+
+        result = preprocessor._strip_signatures(text)
+        assert "Content before signature." in result
+        assert "--" not in result
+        assert "Marc" not in result
+        assert "70839" not in result
+        assert "linkedin.com" not in result
+
+        # Test signature with international phone and address
+        # formatting
+        text = """Body text.
+
+Best regards,
+Maria Rossi
+Via Roma 1, 00100 Roma, Italy
++39 06 1234 5678
+maria.rossi@example.it"""
+        result = preprocessor._strip_signatures(text)
+        assert "Body text." in result
+        assert "Roma" not in result
+        assert "+39" not in result
+        assert "example.it" not in result
+
         # Test text without signature
         text = "This is a simple message without any signature."
         result = preprocessor._strip_signatures(text)
@@ -487,6 +530,41 @@ Sent from my iPhone"""
 
         # Test empty text
         assert preprocessor._strip_signatures("") == ""
+
+    def test_clean_email_body_strips_html_signatures(self):
+        """Ensure clean_email_body removes signatures from HTML."""
+        from datetime import datetime
+
+        sender = EmailAddress("sender@example.com", "Test Sender")
+        recipient = EmailAddress("recipient@example.com", "Test Recipient")
+
+        html_signature = (
+            "<div>This is the body.<br><br>-- <br>"
+            "<br>Dr.-Ing. Marc Müller<br>"
+            "Unbekanntenstraße 666, 70839 Gerlingen, Germany<br>"
+            "+49 176 83105329  (cellphone)<br>"
+            "<a href='https://de.linkedin.com/in/marcmuller'>LinkedIn</a>"
+            "</div>"
+        )
+
+        email = EmailMessage(
+            message_id="msg_html_sig",
+            subject="Test Email",
+            sender=sender,
+            recipients=[recipient],
+            body_html=f"<html><body>{html_signature}</body></html>",
+            body_text=None,
+            date_sent=datetime(2024, 1, 1, 10, 0, 0),
+        )
+
+        preprocessor = EmailPreprocessor()
+        cleaned = preprocessor.clean_email_body(email)
+
+        assert "This is the body." in cleaned
+        assert "Marc" not in cleaned
+        assert "70839" not in cleaned
+        assert "linkedin" not in cleaned.lower()
+        assert "cellphone" not in cleaned
 
     def test_extract_actual_body_html(self):
         """Test extracting actual body content from HTML emails."""
@@ -684,8 +762,6 @@ Phone: 555-123-4567"""
         preprocessor = EmailPreprocessor()
         mock_chunker = Mock(spec=DataChunker)
         preprocessor.chunker = mock_chunker
-
-        from ragora.core.chunking import ChunkMetadata
 
         mock_metadata = ChunkMetadata(chunk_idx=0, chunk_size=10, total_chunks=1)
         mock_chunks = [

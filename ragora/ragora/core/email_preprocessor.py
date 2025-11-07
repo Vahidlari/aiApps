@@ -57,7 +57,9 @@ class EmailPreprocessor:
     # Patterns that indicate signature start (class-level constant)
     _SIGNATURE_INDICATORS = [
         r"^--\s*$",  # Two dashes on their own line
+        r"^\\--\s*$",  # Escaped two dashes (from HTML/text conversion)
         r"^---\s*$",  # Three dashes
+        r"^\\---\s*$",  # Escaped three dashes (from HTML/text conversion)
         r"^_{3,}$",  # Underscores
         r"^={3,}$",  # Equals signs
         r"^Best regards",
