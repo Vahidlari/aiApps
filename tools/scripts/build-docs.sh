@@ -13,5 +13,5 @@ fi
 
 echo "Running mkdocs build..."
 mkdocs build
-echo "Documentation generated in ${REPO_ROOT}/docs"
+echo "Static site generated in the 'docs/' directory at the repository root."
 
