@@ -29,6 +29,12 @@ Arguments
   If omitted, sensible defaults are used.
 - **weaviate_url**: Base URL for the Weaviate instance. Used when `config.database_manager_config` is not specified.
 
+Supported document types for ingestion via `process_document(...)` and `process_documents(...)`:
+
+- `"latex"` — structured LaTeX + optional `.bib`
+- `"markdown"` — Markdown parsed via `markdown-it-py`
+- `"text"` — plain text routed through the Markdown parser
+
 About KnowledgeBaseManagerConfig
 
 `KnowledgeBaseManagerConfig` lets you declaratively configure the system. Its fields are optional; supply only what you want to override.
@@ -55,9 +61,9 @@ About KnowledgeBaseManagerConfig
 Key Methods (brief)
 
 - `process_document(document_path, document_type="latex", collection="Document") -> List[str]`
-  Parses, chunks, embeds, and stores a single document. Returns stored chunk IDs.
+  Parses, chunks, embeds, and stores a single document. Set `document_type` to `"markdown"` or `"text"` to ingest Markdown or plain text files alongside LaTeX sources. Returns stored chunk IDs.
 - `process_documents(document_paths, document_type="latex", collection="Document") -> List[str]`
-  Batch variant for multiple documents; returns all stored chunk IDs.
+  Batch variant for multiple documents. The parser now understands lists of Markdown or plain text files when `document_type` is `"markdown"` or `"text"`.
 - `search(query, collection="Document", strategy=SearchStrategy.HYBRID, top_k=5, filter: Optional[Filter] = None, **kwargs) -> SearchResult`
   Unified retrieval with SIMILAR (vector), KEYWORD (BM25), or HYBRID strategies. Optional `filter` parameter allows filtering results by properties (e.g., chunk type, date ranges, source documents). Returns rich `SearchResult` with timing and totals.
 - `get_chunk(chunk_id: str, collection: str) -> Optional[RetrievalResultItem]`
@@ -338,7 +344,7 @@ For advanced filtering needs, you can use Weaviate's Filter API directly. See [W
 
 #### `ragora.core.DocumentPreprocessor`
 
-Document parsing and preprocessing.
+Document parsing and preprocessing for LaTeX, Markdown, and plain text sources.
 
 ```python
 from ragora.core import DocumentPreprocessor
@@ -347,9 +353,11 @@ preprocessor = DocumentPreprocessor()
 ```
 
 **Key Methods:**
-- `parse_latex(file_path: str, bib_path: Optional[str]) -> Document` - Parse LaTeX
-- `extract_citations(content: str) -> List[Citation]` - Extract citations
-- `clean_text(text: str) -> str` - Clean text content
+- `preprocess_document(file_path: str, format: str = "latex") -> List[DataChunk]` — Parse and chunk a single document. Set `format` to `"markdown"` or `"text"` to route files through the Markdown/Text parser backed by `markdown-it-py`.
+- `preprocess_documents(file_paths: List[str], format: str = "latex") -> List[DataChunk]` — Batch variant for the same supported formats, automatically handling bibliography files for LaTeX input.
+- `preprocess_document_folder(folder_path: str, format: str = "latex") -> List[DataChunk]` — Process folders of LaTeX, Markdown, or text files based on extension mapping.
+
+Under the hood the preprocessor employs the new `MarkdownParser` utility to normalize Markdown and plain text content before chunking, ensuring a consistent metadata experience across formats.
 
 #### `ragora.core.EmailPreprocessor`
 
@@ -409,6 +417,18 @@ LaTeX parsing utilities.
 - `parse_latex_file(file_path: str) -> Dict` - Parse LaTeX file
 - `extract_equations(content: str) -> List[str]` - Extract equations
 - `clean_latex_commands(content: str) -> str` - Remove LaTeX commands
+
+#### `ragora.utils.markdown_parser`
+
+Markdown and plain text parsing utilities backed by `markdown-it-py`.
+
+**Key Classes:**
+- `MarkdownParser` — Converts `.md` and `.txt` files into structured documents suitable for chunking.
+- `MarkdownDocument`, `MarkdownChapter`, `MarkdownSection`, `MarkdownParagraph` — Data structures representing the parsed hierarchy.
+
+**Highlights:**
+- Supports headings, bullet/numbered lists, block quotes, and fenced code blocks.
+- Normalizes plain text files through the same pipeline, simplifying mixed-format ingestion.
 
 #### `ragora.utils.device_utils`
 

@@ -204,6 +204,66 @@ class TestKnowledgeBaseManager:
         finally:
             os.unlink(temp_path)
 
+    def test_process_markdown_document(
+        self, mock_components, sample_chunks, tmp_path
+    ):
+        """Markdown documents should be routed through the preprocessor."""
+
+        mock_components["document_preprocessor"].preprocess_document.return_value = (
+            sample_chunks
+        )
+        mock_components["vector_store"].store_chunks.return_value = ["uuid-md"]
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.document_preprocessor = mock_components["document_preprocessor"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        markdown_file = tmp_path / "sample.md"
+        markdown_file.write_text("# Title\n\nContent", encoding="utf-8")
+
+        result = kbm.process_document(
+            str(markdown_file), document_type="markdown", collection="Doc"
+        )
+
+        assert result == ["uuid-md"]
+        mock_components["document_preprocessor"].preprocess_document.assert_called_once_with(
+            str(markdown_file), "markdown"
+        )
+        mock_components["vector_store"].store_chunks.assert_called_once_with(
+            sample_chunks, collection="Doc"
+        )
+
+    def test_process_text_document(self, mock_components, sample_chunks, tmp_path):
+        """Plain text documents should be routed through the preprocessor."""
+
+        mock_components["document_preprocessor"].preprocess_document.return_value = (
+            sample_chunks
+        )
+        mock_components["vector_store"].store_chunks.return_value = ["uuid-txt"]
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.document_preprocessor = mock_components["document_preprocessor"]
+        kbm.vector_store = mock_components["vector_store"]
+        kbm.logger = Mock()
+
+        text_file = tmp_path / "notes.txt"
+        text_file.write_text("Plain text", encoding="utf-8")
+
+        result = kbm.process_document(
+            str(text_file), document_type="text", collection="Doc"
+        )
+
+        assert result == ["uuid-txt"]
+        mock_components["document_preprocessor"].preprocess_document.assert_called_once_with(
+            str(text_file), "text"
+        )
+        mock_components["vector_store"].store_chunks.assert_called_once_with(
+            sample_chunks, collection="Doc"
+        )
+
     def test_process_document_not_initialized(self):
         """Test document processing when system not initialized."""
         kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
