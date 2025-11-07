@@ -1,11 +1,14 @@
-"""LaTeX Document Processing Example with Knowledge Base Manager
+"""Document Processing Example with Knowledge Base Manager
 
-This module demonstrates how to load and process LaTeX documents using the knowledge
+This module demonstrates how to load and process LaTeX, Markdown, and plain text
+documents using the knowledge
 base manager system. It shows the complete workflow from document ingestion to
 querying and retrieval.
 
 Features demonstrated:
 - LaTeX document processing and chunking
+- Markdown document processing
+- Plain text document processing
 - Vector embedding generation
 - Vector store integration with Weaviate
 - Document querying and retrieval
@@ -17,7 +20,11 @@ Prerequisites:
    - Status: ./database-manager.sh status
    - Stop: ./database-manager.sh stop
 
-2. Sample LaTeX file should exist at: examples/latex_samples/sample_chapter.tex
+2. Sample files should exist at:
+   - examples/latex_samples/sample_chapter.tex
+   - examples/latex_samples/references.bib
+   - examples/markdown_samples/sample_overview.md
+   - examples/text_samples/sample_notes.txt
 
 Configuration Notes:
 - For Docker containers: use http://host.docker.internal:8080
@@ -45,6 +52,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SAMPLE_LATEX_PATH = Path("examples/latex_samples/sample_chapter.tex")
+SAMPLE_BIBLIOGRAPHY_PATH = Path("examples/latex_samples/references.bib")
+SAMPLE_MARKDOWN_PATH = Path("examples/markdown_samples/sample_overview.md")
+SAMPLE_TEXT_PATH = Path("examples/text_samples/sample_notes.txt")
+
 
 def print_section_header(title: str, width: int = 60) -> None:
     """Print a formatted section header."""
@@ -63,14 +75,25 @@ def check_prerequisites() -> bool:
     """Check if all prerequisites are met."""
     print_section_header("🔍 Checking Prerequisites")
 
-    # Check if sample file exists
-    sample_file = Path("examples/latex_samples/sample_chapter.tex")
-    if not sample_file.exists():
-        print(f"❌ Sample LaTeX file not found at: {sample_file}")
-        print("   Please ensure the sample file exists before running this" " example.")
+    # Check required sample files
+    sample_files = [
+        (SAMPLE_LATEX_PATH, "Sample LaTeX file"),
+        (SAMPLE_BIBLIOGRAPHY_PATH, "Sample bibliography file"),
+        (SAMPLE_MARKDOWN_PATH, "Sample Markdown file"),
+        (SAMPLE_TEXT_PATH, "Sample text file"),
+    ]
+
+    all_present = True
+    for path, label in sample_files:
+        if not path.exists():
+            print(f"❌ {label} not found at: {path}")
+            all_present = False
+        else:
+            print(f"✅ {label} found: {path}")
+
+    if not all_present:
+        print("   Please ensure all sample files exist before running this example.")
         return False
-    else:
-        print(f"✅ Sample LaTeX file found: {sample_file}")
 
     print("\n💡 Make sure Weaviate server is running:")
     print("   cd tools/database_server")
@@ -119,30 +142,49 @@ def create_knowledge_base_manager_config() -> KnowledgeBaseManagerConfig:
     return config
 
 
-def demonstrate_document_processing(
-    kbm: KnowledgeBaseManager, file_path: str, bibliography_path: str
-) -> None:
-    """Demonstrate document processing and ingestion."""
-    print_step(2, "Processing LaTeX Document")
+def demonstrate_document_processing(kbm: KnowledgeBaseManager) -> None:
+    """Demonstrate document processing and ingestion across formats."""
 
-    print(f"📖 Loading document: {file_path}")
+    collection_name = "Latex_loading_example"
+    print_step(2, "Processing Documents")
 
     try:
-        # Delete the collection if it exists
         collectionlist = kbm.list_collections()
-        if "latex_loading_example" in collectionlist:
-            kbm.delete_collection("latex_loading_example")
-            print("✅ Latex loading example collection deleted successfully!")
+        if collection_name in collectionlist:
+            kbm.delete_collection(collection_name)
+            print("✅ Existing example collection deleted successfully!")
 
-        # Process the LaTeX document
-        result = kbm.process_documents(
-            [file_path, bibliography_path], collection="latex_loading_example"
+        # Process the LaTeX document with bibliography support
+        print(f"📖 Loading LaTeX document: {SAMPLE_LATEX_PATH}")
+        latex_result = kbm.process_documents(
+            [str(SAMPLE_LATEX_PATH), str(SAMPLE_BIBLIOGRAPHY_PATH)],
+            collection=collection_name,
         )
-        print("✅ Document processed successfully!")
-        print(f"📊 Processing result: {result}")
+        print("✅ LaTeX document processed successfully!")
+        print(f"   📊 Stored chunk IDs: {latex_result}")
+
+        # Process the Markdown document
+        print(f"📘 Loading Markdown document: {SAMPLE_MARKDOWN_PATH}")
+        markdown_result = kbm.process_document(
+            str(SAMPLE_MARKDOWN_PATH),
+            document_type="markdown",
+            collection=collection_name,
+        )
+        print("✅ Markdown document processed successfully!")
+        print(f"   📊 Stored chunk IDs: {markdown_result}")
+
+        # Process the plain text document
+        print(f"📝 Loading text document: {SAMPLE_TEXT_PATH}")
+        text_result = kbm.process_document(
+            str(SAMPLE_TEXT_PATH),
+            document_type="text",
+            collection=collection_name,
+        )
+        print("✅ Text document processed successfully!")
+        print(f"   📊 Stored chunk IDs: {text_result}")
 
     except Exception as e:
-        print(f"❌ Error processing document: {e}")
+        print(f"❌ Error processing documents: {e}")
         raise
 
 
@@ -159,18 +201,23 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
         },
         {
             "category": "Mathematical Formulas",
-            "query": "Show me the mathematical equations related to " "relativity",
+            "query": "Show me the mathematical equations related to relativity",
             "description": "Formula and equation search",
         },
         {
             "category": "Conceptual Understanding",
-            "query": "Explain the theory of special relativity in simple " "terms",
+            "query": "Explain the theory of special relativity in simple terms",
             "description": "Complex conceptual query",
         },
         {
             "category": "Historical Context",
             "query": "Who developed the theory of relativity and when?",
             "description": "Historical and biographical query",
+        },
+        {
+            "category": "Questions from the Markdown document",
+            "query": "How does markdown processing works in Ragora?",
+            "description": "Question about Markdown processing",
         },
     ]
 
@@ -245,6 +292,7 @@ def demonstrate_similarity_search(kbm: KnowledgeBaseManager) -> None:
         "quantum mechanics",
         "uncertainty principle",
         "energy conservation",  # This should return fewer/no results as it's
+        "document processing",
         # not in the document
     ]
 
@@ -298,6 +346,7 @@ def demonstrate_keyword_search(kbm: KnowledgeBaseManager) -> None:
         "quantum mechanics",
         "uncertainty principle",
         "energy conservation",  # This should return fewer/no results as it's
+        "Ragora",
         # not in the document
     ]
 
@@ -364,10 +413,8 @@ def main():
         kbm = KnowledgeBaseManager(config=config)
         print("✅ Knowledge base manager initialized successfully")
 
-        # Step 3: Process document
-        sample_file = "examples/latex_samples/sample_chapter.tex"
-        bibliography_file = "examples/latex_samples/references.bib"
-        demonstrate_document_processing(kbm, sample_file, bibliography_file)
+        # Step 3: Process documents across formats
+        demonstrate_document_processing(kbm)
 
         # Step 4: Demonstrate queries
         demonstrate_queries(kbm)

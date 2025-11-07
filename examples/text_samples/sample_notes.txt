@@ -1,0 +1,13 @@
+Plain Text Ingestion Notes
+==========================
+
+Ragora can now preprocess plain text (.txt) files using the same pipeline that
+handles Markdown documents. The parser normalizes paragraphs and forwards the
+content to the chunker so the knowledge base retains meaningful context.
+
+- Plain text is ideal for quick notes or exported transcripts.
+- Chunk metadata includes the source file name for traceability.
+- You can mix plain text with Markdown and LaTeX inside the same collection.
+
+End of notes.
+

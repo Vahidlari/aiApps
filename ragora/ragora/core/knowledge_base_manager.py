@@ -82,7 +82,7 @@ class KnowledgeBaseManager:
         vector_store: VectorStore instance for document storage
         retriever: Retriever instance for search operations
         embedding_engine: EmbeddingEngine for vector embeddings
-        document_preprocessor: DocumentPreprocessor for LaTeX processing
+        document_preprocessor: DocumentPreprocessor for document parsing
         data_chunker: DataChunker for text chunking
         logger: Logger instance for debugging and monitoring
         is_initialized: Boolean indicating if system is ready
@@ -188,8 +188,8 @@ class KnowledgeBaseManager:
         """Process a list of documents and store them in the vector database.
 
         Args:
-            document_paths: List of paths to the LaTeX documents
-            document_type: Type of document to process ("latex", "pdf", "txt")
+            document_paths: List of paths to the documents to ingest
+            document_type: Type of document to process ("latex", "markdown", "text")
             collection: Collection name to store the documents
         Returns:
             List[str]: List of chunk IDs that were stored
@@ -220,8 +220,8 @@ class KnowledgeBaseManager:
         """Process a LaTeX document and store it in the vector database.
 
         Args:
-            document_path: Path to the LaTeX document file
-            document_type: Type of document to process ("latex", "pdf", "txt")
+            document_path: Path to the document file
+            document_type: Type of document to process ("latex", "markdown", "text")
             collection: Collection name to store the document
         Returns:
             List[str]: List of chunk IDs that were stored

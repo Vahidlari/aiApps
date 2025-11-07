@@ -19,6 +19,47 @@ from ragora.utils.latex_parser import (
 class TestDocumentPreprocessor:
     """Test DocumentPreprocessor class."""
 
+    def test_preprocess_markdown_document(self, tmp_path):
+        """Markdown documents should be chunked with metadata preserved."""
+
+        markdown_path = tmp_path / "sample.md"
+        markdown_path.write_text(
+            "# Title\n\n## Section\n\nMarkdown paragraph content.",
+            encoding="utf-8",
+        )
+
+        preprocessor = DocumentPreprocessor()
+        chunks = preprocessor.preprocess_document(str(markdown_path), format="markdown")
+
+        assert chunks, "Expected chunks for markdown document"
+        combined_text = " ".join(chunk.text for chunk in chunks)
+        assert "Markdown paragraph content" in combined_text
+        assert all(
+            chunk.metadata.source_document == markdown_path.name for chunk in chunks
+        )
+        assert any(
+            chunk.metadata.section_title in {markdown_path.stem, "Title"}
+            for chunk in chunks
+        )
+
+    def test_preprocess_plain_text_document(self, tmp_path):
+        """Plain text documents should be chunked via markdown parser."""
+
+        text_path = tmp_path / "notes.txt"
+        text_path.write_text(
+            "Plain text content line one.\n\nPlain text content line two.",
+            encoding="utf-8",
+        )
+
+        preprocessor = DocumentPreprocessor()
+        chunks = preprocessor.preprocess_document(str(text_path), format="text")
+
+        assert chunks, "Expected chunks for text document"
+        combined_text = " ".join(chunk.text for chunk in chunks)
+        assert "Plain text content line one." in combined_text
+        assert "Plain text content line two." in combined_text
+        assert all(chunk.metadata.source_document == text_path.name for chunk in chunks)
+
     def test_init_default_parameters(self):
         """Test DocumentPreprocessor initialization with default parameters."""
         preprocessor = DocumentPreprocessor()

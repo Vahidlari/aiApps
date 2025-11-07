@@ -15,6 +15,13 @@ from .email_utils.models import (
     MessageStatus,
 )
 from .latex_parser import LatexDocument, LatexParser
+from .markdown_parser import (
+    MarkdownChapter,
+    MarkdownDocument,
+    MarkdownParagraph,
+    MarkdownParser,
+    MarkdownSection,
+)
 
 __all__ = [
     "get_sentence_transformer_device",
@@ -32,4 +39,9 @@ __all__ = [
     "MessageStatus",
     "IMAPCredentials",
     "GraphCredentials",
+    "MarkdownParser",
+    "MarkdownDocument",
+    "MarkdownChapter",
+    "MarkdownSection",
+    "MarkdownParagraph",
 ]

@@ -19,6 +19,7 @@ the embedding engine for vector database storage.
 import os
 
 from ..utils.latex_parser import LatexDocument, LatexParser
+from ..utils.markdown_parser import MarkdownDocument, MarkdownParser
 from .chunking import (
     ChunkingContext,
     ChunkingContextBuilder,
@@ -56,10 +57,13 @@ class DocumentPreprocessor:
             "pdf": [".pdf"],
             "docx": [".docx"],
             "doc": [".doc"],
+            "markdown": [".md", ".markdown"],
+            "text": [".txt"],
             "txt": [".txt"],
         }
 
         self.latex_parser = LatexParser()
+        self.markdown_parser = MarkdownParser()
 
     def preprocess_document(
         self, file_path: str, format: str = "latex"
@@ -73,21 +77,28 @@ class DocumentPreprocessor:
         Returns:
             list[DataChunk]: List of DataChunks with metadata
         """
-        if format == "latex":
+        normalized_format = format.lower()
+
+        if normalized_format == "latex":
             if file_path.endswith(".bib"):
                 self.latex_parser.parse_bibliography(file_path)
-            else:
-                document = self.latex_parser.parse_document(file_path)
-        else:
-            raise ValueError(f"Unsupported document format: {format}")
+                return []
+            document = self.latex_parser.parse_document(file_path)
+            return self._chunk_documents([document])
 
-        return self._chunk_documents([document])
+        if normalized_format in {"markdown", "md", "text", "txt"}:
+            document = self.markdown_parser.parse_document(file_path)
+            return self._chunk_markdown_documents([document])
+
+        raise ValueError(f"Unsupported document format: {format}")
 
     def preprocess_documents(
         self, file_paths: list[str], format: str = "latex"
     ) -> list[DataChunk]:
         """Preprocess the documents and return a list of DataChunks."""
-        if format == "latex":
+        normalized_format = format.lower()
+
+        if normalized_format == "latex":
             # Find the bibliography file
             bibliography_path = None
             for file_path in file_paths:
@@ -102,19 +113,31 @@ class DocumentPreprocessor:
                 if file_path != bibliography_path
             ]
             return self._chunk_documents(documents)
-        else:
-            raise ValueError(f"Unsupported document format: {format}")
+
+        if normalized_format in {"markdown", "md", "text", "txt"}:
+            documents = [
+                self.markdown_parser.parse_document(path) for path in file_paths
+            ]
+            return self._chunk_markdown_documents(documents)
+
+        raise ValueError(f"Unsupported document format: {format}")
 
     def preprocess_document_folder(
         self, folder_path: str, format: str = "latex"
     ) -> list[DataChunk]:
         """Preprocess the documents in the folder and return a list of DataChunks."""
+        normalized_format = format.lower()
+        if normalized_format not in self.file_extension_map:
+            raise ValueError(f"Unsupported document format: {format}")
+
         file_paths = [
             os.path.join(folder_path, file)
             for file in os.listdir(folder_path)
-            if any(file.endswith(ext) for ext in self.file_extension_map[format])
+            if any(
+                file.endswith(ext) for ext in self.file_extension_map[normalized_format]
+            )
         ]
-        return self.preprocess_documents(file_paths, format)
+        return self.preprocess_documents(file_paths, normalized_format)
 
     def _extract_document_text(self, documentList: list[LatexDocument]) -> str:
         """Extract the text from the document.
@@ -170,6 +193,137 @@ class DocumentPreprocessor:
             return chunks
         for document in documentList:
             chunks.extend(self._chunk_document(document))
+        return chunks
+
+    def _chunk_markdown_documents(
+        self, document_list: list[MarkdownDocument]
+    ) -> list[DataChunk]:
+        """Chunk Markdown or plain text documents."""
+
+        chunks: list[DataChunk] = []
+        if not document_list:
+            return chunks
+
+        for document in document_list:
+            chunks.extend(self._chunk_markdown_document(document))
+
+        return chunks
+
+    def _chunk_markdown_document(self, document: MarkdownDocument) -> list[DataChunk]:
+        if document is None:
+            raise ValueError("Document cannot be None")
+
+        chunk_id_counter = 0
+        chunks: list[DataChunk] = []
+
+        if document.paragraphs:
+            paragraph_content = "\n\n".join(
+                paragraph.content
+                for paragraph in document.paragraphs
+                if paragraph.content
+            )
+            if paragraph_content:
+                section_label = document.title or document.source_document
+                context = (
+                    ChunkingContextBuilder()
+                    .for_document()
+                    .with_source(document.source_document)
+                    .with_section(section_label)
+                    .with_start_sequence_idx(chunk_id_counter)
+                    .build()
+                )
+                doc_chunks = self.chunker.chunk(paragraph_content, context)
+                chunks.extend(doc_chunks)
+                chunk_id_counter += len(doc_chunks)
+
+        if document.chapters:
+            for chapter in document.chapters:
+                chapter_content_parts = [f"# {chapter.title}" if chapter.title else ""]
+                chapter_content_parts.extend(
+                    paragraph.content
+                    for paragraph in chapter.paragraphs
+                    if paragraph.content
+                )
+                chapter_content = "\n\n".join(
+                    part for part in chapter_content_parts if part.strip()
+                )
+                if chapter_content:
+                    section_label = (
+                        chapter.title or document.title or document.source_document
+                    )
+                    context = (
+                        ChunkingContextBuilder()
+                        .for_document()
+                        .with_source(document.source_document)
+                        .with_section(section_label)
+                        .with_start_sequence_idx(chunk_id_counter)
+                        .build()
+                    )
+                    doc_chunks = self.chunker.chunk(chapter_content, context)
+                    chunks.extend(doc_chunks)
+                    chunk_id_counter += len(doc_chunks)
+
+                if chapter.sections:
+                    for section in chapter.sections:
+                        section_content_parts = [
+                            f"## {section.title}" if section.title else "",
+                            *[
+                                paragraph.content
+                                for paragraph in section.paragraphs
+                                if paragraph.content
+                            ],
+                        ]
+                        section_content = "\n\n".join(
+                            part for part in section_content_parts if part.strip()
+                        )
+                        if section_content:
+                            section_label = (
+                                section.title
+                                or chapter.title
+                                or document.title
+                                or document.source_document
+                            )
+                            context = (
+                                ChunkingContextBuilder()
+                                .for_document()
+                                .with_source(document.source_document)
+                                .with_section(section_label)
+                                .with_start_sequence_idx(chunk_id_counter)
+                                .build()
+                            )
+                            doc_chunks = self.chunker.chunk(section_content, context)
+                            chunks.extend(doc_chunks)
+                            chunk_id_counter += len(doc_chunks)
+
+        if document.sections:
+            for section in document.sections:
+                section_content_parts = [
+                    f"## {section.title}" if section.title else "",
+                    *[
+                        paragraph.content
+                        for paragraph in section.paragraphs
+                        if paragraph.content
+                    ],
+                ]
+                section_content = "\n\n".join(
+                    part for part in section_content_parts if part.strip()
+                )
+                if section_content:
+                    section_label = (
+                        section.title or document.title or document.source_document
+                    )
+                    context = (
+                        ChunkingContextBuilder()
+                        .for_document()
+                        .with_source(document.source_document)
+                        .with_section(section_label)
+                        .with_start_sequence_idx(chunk_id_counter)
+                        .build()
+                    )
+                    doc_chunks = self.chunker.chunk(section_content, context)
+                    chunks.extend(doc_chunks)
+                    chunk_id_counter += len(doc_chunks)
+
         return chunks
 
     def _chunk_document(self, document: LatexDocument) -> list[DataChunk]:
