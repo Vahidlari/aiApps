@@ -393,7 +393,7 @@ class Retriever:
                     content=properties.get("content", ""),
                     chunk_id=properties.get("chunk_id", ""),
                     properties=properties,
-                    similarity_score=bm25_score,
+                    similarity_score=None,
                     bm25_score=bm25_score,
                     retrieval_method="keyword_search",
                     retrieval_timestamp=self._get_current_timestamp(),

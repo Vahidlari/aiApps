@@ -15,7 +15,7 @@ Key Models:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -211,24 +211,48 @@ class SearchResultItem(RetrievalResultItem):
     """Search result item extending base retrieval result.
 
     Adds search-specific context: scores, retrieval method, and timestamp.
-    This is used for results returned from search operations.
+    Score fields correspond to Weaviate GraphQL search operators
+    (https://weaviate.io/developers/weaviate/api/graphql/search-operators):
+
+    * ``distance`` - metadata from ``collection.query.near_text`` (lower is
+      closer)
+    * ``hybrid_score`` - metadata from ``collection.query.hybrid`` (alpha mix)
+    * ``bm25_score`` - metadata from ``collection.query.bm25`` (lexical match)
+    * ``similarity_score`` - derived ``1 - distance`` for vector/hybrid
+      results; keyword searches leave it empty
     """
 
     # Retrieval scores
-    similarity_score: float = Field(
-        ...,
+    similarity_score: Optional[float] = Field(
+        default=None,
         ge=0.0,
         le=1.0,
-        description="Similarity score (0.0-1.0)",
+        description=(
+            "Vector similarity in the 0-1 range. Populated for near_text and "
+            "hybrid results as 1 - distance. Keyword (BM25) searches leave it "
+            "empty."
+        ),
     )
     distance: Optional[float] = Field(
-        default=None, description="Distance metric (for vector similarity)"
+        default=None,
+        description=(
+            "Raw vector distance returned by Weaviate near_text queries. "
+            "Lower values indicate higher semantic similarity."
+        ),
     )
     hybrid_score: Optional[float] = Field(
-        default=None, description="Hybrid search score"
+        default=None,
+        description=(
+            "Combined relevance from Weaviate hybrid search. Represents the "
+            "alpha-weighted blend of vector similarity and BM25 scores."
+        ),
     )
     bm25_score: Optional[float] = Field(
-        default=None, description="BM25 keyword search score"
+        default=None,
+        description=(
+            "Unbounded BM25 relevance score returned by Weaviate bm25 queries. "
+            "Higher values indicate stronger lexical matches."
+        ),
     )
 
     # Retrieval context

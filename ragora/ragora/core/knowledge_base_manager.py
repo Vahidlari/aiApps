@@ -359,13 +359,17 @@ class KnowledgeBaseManager:
             }
 
             # Add similarity scores if available
-            if results:
-                metadata["avg_similarity"] = sum(
-                    result.similarity_score for result in results
-                ) / len(results)
-                metadata["max_similarity"] = max(
-                    result.similarity_score for result in results
+            similarity_scores = [
+                result.similarity_score
+                for result in results
+                if result.similarity_score is not None
+            ]
+
+            if similarity_scores:
+                metadata["avg_similarity"] = sum(similarity_scores) / len(
+                    similarity_scores
                 )
+                metadata["max_similarity"] = max(similarity_scores)
 
             self.logger.info(
                 f"Search completed: {len(results)} results in {execution_time:.3f}s"
