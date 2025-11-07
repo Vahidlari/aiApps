@@ -1,8 +1,9 @@
-"""Command-line interface for the knowledge base manager system."""
+"""Entry points for the `kbm` command-line interface."""
 
 import argparse
 import logging
 import sys
+from argparse import Namespace
 from pathlib import Path
 from typing import Optional
 
@@ -17,15 +18,32 @@ from ..exceptions import KnowledgeBaseManagerError
 
 
 def setup_logging(verbose: bool = False) -> None:
-    """Set up logging configuration."""
+    """Configure application logging.
+
+    Args:
+        verbose: When ``True`` raises the log level to ``DEBUG``.
+    """
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
 
-def process_document_command(args) -> None:
-    """Process a LaTeX document."""
+def process_document_command(args: Namespace) -> None:
+    """Process a document specified via CLI arguments.
+
+    Args:
+        args: Parsed CLI namespace with `document`, `chunk_size`, `overlap`,
+            `embedding_model`, and `weaviate_url`.
+
+    Raises:
+        SystemExit: When processing fails (exit code 1).
+
+    Examples:
+        ```bash
+        kbm process docs/sample.tex --chunk-size 600 --overlap 80
+        ```
+    """
     try:
         config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(
@@ -45,8 +63,20 @@ def process_document_command(args) -> None:
         sys.exit(1)
 
 
-def query_command(args) -> None:
-    """Query the RAG system."""
+def query_command(args: Namespace) -> None:
+    """Execute a semantic or hybrid search.
+
+    Args:
+        args: Parsed CLI namespace containing the query options.
+
+    Raises:
+        SystemExit: When querying fails (exit code 1).
+
+    Examples:
+        ```bash
+        kbm query "Explain theorem 3" --search-type similar --top-k 3
+        ```
+    """
     try:
         config = KnowledgeBaseManagerConfig(
             chunk_config=ChunkConfig(),
@@ -75,8 +105,15 @@ def query_command(args) -> None:
         sys.exit(1)
 
 
-def status_command(args) -> None:
-    """Check system status."""
+def status_command(args: Namespace) -> None:
+    """Display status information for the knowledge base manager.
+
+    Args:
+        args: Parsed CLI namespace (unused).
+
+    Raises:
+        SystemExit: If the status request fails.
+    """
     try:
         config = KnowledgeBaseManagerConfig.default()
         kbm = KnowledgeBaseManager(config=config)
@@ -94,7 +131,17 @@ def status_command(args) -> None:
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Create command-line argument parser."""
+    """Create the top-level CLI parser.
+
+    Returns:
+        argparse.ArgumentParser: Configured parser instance.
+
+    Examples:
+        ```python
+        parser = create_parser()
+        parser.parse_args(["process", "docs/paper.tex"])
+        ```
+    """
     parser = argparse.ArgumentParser(
         description="Knowledge Base Manager CLI - LaTeX Document Knowledge Base Manager",
         formatter_class=argparse.RawDescriptionHelpFormatter,

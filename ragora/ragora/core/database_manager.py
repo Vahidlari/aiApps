@@ -1,20 +1,4 @@
-"""Database management layer for RAG system using Weaviate.
-
-This module provides the DatabaseManager class that handles low-level
-database operations and connection management. It serves as the
-infrastructure layer that both VectorStore and Retriever use for
-database access.
-
-Key responsibilities:
-- Initialize and manage Weaviate client connections
-- Provide collection access and management
-- Handle connection testing and health checks
-- Manage database schema operations
-- Provide clean abstraction over Weaviate client operations
-
-The DatabaseManager focuses solely on infrastructure concerns,
-allowing higher layers to focus on business logic.
-"""
+"""Infrastructure helpers for connecting Ragora to Weaviate."""
 
 import logging
 from typing import Any, Dict, List
@@ -25,20 +9,24 @@ from weaviate.exceptions import WeaviateBaseError
 
 
 class DatabaseManager:
-    """Database management layer for Weaviate operations.
-
-    This class provides a clean abstraction over Weaviate client operations,
-    focusing on infrastructure concerns like connection management, collection
-    access, and basic database operations.
+    """Lightweight façade over the Weaviate Python client.
 
     Attributes:
-        client: Weaviate client instance
-        url: Weaviate server URL
-        grpc_port: gRPC port for Weaviate connection
-        timeout: Connection timeout in seconds
-        retry_attempts: Number of retry attempts for failed operations
-        is_connected: Boolean indicating if connection to Weaviate is active
-        logger: Logger instance for debugging and monitoring
+        client: Low-level Weaviate client instance.
+        url: Weaviate HTTP endpoint.
+        grpc_port: Optional gRPC port.
+        timeout: Request timeout in seconds.
+        retry_attempts: How many retries to attempt for transient failures.
+        is_connected: Indicates whether :meth:`_test_connection` succeeded.
+        logger: Module logger.
+
+    Examples:
+        ```python
+        from ragora.core.database_manager import DatabaseManager
+
+        db = DatabaseManager(url="http://localhost:8080")
+        collections = db.list_collections()
+        ```
     """
 
     def __init__(

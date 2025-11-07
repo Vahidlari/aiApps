@@ -1,10 +1,4 @@
-"""Markdown and plain text parser utilities for Ragora.
-
-This module provides lightweight parsing utilities that leverage the
-``markdown-it-py`` package to convert Markdown or plain text documents into
-structured representations that can be consumed by the document preprocessor
-module.
-"""
+"""Parse Markdown or plain-text files into structured Ragora models."""
 
 from __future__ import annotations
 
@@ -55,9 +49,15 @@ class MarkdownDocument:
 
 
 class MarkdownParser:
-    """Parser that converts Markdown or plain text into structured objects."""
+    """Convert Markdown/plain text into the :class:`MarkdownDocument` model."""
 
     def __init__(self, enable_tables: bool = True, enable_fenced_code: bool = True):
+        """Build a parser with optional CommonMark extensions.
+
+        Args:
+            enable_tables: Enable GitHub-style table support.
+            enable_fenced_code: Enable fenced code block parsing.
+        """
         self._markdown = MarkdownIt("commonmark")
         if enable_tables:
             self._markdown.enable("table")
@@ -65,7 +65,23 @@ class MarkdownParser:
             self._markdown.enable("fence")
 
     def parse_document(self, file_path: str) -> MarkdownDocument:
-        """Parse a Markdown document from disk."""
+        """Parse a Markdown document from disk.
+
+        Args:
+            file_path: Path to the Markdown/plain text file.
+
+        Returns:
+            MarkdownDocument: Parsed representation.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+
+        Examples:
+            ```python
+            parser = MarkdownParser()
+            doc = parser.parse_document("notes.md")
+            ```
+        """
 
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Markdown file not found: {file_path}")
@@ -75,14 +91,28 @@ class MarkdownParser:
 
         return self.parse_text(content, source_document=os.path.basename(file_path))
 
-    def parse_text(self, text: str, source_document: Optional[str] = None) -> MarkdownDocument:
-        """Parse provided Markdown/plain text content."""
+    def parse_text(
+        self, text: str, source_document: Optional[str] = None
+    ) -> MarkdownDocument:
+        """Parse provided Markdown/plain text content.
+
+        Args:
+            text: Text blob to parse.
+            source_document: Optional source name for metadata.
+
+        Returns:
+            MarkdownDocument: Parsed representation suitable for chunking.
+
+        Examples:
+            ```python
+            parser = MarkdownParser()
+            doc = parser.parse_text("# Title\\n\\nSome content")
+            ```
+        """
 
         source_name = source_document or ""
         default_title = (
-            os.path.splitext(os.path.basename(source_name))[0]
-            if source_name
-            else None
+            os.path.splitext(os.path.basename(source_name))[0] if source_name else None
         )
         document = MarkdownDocument(source_document=source_name, title=default_title)
 
@@ -117,10 +147,15 @@ class MarkdownParser:
             token = tokens[index]
 
             if token.type == "heading_open":
-                level = int(token.tag[-1]) if token.tag and token.tag[-1].isdigit() else 1
+                level = (
+                    int(token.tag[-1]) if token.tag and token.tag[-1].isdigit() else 1
+                )
                 title = ""
                 lookahead = index + 1
-                while lookahead < len(tokens) and tokens[lookahead].type != "heading_close":
+                while (
+                    lookahead < len(tokens)
+                    and tokens[lookahead].type != "heading_close"
+                ):
                     if tokens[lookahead].type == "inline":
                         title = tokens[lookahead].content.strip()
                     lookahead += 1
@@ -193,5 +228,3 @@ class MarkdownParser:
             index += 1
 
         return document
-
-

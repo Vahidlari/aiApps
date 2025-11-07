@@ -1,19 +1,7 @@
-"""Retrieval system for RAG implementation.
+"""Search utilities that power Ragora retrieval workflows.
 
-This module provides the Retriever class that handles search and
-retrieval operations for the RAG system. It separates search logic from
-storage operations, following the single responsibility principle.
-
-Key responsibilities:
-- Vector similarity search using Weaviate APIs
-- Hybrid search (vector + keyword) using Weaviate APIs
-- Keyword search (BM25) using Weaviate APIs
-- Query preprocessing and optimization
-- Result ranking and filtering
-- Query expansion and normalization
-
-The retriever uses DatabaseManager for data access but handles all search
-logic independently, enabling better testability and maintainability.
+The :class:`Retriever` encapsulates vector, keyword, and hybrid search strategies
+while delegating persistence to :class:`~ragora.core.database_manager.DatabaseManager`.
 """
 
 import logging
@@ -27,17 +15,22 @@ from .models import RetrievalMetadata, SearchResultItem
 
 
 class Retriever:
-    """Retrieval system for document search and retrieval.
-
-    This class handles all search and retrieval operations, separating
-    search logic from storage concerns. It uses DatabaseManager for data access
-    but implements its own search algorithms and query processing.
+    """Encapsulates reusable retrieval strategies for Ragora.
 
     Attributes:
-        db_manager: DatabaseManager instance for database access
-        class_name: Name of the collection to search
-        embedding_engine: EmbeddingEngine for query embeddings
-        logger: Logger instance for debugging and monitoring
+        db_manager: Database access layer.
+        embedding_engine: Optional embedding provider for custom workflows.
+        logger: Logger used for diagnostic output.
+
+    Examples:
+        ```python
+        from ragora.core.database_manager import DatabaseManager
+        from ragora.core.retriever import Retriever
+
+        db = DatabaseManager(url="http://localhost:8080")
+        retriever = Retriever(db_manager=db)
+        hits = retriever.search_similar("neural networks", collection="Document")
+        ```
     """
 
     def __init__(
@@ -94,6 +87,11 @@ class Retriever:
 
         Raises:
             ValueError: If query is empty
+
+        Examples:
+            ```python
+            hits = retriever.search_similar("rag pipeline", "Document", top_k=10)
+            ```
         """
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
@@ -158,6 +156,15 @@ class Retriever:
 
         Raises:
             ValueError: If query is empty or alpha is out of range
+
+        Examples:
+            ```python
+            hits = retriever.search_hybrid(
+                "retrieval strategies",
+                collection="Document",
+                alpha=0.7,
+            )
+            ```
         """
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
@@ -240,6 +247,11 @@ class Retriever:
 
         Raises:
             ValueError: If query is empty
+
+        Examples:
+            ```python
+            hits = retriever.search_keyword("BM25 overview", "Document", top_k=3)
+            ```
         """
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
