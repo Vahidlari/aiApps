@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/Vahidlari/aiApps/compare/v1.2.0...v1.2.1) (2025-11-07)
+
+
+### Bug Fixes
+
+* fix an issue in setting and validating the keyword search scores ([#83](https://github.com/Vahidlari/aiApps/issues/83)) ([1a14cf7](https://github.com/Vahidlari/aiApps/commit/1a14cf709a9194b03b0fc186fdbfcdbce7f40604)), closes [#82](https://github.com/Vahidlari/aiApps/issues/82)
+* fixed email signature detection with escaped delimiters ([457d95b](https://github.com/Vahidlari/aiApps/commit/457d95bbf636ff29c2f65a3bae251ab97cba5285))
+
 ## [1.2.0](https://github.com/Vahidlari/aiApps/compare/v1.1.0...v1.2.0) (2025-11-06)
 
 
