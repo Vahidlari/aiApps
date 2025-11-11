@@ -1,22 +1,20 @@
-name: Build and Push Docker Image
+name: Build Docker Image
 
 on:
-  # Trigger when update-dependencies workflow completes successfully
   workflow_run:
     workflows: ["Update Dependencies"]
     types: [completed]
-    branches: [main]
-  # Also trigger on direct changes to Docker files (not Pipfile)
-  push:
-    branches: [main]
-    paths:
-      - "tools/docker/Dockerfile"
-      - ".github/workflows/docker-build.yml"
   pull_request:
     branches: [main]
     paths:
-      - "tools/docker/**"
       - ".github/workflows/docker-build.yml"
+      - "tools/docker/Dockerfile"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/docker-build.yml"
+      - "tools/docker/Dockerfile"
+      - "tools/docker/Pipfile.lock"
 
 env:
   REGISTRY: ghcr.io
@@ -25,38 +23,42 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Only run if update-dependencies workflow succeeded OR if no Pipfile was modified
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'push' && !contains(github.event.head_commit.modified, 'tools/docker/Pipfile')) ||
-      github.event_name == 'pull_request'
     permissions:
       contents: read
       packages: write
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'pull_request')
+
+    env:
+      SHOULD_PUSH: ${{ github.event_name == 'push' }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (workflow run)
+        if: github.event_name == 'workflow_run'
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Check for race condition
-        if: github.event_name == 'push'
-        run: |
-          if echo "${{ github.event.head_commit.modified }}" | grep -q "tools/docker/Pipfile"; then
-            echo "🚨 RACE CONDITION DETECTED!"
-            echo "Pipfile was modified in this push. The 'Update Dependencies' workflow should handle this."
-            echo "This workflow will exit to avoid building with outdated dependencies."
-            echo "The docker build will be triggered automatically after dependencies are updated."
-            exit 1
-          fi
+      - name: Checkout repository
+        if: github.event_name != 'workflow_run'
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
-        run: echo "${{ secrets.ClassicTokenForRegisteryAccess }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        if: env.SHOULD_PUSH == 'true'
+        run: echo "${{ secrets.ClassicTokenForRegisteryAccess }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Generate date tag
         id: date-tag
+        if: env.SHOULD_PUSH == 'true'
         run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
       - name: Extract metadata
@@ -68,16 +70,16 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ github.run_number }},enable={{is_default_branch}}
-            type=raw,value=${{ steps.date-tag.outputs.date }},enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ env.SHOULD_PUSH }}
+            type=raw,value=${{ github.run_number }},enable=${{ env.SHOULD_PUSH }}
+            type=raw,value=${{ steps.date-tag.outputs.date }},enable=${{ env.SHOULD_PUSH }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./tools/docker
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ env.SHOULD_PUSH == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
