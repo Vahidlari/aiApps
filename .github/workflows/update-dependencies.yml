@@ -1,15 +1,10 @@
 name: Update Dependencies
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/docker/Pipfile"
   pull_request:
     branches: [main]
     paths:
       - "tools/docker/Pipfile"
-  workflow_dispatch: # Allow manual triggering
 
 jobs:
   update-pipfile-lock:
