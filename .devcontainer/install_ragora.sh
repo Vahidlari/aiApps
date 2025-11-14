@@ -5,8 +5,8 @@ cd /workspaces/aiApps/ragora
 
 # Try to get the latest version tag (sorted by version, not by commit history)
 # This gets the highest version tag in the repo, regardless of which branch it's on
-VERSION=$(git tag --sort=-version:refname 2>/dev/null | head -1 | sed 's/^v//' || echo "0.0.0")
-
+VERSION=$(git tag --sort=-version:refname 2>/dev/null | head -n 1 | sed 's/^v//')
+VERSION=${VERSION:-0.0.0}
 echo "Installing ragora with version: $VERSION"
 
 # Export both environment variable formats for setuptools-scm
