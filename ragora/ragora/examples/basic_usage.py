@@ -136,6 +136,23 @@ def main():
                     f"      Language: {chunk['metadata']['language']}, Domain: {chunk['metadata']['domain']}"
                 )
 
+        # Example: Batch search for multiple queries
+        logger.info("🔍 Batch searching multiple queries...")
+        batch_queries = [
+            "What is the relationship between mass and energy?",
+            "How does relativity work?",
+            "What is quantum mechanics?",
+        ]
+        batch_results = kbm.batch_search(
+            batch_queries, strategy=SearchStrategy.HYBRID, top_k=3
+        )
+        logger.info(f"   Processed {len(batch_results)} queries:")
+        for i, result in enumerate(batch_results):
+            logger.info(
+                f"   Query {i+1}: '{result.query}' - Found {result.total_found} results "
+                f"in {result.execution_time:.3f}s"
+            )
+
         # Get system statistics
         logger.info("📊 System Statistics:")
         stats = kbm.get_collection_stats("Document")

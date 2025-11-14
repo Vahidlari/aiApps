@@ -5,6 +5,7 @@ while delegating persistence to :class:`~ragora.core.database_manager.DatabaseMa
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
 from weaviate.classes.query import Filter, MetadataQuery
@@ -285,6 +286,311 @@ class Retriever:
 
         except Exception as e:
             self.logger.error(f"Keyword search failed: {str(e)}")
+            raise
+
+    def batch_search_similar(
+        self,
+        queries: List[str],
+        collection: str,
+        top_k: int = 5,
+        score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
+        max_workers: Optional[int] = None,
+    ) -> List[List[SearchResultItem]]:
+        """Perform batch vector similarity search for multiple queries.
+
+        This method performs semantic search using vector embeddings for multiple
+        queries in parallel, improving performance for bulk operations.
+
+        Args:
+            queries: List of search query texts
+            collection: Collection name to search
+            top_k: Number of results to return per query
+            score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results
+            max_workers: Maximum number of parallel workers (default: min(32, len(queries) + 4))
+
+        Returns:
+            List[List[SearchResultItem]]: List of search result lists, where each inner list
+                corresponds to the query at the same index in the input queries list
+
+        Raises:
+            ValueError: If queries list is empty or contains empty strings
+
+        Examples:
+            ```python
+            queries = ["neural networks", "machine learning", "deep learning"]
+            results = retriever.batch_search_similar(queries, "Document", top_k=10)
+            # results[0] contains results for "neural networks"
+            # results[1] contains results for "machine learning"
+            # results[2] contains results for "deep learning"
+            ```
+        """
+        if not queries:
+            raise ValueError("Queries list cannot be empty")
+
+        # Validate all queries are non-empty
+        for i, query in enumerate(queries):
+            if not query or not query.strip():
+                raise ValueError(f"Query at index {i} cannot be empty")
+
+        # Determine number of workers
+        if max_workers is None:
+            max_workers = min(32, len(queries) + 4)
+
+        try:
+            self.logger.info(
+                f"Performing batch vector similarity search for {len(queries)} queries"
+            )
+
+            # Create results list with same length as queries to maintain index alignment
+            results: List[List[SearchResultItem]] = [[] for _ in queries]
+
+            # Execute queries in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all queries
+                future_to_index = {
+                    executor.submit(
+                        self.search_similar,
+                        query,
+                        collection,
+                        top_k,
+                        score_threshold,
+                        filter,
+                    ): i
+                    for i, query in enumerate(queries)
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_index):
+                    index = future_to_index[future]
+                    try:
+                        query_results = future.result()
+                        results[index] = query_results
+                        self.logger.debug(
+                            f"Query {index} ('{queries[index]}') returned {len(query_results)} results"
+                        )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Query {index} ('{queries[index]}') failed: {str(e)}"
+                        )
+                        # Keep empty list for failed query to maintain index alignment
+                        results[index] = []
+
+            self.logger.info(
+                f"Batch search completed: {len(queries)} queries processed, "
+                f"{sum(len(r) for r in results)} total results"
+            )
+            return results
+
+        except Exception as e:
+            self.logger.error(f"Batch vector similarity search failed: {str(e)}")
+            raise
+
+    def batch_search_hybrid(
+        self,
+        queries: List[str],
+        collection: str,
+        top_k: int = 5,
+        alpha: float = 0.5,
+        score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
+        max_workers: Optional[int] = None,
+    ) -> List[List[SearchResultItem]]:
+        """Perform batch hybrid search for multiple queries.
+
+        This method combines semantic similarity search with traditional keyword
+        search for multiple queries in parallel, improving performance for bulk operations.
+
+        Args:
+            queries: List of search query texts
+            collection: Collection name to search
+            top_k: Number of results to return per query
+            alpha: Weight for vector search (0.0 = keyword only, 1.0 = vector only)
+            score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results by properties
+            max_workers: Maximum number of parallel workers (default: min(32, len(queries) + 4))
+
+        Returns:
+            List[List[SearchResultItem]]: List of search result lists, where each inner list
+                corresponds to the query at the same index in the input queries list
+
+        Raises:
+            ValueError: If queries list is empty, contains empty strings, or alpha is out of range
+
+        Examples:
+            ```python
+            queries = ["retrieval strategies", "vector search", "keyword matching"]
+            results = retriever.batch_search_hybrid(
+                queries, "Document", alpha=0.7, top_k=10
+            )
+            # results[0] contains results for "retrieval strategies"
+            # results[1] contains results for "vector search"
+            # results[2] contains results for "keyword matching"
+            ```
+        """
+        if not queries:
+            raise ValueError("Queries list cannot be empty")
+
+        # Validate all queries are non-empty
+        for i, query in enumerate(queries):
+            if not query or not query.strip():
+                raise ValueError(f"Query at index {i} cannot be empty")
+
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("Alpha must be between 0.0 and 1.0")
+
+        # Determine number of workers
+        if max_workers is None:
+            max_workers = min(32, len(queries) + 4)
+
+        try:
+            self.logger.info(
+                f"Performing batch hybrid search for {len(queries)} queries with alpha={alpha}"
+            )
+
+            # Create results list with same length as queries to maintain index alignment
+            results: List[List[SearchResultItem]] = [[] for _ in queries]
+
+            # Execute queries in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all queries
+                future_to_index = {
+                    executor.submit(
+                        self.search_hybrid,
+                        query,
+                        collection,
+                        top_k,
+                        alpha,
+                        score_threshold,
+                        filter,
+                    ): i
+                    for i, query in enumerate(queries)
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_index):
+                    index = future_to_index[future]
+                    try:
+                        query_results = future.result()
+                        results[index] = query_results
+                        self.logger.debug(
+                            f"Query {index} ('{queries[index]}') returned {len(query_results)} results"
+                        )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Query {index} ('{queries[index]}') failed: {str(e)}"
+                        )
+                        # Keep empty list for failed query to maintain index alignment
+                        results[index] = []
+
+            self.logger.info(
+                f"Batch search completed: {len(queries)} queries processed, "
+                f"{sum(len(r) for r in results)} total results"
+            )
+            return results
+
+        except Exception as e:
+            self.logger.error(f"Batch hybrid search failed: {str(e)}")
+            raise
+
+    def batch_search_keyword(
+        self,
+        queries: List[str],
+        collection: str,
+        top_k: int = 5,
+        score_threshold: float = 0.0,
+        filter: Optional[Filter] = None,
+        max_workers: Optional[int] = None,
+    ) -> List[List[SearchResultItem]]:
+        """Perform batch keyword search for multiple queries.
+
+        This method performs traditional keyword search using BM25 algorithm for
+        multiple queries in parallel, improving performance for bulk operations.
+
+        Args:
+            queries: List of search query texts
+            collection: Collection name to search
+            top_k: Number of results to return per query
+            score_threshold: Minimum similarity score threshold
+            filter: Optional Weaviate Filter object to filter results by properties
+            max_workers: Maximum number of parallel workers (default: min(32, len(queries) + 4))
+
+        Returns:
+            List[List[SearchResultItem]]: List of search result lists, where each inner list
+                corresponds to the query at the same index in the input queries list
+
+        Raises:
+            ValueError: If queries list is empty or contains empty strings
+
+        Examples:
+            ```python
+            queries = ["BM25 overview", "keyword search", "text matching"]
+            results = retriever.batch_search_keyword(queries, "Document", top_k=3)
+            # results[0] contains results for "BM25 overview"
+            # results[1] contains results for "keyword search"
+            # results[2] contains results for "text matching"
+            ```
+        """
+        if not queries:
+            raise ValueError("Queries list cannot be empty")
+
+        # Validate all queries are non-empty
+        for i, query in enumerate(queries):
+            if not query or not query.strip():
+                raise ValueError(f"Query at index {i} cannot be empty")
+
+        # Determine number of workers
+        if max_workers is None:
+            max_workers = min(32, len(queries) + 4)
+
+        try:
+            self.logger.info(
+                f"Performing batch keyword search for {len(queries)} queries"
+            )
+
+            # Create results list with same length as queries to maintain index alignment
+            results: List[List[SearchResultItem]] = [[] for _ in queries]
+
+            # Execute queries in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all queries
+                future_to_index = {
+                    executor.submit(
+                        self.search_keyword,
+                        query,
+                        collection,
+                        top_k,
+                        score_threshold,
+                        filter,
+                    ): i
+                    for i, query in enumerate(queries)
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_index):
+                    index = future_to_index[future]
+                    try:
+                        query_results = future.result()
+                        results[index] = query_results
+                        self.logger.debug(
+                            f"Query {index} ('{queries[index]}') returned {len(query_results)} results"
+                        )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Query {index} ('{queries[index]}') failed: {str(e)}"
+                        )
+                        # Keep empty list for failed query to maintain index alignment
+                        results[index] = []
+
+            self.logger.info(
+                f"Batch search completed: {len(queries)} queries processed, "
+                f"{sum(len(r) for r in results)} total results"
+            )
+            return results
+
+        except Exception as e:
+            self.logger.error(f"Batch keyword search failed: {str(e)}")
             raise
 
     def _process_vector_results(

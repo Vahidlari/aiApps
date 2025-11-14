@@ -189,11 +189,11 @@ def demonstrate_document_processing(kbm: KnowledgeBaseManager) -> None:
 
 
 def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
-    """Demonstrate various types of queries."""
-    print_step(3, "Demonstrating Query Capabilities")
+    """Demonstrate various types of queries using batch search."""
+    print_step(3, "Demonstrating Query Capabilities (Batch Search)")
 
     # Define different types of queries to showcase capabilities
-    queries = [
+    query_info_list = [
         {
             "category": "Physics Concepts",
             "query": "What is the relationship between mass and energy?",
@@ -221,25 +221,33 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
         },
     ]
 
-    for i, query_info in enumerate(queries, 1):
-        print(f"\n🔍 Query {i}: {query_info['category']}")
-        print(f"   Description: {query_info['description']}")
-        print(f"   Question: \"{query_info['query']}\"")
-        print("   " + "─" * 40)
+    # Extract query strings for batch search
+    queries = [query_info["query"] for query_info in query_info_list]
 
-        try:
-            # Execute the search
-            response = kbm.search(
-                query_info["query"],
-                strategy=SearchStrategy.HYBRID,
-                collection="latex_loading_example",
-            )
+    print("\n📦 Executing batch search for all queries...")
+    try:
+        # Execute batch search for all queries at once
+        batch_results = kbm.batch_search(
+            queries,
+            strategy=SearchStrategy.HYBRID,
+            collection="latex_loading_example",
+        )
+
+        # Process and display results
+        for i, (query_info, response) in enumerate(
+            zip(query_info_list, batch_results), 1
+        ):
+            print(f"\n🔍 Query {i}: {query_info['category']}")
+            print(f"   Description: {query_info['description']}")
+            print(f"   Question: \"{query_info['query']}\"")
+            print("   " + "─" * 40)
 
             # Format the response nicely
             print("   📝 Answer:")
             print(f"   Strategy: {response.strategy}")
             print(
-                f"   Found {response.total_found} chunks in {response.execution_time:.3f}s"
+                f"   Found {response.total_found} chunks in "
+                f"{response.execution_time:.3f}s"
             )
 
             if response.results:
@@ -276,9 +284,10 @@ def demonstrate_queries(kbm: KnowledgeBaseManager) -> None:
             else:
                 print("      No relevant results found.")
 
-        except Exception as e:
-            print(f"   ❌ Error executing query: {e}")
+            print()
 
+    except Exception as e:
+        print(f"   ❌ Error executing batch search: {e}")
         print()
 
 
