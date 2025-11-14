@@ -111,6 +111,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }} # Checkout branch HEAD to get latest commit (including updated Pipfile.lock)
+          fetch-depth: 0 # Fetch full history for better git operations
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -144,7 +147,7 @@ jobs:
 
       - name: Run basic smoke tests
         run: |
-          docker load -i /tmp/image.tar
+          # Image already loaded in previous step, no need to reload
           echo "Testing Python version..."
           docker run --rm test-image:pr-${{ github.event.pull_request.number }} \
             python3 --version
@@ -155,7 +158,7 @@ jobs:
 
       - name: Check dependency installation
         run: |
-          docker load -i /tmp/image.tar
+          # Image already loaded in previous step, no need to reload
           docker run --rm test-image:pr-${{ github.event.pull_request.number }} \
             python3 -c "import torch; import transformers; print('✅ Key dependencies available')" || echo "⚠️ Some optional dependencies may not be available"
         continue-on-error: true
@@ -185,15 +188,18 @@ jobs:
 
             if ('${{ job.status }}' === 'success') {
               message += `✅ All validation tests passed! The Docker image builds successfully with the current configuration.`;
-            } else if ('${{ job.status }}' === 'cancelled' || '${{ job.status }}' === 'timeout') {
-              message += `⏱️ Build timed out or was cancelled. This may indicate:\n`;
+            } else if ('${{ job.status }}' === 'cancelled') {
+              // Note: Timeouts result in 'cancelled' status in GitHub Actions
+              message += `⏱️ Build was cancelled (may be due to timeout). This may indicate:\n`;
               message += `- Slow dependency downloads (PyTorch/transformers can be large)\n`;
               message += `- Network issues during package installation\n`;
-              message += `- Stuck dependency resolution in Pipfile.lock\n\n`;
+              message += `- Stuck dependency resolution in Pipfile.lock\n`;
+              message += `- Job exceeded timeout limit\n\n`;
               message += `**Recommended actions:**\n`;
               message += `- Check if specific packages are causing delays\n`;
               message += `- Verify network connectivity in workflow logs\n`;
-              message += `- Consider splitting large dependencies if this persists`;
+              message += `- Consider splitting large dependencies if this persists\n`;
+              message += `- Review timeout settings if builds consistently take too long`;
             } else {
               message += `❌ Some tests failed. Please check the workflow logs for details.`;
             }

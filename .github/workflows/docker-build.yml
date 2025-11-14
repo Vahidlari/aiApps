@@ -1,8 +1,10 @@
 name: Build and Push Docker Image
 
 # Only trigger on pushes to main when Docker-related files change
-# Pipfile.lock changes trigger builds (after being updated in PRs)
-# Dockerfile changes trigger builds directly
+# - Pipfile.lock: Generated artifact automatically updated by PR validation workflow
+#   When Pipfile changes in a PR, the lock file is regenerated and merged to main
+# - Dockerfile: Direct modifications to the Docker image configuration
+#   Any changes to the Dockerfile require a new image build
 on:
   push:
     branches: [main]
