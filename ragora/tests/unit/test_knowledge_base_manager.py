@@ -1215,14 +1215,16 @@ class TestKnowledgeBaseManager:
         assert "doc1.pdf" in results[0].metadata["chunk_sources"]
         assert "text" in results[0].metadata["chunk_types"]
         assert "equation" in results[0].metadata["chunk_types"]
-        assert results[0].metadata["avg_similarity"] == 0.85  # (0.9 + 0.8) / 2
-        assert results[0].metadata["max_similarity"] == 0.9
+        assert results[0].metadata["avg_similarity"] == pytest.approx(
+            0.85
+        )  # (0.9 + 0.8) / 2
+        assert results[0].metadata["max_similarity"] == pytest.approx(0.9)
 
         # Second query should have metadata from its result
         assert "doc2.pdf" in results[1].metadata["chunk_sources"]
         assert "text" in results[1].metadata["chunk_types"]
-        assert results[1].metadata["avg_similarity"] == 0.7
-        assert results[1].metadata["max_similarity"] == 0.7
+        assert results[1].metadata["avg_similarity"] == pytest.approx(0.7)
+        assert results[1].metadata["max_similarity"] == pytest.approx(0.7)
 
     def test_batch_search_with_strategy_kwargs(self, mock_components):
         """Test batch search with strategy-specific kwargs."""

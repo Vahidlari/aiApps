@@ -863,12 +863,35 @@ class TestRetriever:
 
         with patch.object(retriever, "search_similar") as mock_search:
             mock_search.return_value = []
-            with patch("concurrent.futures.ThreadPoolExecutor") as mock_executor:
-                retriever.batch_search_similar(
-                    queries, collection="Document", max_workers=2
-                )
-                # Verify ThreadPoolExecutor was called with max_workers=2
-                mock_executor.assert_called_once_with(max_workers=2)
+            # Create mock futures
+            mock_futures = []
+            for _ in queries:
+                mock_future = MagicMock()
+                mock_future.result.return_value = []
+                mock_futures.append(mock_future)
+
+            # Create mock executor instance
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.submit.side_effect = mock_futures
+            mock_executor_instance.__enter__.return_value = mock_executor_instance
+            mock_executor_instance.__exit__.return_value = None
+
+            # Create mock ThreadPoolExecutor class
+            mock_executor_class = MagicMock()
+            mock_executor_class.return_value = mock_executor_instance
+
+            with patch("ragora.core.retriever.ThreadPoolExecutor", mock_executor_class):
+                with patch("ragora.core.retriever.as_completed") as mock_as_completed:
+
+                    def as_completed_side_effect(futures_dict):
+                        return iter(futures_dict.keys())
+
+                    mock_as_completed.side_effect = as_completed_side_effect
+                    retriever.batch_search_similar(
+                        queries, collection="Document", max_workers=2
+                    )
+                    # Verify ThreadPoolExecutor was called with max_workers=2
+                    mock_executor_class.assert_called_once_with(max_workers=2)
 
     def test_batch_search_default_max_workers(self, retriever):
         """Test batch search with default max_workers calculation."""
@@ -876,7 +899,30 @@ class TestRetriever:
 
         with patch.object(retriever, "search_similar") as mock_search:
             mock_search.return_value = []
-            with patch("concurrent.futures.ThreadPoolExecutor") as mock_executor:
-                retriever.batch_search_similar(queries, collection="Document")
-                # Default should be min(32, len(queries) + 4) = min(32, 14) = 14
-                mock_executor.assert_called_once_with(max_workers=14)
+            # Create mock futures
+            mock_futures = []
+            for _ in queries:
+                mock_future = MagicMock()
+                mock_future.result.return_value = []
+                mock_futures.append(mock_future)
+
+            # Create mock executor instance
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.submit.side_effect = mock_futures
+            mock_executor_instance.__enter__.return_value = mock_executor_instance
+            mock_executor_instance.__exit__.return_value = None
+
+            # Create mock ThreadPoolExecutor class
+            mock_executor_class = MagicMock()
+            mock_executor_class.return_value = mock_executor_instance
+
+            with patch("ragora.core.retriever.ThreadPoolExecutor", mock_executor_class):
+                with patch("ragora.core.retriever.as_completed") as mock_as_completed:
+
+                    def as_completed_side_effect(futures_dict):
+                        return iter(futures_dict.keys())
+
+                    mock_as_completed.side_effect = as_completed_side_effect
+                    retriever.batch_search_similar(queries, collection="Document")
+                    # Default should be min(32, len(queries) + 4) = min(32, 14) = 14
+                    mock_executor_class.assert_called_once_with(max_workers=14)
