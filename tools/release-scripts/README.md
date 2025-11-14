@@ -123,10 +123,10 @@ python format-release-notes.py <version> <repository> [milestone_summary_file]
 **Example:**
 ```bash
 # Without milestone summary
-python format-release-notes.py 1.2.0 Vahidlari/aiApps
+python format-release-notes.py 1.2.0 vahidlari/ragora-core
 
 # With milestone summary
-python format-release-notes.py 1.2.0 Vahidlari/aiApps milestone_summary.md
+python format-release-notes.py 1.2.0 vahidlari/ragora-core milestone_summary.md
 ```
 
 **Output:** Formatted markdown to stdout with:
@@ -149,7 +149,7 @@ create-version-metadata.sh <version> <git_commit> <git_branch> <repository>
 
 **Example:**
 ```bash
-bash create-version-metadata.sh 1.0.0 abc123def main Vahidlari/aiApps
+bash create-version-metadata.sh 1.0.0 abc123def main vahidlari/ragora-core
 ```
 
 **Creates:**
@@ -171,8 +171,8 @@ bash create-version-metadata.sh 1.0.0 abc123def main Vahidlari/aiApps
   "git_tag": "v1.0.0",
   "git_commit": "abc123def",
   "git_branch": "main",
-  "release_url": "https://github.com/Vahidlari/aiApps/releases/tag/v1.0.0",
-  "repository": "Vahidlari/aiApps"
+  "release_url": "https://github.com/vahidlari/ragora-core/releases/tag/v1.0.0",
+  "repository": "vahidlari/ragora-core"
 }
 ```
 
@@ -189,7 +189,7 @@ update-readme-version.sh <version> <repository>
 
 **Example:**
 ```bash
-bash update-readme-version.sh 1.0.0 Vahidlari/aiApps
+bash update-readme-version.sh 1.0.0 vahidlari/ragora-core
 ```
 
 **Actions:**
@@ -257,19 +257,19 @@ cd /workspaces/aiApps
 bash tools/release-scripts/check-release-commits.sh v1.0.0 HEAD
 
 # Test format release notes
-python tools/release-scripts/format-release-notes.py 1.2.0 Vahidlari/aiApps
+python tools/release-scripts/format-release-notes.py 1.2.0 vahidlari/ragora-core
 
 # Test metadata creation
 bash tools/release-scripts/create-version-metadata.sh \
   "1.0.0-test" \
   "abc123" \
   "test-branch" \
-  "Vahidlari/aiApps"
+  "vahidlari/ragora-core"
 
 # Test README update
 bash tools/release-scripts/update-readme-version.sh \
   "1.0.0-test" \
-  "Vahidlari/aiApps"
+  "vahidlari/ragora-core"
 
 # Check the results
 cat tools/database_server/config/VERSION

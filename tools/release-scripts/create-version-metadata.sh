@@ -7,7 +7,7 @@ set -e
 # Check arguments
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 <version> <git_commit> <git_branch> <repository>"
-    echo "Example: $0 1.0.0 abc123def main Vahidlari/aiApps"
+    echo "Example: $0 1.0.0 abc123def main vahidlari/ragora-core"
     exit 1
 fi
 

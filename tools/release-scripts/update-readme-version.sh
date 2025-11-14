@@ -7,7 +7,7 @@ set -e
 # Check arguments
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <version> <repository>"
-    echo "Example: $0 1.0.0 Vahidlari/aiApps"
+    echo "Example: $0 1.0.0 vahidlari/ragora-core"
     exit 1
 fi
 

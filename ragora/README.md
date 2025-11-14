@@ -60,7 +60,7 @@ You need a Weaviate instance running. Download the pre-configured Ragora databas
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+wget https://github.com/vahidlari/ragora-core/releases/latest/download/ragora-database-server.tar.gz
 
 # Extract and start
 tar -xzf ragora-database-server.tar.gz
@@ -214,7 +214,7 @@ Check out the [`ragora/examples/`](ragora/examples/) directory for more detailed
 
 ```bash
 # Clone the repository
-git clone https://github.com/vahidlari/aiapps.git
+git clone https://github.com/vahidlari/ragora-core.git
 cd aiapps/ragora
 
 # Install in development mode
@@ -275,11 +275,11 @@ Ragora builds on excellent open-source projects:
 
 ## 🔗 Links
 
-- **Repository**: [github.com/vahidlari/aiapps](https://github.com/vahidlari/aiapps)
+- **Repository**: [github.com/vahidlari/ragora-core](https://github.com/vahidlari/ragora-core)
 - **Documentation**: [docs/](docs/)
 - **Examples**: [examples/](../examples/)
-- **Issues**: [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/aiapps/discussions)
+- **Issues**: [GitHub Issues](https://github.com/vahidlari/ragora-core/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/ragora-core/discussions)
 
 ## 📮 Contact
 

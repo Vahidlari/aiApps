@@ -10,7 +10,7 @@ Usage:
     python format-release-notes.py <version> <repository> [milestone_summary_file]
 
 Example:
-    python format-release-notes.py 1.2.0 Vahidlari/aiApps milestone_summary.md
+    python format-release-notes.py 1.2.0 vahidlari/ragora-core milestone_summary.md
 """
 
 import argparse
@@ -25,7 +25,7 @@ def format_installation_instructions(version: str, repository: str) -> str:
 
     Args:
         version: The release version (e.g., "1.2.0")
-        repository: The repository name (e.g., "Vahidlari/aiApps")
+        repository: The repository name (e.g., "vahidlari/ragora-core")
 
     Returns:
         Formatted markdown string with installation instructions
@@ -109,14 +109,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s 1.2.0 Vahidlari/aiApps
-  %(prog)s 1.2.0 Vahidlari/aiApps milestone_summary.md
+  %(prog)s 1.2.0 vahidlari/ragora-core
+  %(prog)s 1.2.0 vahidlari/ragora-core milestone_summary.md
         """,
     )
 
     parser.add_argument("version", help="Release version (e.g., 1.2.0)")
 
-    parser.add_argument("repository", help="Repository name (e.g., Vahidlari/aiApps)")
+    parser.add_argument(
+        "repository", help="Repository name (e.g., vahidlari/ragora-core)"
+    )
 
     parser.add_argument(
         "milestone_summary_file",
