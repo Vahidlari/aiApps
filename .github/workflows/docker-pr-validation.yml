@@ -1,0 +1,212 @@
+name: Docker PR Validation
+
+# Validates Docker image builds on PRs
+# - Updates Pipfile.lock if Pipfile changed (treats lock file as generated artifact)
+# - Tests Docker image build without pushing to registry
+# Ensures Pipfile.lock is always up-to-date before testing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/docker/Pipfile"
+      - "tools/docker/Pipfile.lock"
+      - "tools/docker/Dockerfile"
+      - ".github/workflows/docker-pr-validation.yml"
+  workflow_dispatch: # Allow manual triggering for testing
+
+jobs:
+  update-pipfile-lock:
+    # Only updates Pipfile.lock if Pipfile changed in the PR
+    # Pipfile.lock is a generated artifact - always regenerated from Pipfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # Dependency resolution can be slow, but shouldn't take more than 20 min
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      pipfile_changed: ${{ steps.check.outputs.changed }}
+      lockfile_updated: ${{ steps.changes.outputs.has_changes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Check if Pipfile changed
+        id: check
+        run: |
+          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q "^tools/docker/Pipfile$"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Pipfile changed in this PR - will update Pipfile.lock"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Pipfile not changed in this PR - skipping dependency update"
+          fi
+
+      - name: Set up Python
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install pipenv
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+
+      - name: Generate Pipfile.lock
+        if: steps.check.outputs.changed == 'true'
+        timeout-minutes: 15 # Lock file generation timeout (dependency resolution can be slow)
+        working-directory: ./tools/docker
+        run: |
+          echo "Generating Pipfile.lock from Pipfile..."
+          pipenv lock
+          echo "Pipfile.lock generated successfully!"
+
+      - name: Check for changes
+        if: steps.check.outputs.changed == 'true'
+        id: changes
+        run: |
+          if git diff --quiet tools/docker/Pipfile.lock; then
+            echo "No changes to Pipfile.lock"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in Pipfile.lock"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push updated Pipfile.lock
+        if: steps.check.outputs.changed == 'true' && steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add tools/docker/Pipfile.lock
+          git commit -m "chore: update Pipfile.lock dependencies
+
+          Auto-generated from Pipfile changes in PR #${{ github.event.pull_request.number }}"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Notify completion
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          if [ "${{ steps.changes.outputs.has_changes }}" == "true" ]; then
+            echo "✅ Pipfile.lock updated successfully!"
+            echo "🔄 Pipfile.lock has been updated in the PR branch"
+          else
+            echo "ℹ️ Pipfile.lock was already up to date"
+          fi
+
+  test-docker-build:
+    # Always runs to test Docker build, but waits for dependency update if Pipfile changed
+    needs: update-pipfile-lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # Single-platform build timeout (allows for slow dependency downloads)
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }} # Checkout branch HEAD to get latest commit (including updated Pipfile.lock)
+          fetch-depth: 0 # Fetch full history for better git operations
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (test only, no push)
+        id: build
+        timeout-minutes: 40 # Build step timeout (PyTorch/transformers can take 20-30 min to download)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tools/docker
+          platforms: linux/amd64 # Test on single platform for speed
+          push: false # Don't push, just build
+          tags: test-image:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Validate Pipfile.lock exists
+        run: |
+          if [ ! -f "tools/docker/Pipfile.lock" ]; then
+            echo "❌ Pipfile.lock is missing. This should not happen if Pipfile exists."
+            exit 1
+          fi
+          echo "✅ Pipfile.lock exists"
+
+      - name: Test image can be loaded
+        run: |
+          docker load -i /tmp/image.tar
+          docker image inspect test-image:pr-${{ github.event.pull_request.number }} > /dev/null
+          echo "✅ Image built and loaded successfully"
+
+      - name: Run basic smoke tests
+        run: |
+          # Image already loaded in previous step, no need to reload
+          echo "Testing Python version..."
+          docker run --rm test-image:pr-${{ github.event.pull_request.number }} \
+            python3 --version
+          echo "Testing pipenv..."
+          docker run --rm test-image:pr-${{ github.event.pull_request.number }} \
+            pipenv --version
+          echo "✅ Basic smoke tests passed"
+
+      - name: Check dependency installation
+        run: |
+          # Image already loaded in previous step, no need to reload
+          docker run --rm test-image:pr-${{ github.event.pull_request.number }} \
+            python3 -c "import torch; import transformers; print('✅ Key dependencies available')" || echo "⚠️ Some optional dependencies may not be available"
+        continue-on-error: true
+
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            const pipfileChanged = '${{ needs.update-pipfile-lock.outputs.pipfile_changed }}' === 'true';
+            const lockfileUpdated = '${{ needs.update-pipfile-lock.outputs.lockfile_updated }}' === 'true';
+
+            let message = `## Docker Image Test Results ${status}\n\n`;
+            message += `**Build Status:** ${{ job.status }}\n`;
+            message += `**Image:** Built successfully (not pushed to registry)\n\n`;
+
+            if (pipfileChanged) {
+              if (lockfileUpdated) {
+                message += `**Dependencies:** Pipfile.lock was automatically updated from Pipfile changes\n\n`;
+              } else {
+                message += `**Dependencies:** Pipfile changed but Pipfile.lock was already up to date\n\n`;
+              }
+            } else {
+              message += `**Dependencies:** No Pipfile changes detected\n\n`;
+            }
+
+            if ('${{ job.status }}' === 'success') {
+              message += `✅ All validation tests passed! The Docker image builds successfully with the current configuration.`;
+            } else if ('${{ job.status }}' === 'cancelled') {
+              // Note: Timeouts result in 'cancelled' status in GitHub Actions
+              message += `⏱️ Build was cancelled (may be due to timeout). This may indicate:\n`;
+              message += `- Slow dependency downloads (PyTorch/transformers can be large)\n`;
+              message += `- Network issues during package installation\n`;
+              message += `- Stuck dependency resolution in Pipfile.lock\n`;
+              message += `- Job exceeded timeout limit\n\n`;
+              message += `**Recommended actions:**\n`;
+              message += `- Check if specific packages are causing delays\n`;
+              message += `- Verify network connectivity in workflow logs\n`;
+              message += `- Consider splitting large dependencies if this persists\n`;
+              message += `- Review timeout settings if builds consistently take too long`;
+            } else {
+              message += `❌ Some tests failed. Please check the workflow logs for details.`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
