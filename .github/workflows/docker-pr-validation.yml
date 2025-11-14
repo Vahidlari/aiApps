@@ -84,7 +84,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add tools/docker/Pipfile.lock
-          git commit -m "chore: update Pipfile.lock dependencies
+          git commit -m "chore: update Pipfile.lock dependencies [skip ci]
 
           Auto-generated from Pipfile changes in PR #${{ github.event.pull_request.number }}"
           git push origin HEAD:${{ github.head_ref }}
@@ -114,6 +114,35 @@ jobs:
         with:
           ref: ${{ github.head_ref }} # Checkout branch HEAD to get latest commit (including updated Pipfile.lock)
           fetch-depth: 0 # Fetch full history for better git operations
+
+      - name: Free up disk space
+        run: |
+          echo "📊 Disk space before cleanup:"
+          df -h
+
+          echo "🧹 Cleaning up disk space..."
+
+          # Clean APT cache and remove unnecessary packages
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+
+          # Remove unused system packages and tools
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+
+          # Clean Docker resources (images, containers, volumes, build cache)
+          docker system prune -af --volumes || true
+
+          # Remove all Docker images if any exist
+          docker rmi $(docker images -aq) 2>/dev/null || true
+
+          # Clean pip cache if it exists
+          pip cache purge 2>/dev/null || true
+
+          echo "📊 Disk space after cleanup:"
+          df -h
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -163,17 +192,34 @@ jobs:
             python3 -c "import torch; import transformers; print('✅ Key dependencies available')" || echo "⚠️ Some optional dependencies may not be available"
         continue-on-error: true
 
+      - name: Clean up Docker resources after build
+        if: always()
+        run: |
+          echo "🧹 Cleaning up Docker resources after build..."
+          # Remove the test image to free up space
+          docker rmi test-image:pr-${{ github.event.pull_request.number }} 2>/dev/null || true
+          # Clean up any dangling images or build cache
+          docker builder prune -af || true
+          echo "📊 Final disk space:"
+          df -h
+
       - name: Comment PR with results
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            // This step only runs after all previous steps complete (steps run sequentially)
+            // job.status reflects the final job status at this point
+            const jobStatus = '${{ job.status }}';
+            const workflowRunId = context.runId;
+            const workflowRunUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${workflowRunId}`;
+            const status = jobStatus === 'success' ? '✅' : '❌';
             const pipfileChanged = '${{ needs.update-pipfile-lock.outputs.pipfile_changed }}' === 'true';
             const lockfileUpdated = '${{ needs.update-pipfile-lock.outputs.lockfile_updated }}' === 'true';
 
             let message = `## Docker Image Test Results ${status}\n\n`;
-            message += `**Build Status:** ${{ job.status }}\n`;
+            message += `**Workflow Run:** [${workflowRunId}](${workflowRunUrl})\n`;
+            message += `**Build Status:** ${jobStatus}\n`;
             message += `**Image:** Built successfully (not pushed to registry)\n\n`;
 
             if (pipfileChanged) {
@@ -186,9 +232,9 @@ jobs:
               message += `**Dependencies:** No Pipfile changes detected\n\n`;
             }
 
-            if ('${{ job.status }}' === 'success') {
+            if (jobStatus === 'success') {
               message += `✅ All validation tests passed! The Docker image builds successfully with the current configuration.`;
-            } else if ('${{ job.status }}' === 'cancelled') {
+            } else if (jobStatus === 'cancelled') {
               // Note: Timeouts result in 'cancelled' status in GitHub Actions
               message += `⏱️ Build was cancelled (may be due to timeout). This may indicate:\n`;
               message += `- Slow dependency downloads (PyTorch/transformers can be large)\n`;
@@ -204,9 +250,36 @@ jobs:
               message += `❌ Some tests failed. Please check the workflow logs for details.`;
             }
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            // Find and update existing comment from this workflow, or create new one
+            const commentMarker = `<!-- docker-pr-validation-${workflowRunId} -->`;
+            message = commentMarker + '\n' + message;
+
+            // Get existing comments
+            const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: message
+              issue_number: context.issue.number,
             });
+
+            // Find comment from this workflow run
+            const existingComment = comments.data.find(comment => 
+              comment.body.includes(`Workflow Run:** [${workflowRunId}]`)
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: message
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
