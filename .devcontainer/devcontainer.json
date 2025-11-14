@@ -1,6 +1,6 @@
 {
     "name": "AI Models Practice Environment",
-    "image": "ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578",
+    "image": "ghcr.io/vahidlari/aiapps/ai-dev:main-660cd4e",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -39,6 +39,6 @@
             }
         }
     },
-    "postCreateCommand": "cd /workspaces/aiApps/ragora && LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo '0.0.0') && SETUPTOOLS_SCM_PRETEND_VERSION=\"$LATEST_TAG\" pip install -e . && echo 'export PATH=\"/home/vscode/.local/bin:$PATH\"' >> ~/.bashrc",
+    "postCreateCommand": "bash /workspaces/aiApps/.devcontainer/install_ragora.sh",
     "remoteUser": "vscode"
 }
