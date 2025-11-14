@@ -1,3 +1,13 @@
+## [1.3.0](https://github.com/Vahidlari/aiApps/compare/v1.2.1...v1.3.0) (2025-11-14)
+
+
+### Features
+
+* add efficient batch search api to knowledgebasemanager and retriever ([#92](https://github.com/Vahidlari/aiApps/issues/92)) ([bb44166](https://github.com/Vahidlari/aiApps/commit/bb441668f002ede4aee19e62ee3f054b0543860a)), closes [#60](https://github.com/Vahidlari/aiApps/issues/60)
+* add support for Markdown and plain text document processing ([#84](https://github.com/Vahidlari/aiApps/issues/84)) ([ad68839](https://github.com/Vahidlari/aiApps/commit/ad68839683474293fc205a07de0593f79eb178f6)), closes [#50](https://github.com/Vahidlari/aiApps/issues/50)
+* autogenerate reference api documentation using markdown for ragora project ([#86](https://github.com/Vahidlari/aiApps/issues/86)) ([ebc734e](https://github.com/Vahidlari/aiApps/commit/ebc734e73186d857155d06d7150ad5dbd1bb5a6f)), closes [#10](https://github.com/Vahidlari/aiApps/issues/10)
+* update devcontainer to latest image and fix ragora installation issue ([#93](https://github.com/Vahidlari/aiApps/issues/93)) ([a98e8f5](https://github.com/Vahidlari/aiApps/commit/a98e8f519848c5df655498184f6b15acb0bff1c3)), closes [#91](https://github.com/Vahidlari/aiApps/issues/91)
+
 ## [1.2.1](https://github.com/Vahidlari/aiApps/compare/v1.2.0...v1.2.1) (2025-11-07)
 
 
