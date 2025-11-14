@@ -1,6 +1,6 @@
 {
     "name": "AI Models Practice Environment",
-    "image": "ghcr.io/vahidlari/aiapps/ai-dev:main-33e9578",
+    "image": "ghcr.io/vahidlari/aiapps/ai-dev:main-660cd4e",
     "customizations": {
         "vscode": {
             "extensions": [
