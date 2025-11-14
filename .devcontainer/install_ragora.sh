@@ -13,8 +13,9 @@ echo "Installing ragora with version: $VERSION"
 export SETUPTOOLS_SCM_PRETEND_VERSION="$VERSION"
 export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_RAGORA="$VERSION"
 
-# Install the package
-pip install -e .
+# Install the package with dev dependencies (includes pytest, black, flake8, etc.)
+echo "Installing ragora package with development dependencies..."
+pip install -e ".[dev]"
 
 # Add local bin to PATH
 echo 'export PATH="/home/vscode/.local/bin:$PATH"' >> ~/.bashrc
