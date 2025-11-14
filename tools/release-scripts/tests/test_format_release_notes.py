@@ -36,14 +36,14 @@ def run_script(args, expect_success=True):
 @pytest.mark.unit
 def test_basic_installation_instructions():
     """Test basic installation instructions without milestone summary."""
-    stdout, stderr, returncode = run_script(["1.2.0", "Vahidlari/aiApps"])
+    stdout, stderr, returncode = run_script(["1.2.0", "vahidlari/ragora-core"])
 
     assert returncode == 0
     assert "## 📦 Installation" in stdout
     assert "pip install ragora==1.2.0" in stdout
     assert "v1.2.0/ragora-1.2.0-py3-none-any.whl" in stdout
     assert "v1.2.0/ragora-1.2.0.tar.gz" in stdout
-    assert "Vahidlari/aiApps" in stdout
+    assert "vahidlari/ragora-core" in stdout
 
 
 @pytest.mark.unit
@@ -54,7 +54,7 @@ def test_with_milestone_summary(temp_dir, sample_milestone_content):
     milestone_file.write_text(sample_milestone_content)
 
     stdout, stderr, returncode = run_script(
-        ["1.2.0", "Vahidlari/aiApps", str(milestone_file)]
+        ["1.2.0", "vahidlari/ragora-core", str(milestone_file)]
     )
 
     assert returncode == 0
@@ -68,7 +68,7 @@ def test_with_milestone_summary(temp_dir, sample_milestone_content):
 def test_missing_milestone_file():
     """Test with missing milestone summary file (should not fail)."""
     stdout, stderr, returncode = run_script(
-        ["1.2.0", "Vahidlari/aiApps", "/nonexistent/file.md"]
+        ["1.2.0", "vahidlari/ragora-core", "/nonexistent/file.md"]
     )
 
     assert returncode == 0
@@ -131,7 +131,7 @@ def test_with_existing_milestone_fixture(fixtures_dir):
 
     if milestone_file.exists():
         stdout, stderr, returncode = run_script(
-            ["1.2.0", "Vahidlari/aiApps", str(milestone_file)]
+            ["1.2.0", "vahidlari/ragora-core", str(milestone_file)]
         )
 
         assert returncode == 0

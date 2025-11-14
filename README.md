@@ -32,7 +32,7 @@ Set up the development environment:
 
 ```bash
 # Clone the repository
-git clone https://github.com/vahidlari/aiapps.git
+git clone https://github.com/vahidlari/ragora-core.git
 cd aiapps
 
 # Open in DevContainer (recommended)
@@ -96,7 +96,7 @@ Ragora uses Weaviate as its vector database. For users, download the pre-configu
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+wget https://github.com/vahidlari/ragora-core/releases/latest/download/ragora-database-server.tar.gz
 tar -xzf ragora-database-server.tar.gz
 cd ragora-database-server
 ./database-manager.sh start
@@ -214,9 +214,9 @@ This project is licensed under the MIT License - see the [LICENSE](ragora/LICENS
 ## 🔗 Links
 
 - **PyPI Package**: [pypi.org/project/ragora](https://pypi.org/project/ragora) (coming soon)
-- **GitHub Repository**: [github.com/vahidlari/aiapps](https://github.com/vahidlari/aiapps)
-- **Issues**: [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/aiapps/discussions)
+- **GitHub Repository**: [github.com/vahidlari/ragora-core](https://github.com/vahidlari/ragora-core)
+- **Issues**: [GitHub Issues](https://github.com/vahidlari/ragora-core/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/ragora-core/discussions)
 
 ## 🆘 Getting Help
 

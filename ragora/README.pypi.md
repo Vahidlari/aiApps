@@ -2,8 +2,8 @@
 
 [![PyPI version](https://badge.fury.io/py/ragora.svg)](https://pypi.org/project/ragora/)
 [![Python versions](https://img.shields.io/pypi/pyversions/ragora.svg)](https://pypi.org/project/ragora/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Vahidlari/aiApps/blob/main/ragora/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/vahidlari/aiapps.svg)](https://github.com/vahidlari/aiapps)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vahidlari/ragora-core/blob/main/ragora/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/vahidlari/ragora-core.svg)](https://github.com/vahidlari/ragora-core)
 
 **Build smarter, grounded, and transparent AI with Ragora.**
 
@@ -32,7 +32,7 @@ You need a Weaviate instance running. Download the pre-configured Ragora databas
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/Vahidlari/aiApps/releases/download/v<x.y.z>/database_server-<x.y.z>.tar.gz
+wget https://github.com/vahidlari/ragora-core/releases/download/v<x.y.z>/database_server-<x.y.z>.tar.gz
 
 # Extract and start
 tar -xzf database_server-<x.y.z>.tar.gz
@@ -94,7 +94,7 @@ results = kbm.search("neural networks", strategy=SearchStrategy.HYBRID, alpha=0.
 
 - **[Tool Documentation](https://vahidlari.github.io/aiApps/)**: Overal tool documentation, including instructions to get started
 - **[API Reference](https://vahidlari.github.io/aiApps/api-reference/)**: Complete API documentation
-- **[Examples Directory](https://github.com/vahidlari/aiapps/tree/main/ragora/ragora/examples)**: Working code examples
+- **[Examples Directory](https://github.com/vahidlari/ragora-core/tree/main/ragora/ragora/examples)**: Working code examples
   - `basic_usage.py`: Basic usage examples and getting started
   - `advanced_usage.py`: Advanced features and custom pipelines
   - `email_usage_examples.py`: Email integration examples
@@ -103,11 +103,11 @@ results = kbm.search("neural networks", strategy=SearchStrategy.HYBRID, alpha=0.
 
 - **Python**: 3.11 or higher
 - **Weaviate**: 1.22.0 or higher (for vector storage)
-- **Dependencies**: See [requirements.txt](https://github.com/vahidlari/aiapps/blob/main/ragora/requirements.txt)
+- **Dependencies**: See [requirements.txt](https://github.com/vahidlari/ragora-core/blob/main/ragora/requirements.txt)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](https://github.com/vahidlari/aiapps/blob/main/ragora/docs/contributing.md) for:
+We welcome contributions! Please see our [Contributing Guidelines](https://github.com/vahidlari/ragora-core/blob/main/ragora/docs/contributing.md) for:
 
 - Setting up your development environment
 - Code style and standards
@@ -116,13 +116,13 @@ We welcome contributions! Please see our [Contributing Guidelines](https://githu
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/vahidlari/aiapps/blob/main/ragora/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/vahidlari/ragora-core/blob/main/ragora/LICENSE) file for details.
 
 ## 🔗 Links
 
-- **Repository**: [github.com/vahidlari/aiapps](https://github.com/vahidlari/aiapps)
-- **Issues**: [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/aiapps/discussions)
+- **Repository**: [github.com/vahidlari/ragora-core](https://github.com/vahidlari/ragora-core)
+- **Issues**: [GitHub Issues](https://github.com/vahidlari/ragora-core/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vahidlari/ragora-core/discussions)
 
 ## 📮 Contact
 

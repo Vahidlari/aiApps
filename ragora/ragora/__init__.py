@@ -121,4 +121,4 @@ __all__ = [
 __author__ = "Vahid Lari"
 __email__ = "vahidlari@gmail.com"
 __description__ = "A knowledge base manager for LaTeX documents"
-__url__ = "https://github.com/vahidlari/aiapps"
+__url__ = "https://github.com/vahidlari/ragora-core"

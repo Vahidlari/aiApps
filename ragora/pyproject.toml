@@ -82,9 +82,9 @@ jupyter = [
 ragora = "ragora.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/vahidlari/aiapps"
-Repository = "https://github.com/vahidlari/aiapps"
-Issues = "https://github.com/vahidlari/aiapps/issues"
+Homepage = "https://github.com/vahidlari/ragora-core"
+Repository = "https://github.com/vahidlari/ragora-core"
+Issues = "https://github.com/vahidlari/ragora-core/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

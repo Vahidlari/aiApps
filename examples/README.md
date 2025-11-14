@@ -86,7 +86,7 @@ The examples require a running Weaviate instance. Download the pre-configured da
 
 ```bash
 # Download from GitHub releases
-wget https://github.com/vahidlari/aiapps/releases/latest/download/ragora-database-server.tar.gz
+wget https://github.com/vahidlari/ragora-core/releases/latest/download/ragora-database-server.tar.gz
 
 # Extract and start
 tar -xzf ragora-database-server.tar.gz
@@ -322,8 +322,8 @@ After running the examples, you can:
 If you encounter issues or have questions:
 
 - **Check Documentation**: See [ragora/docs/](../ragora/docs/)
-- **Review Issues**: Search [GitHub Issues](https://github.com/vahidlari/aiapps/issues)
-- **Ask Questions**: Start a [GitHub Discussion](https://github.com/vahidlari/aiapps/discussions)
+- **Review Issues**: Search [GitHub Issues](https://github.com/vahidlari/ragora-core/issues)
+- **Ask Questions**: Start a [GitHub Discussion](https://github.com/vahidlari/ragora-core/discussions)
 - **Report Bugs**: Create a new issue with detailed information
 
 ## 🤝 Contributing Examples
