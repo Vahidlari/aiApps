@@ -29,6 +29,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          echo "📊 Disk space before cleanup:"
+          df -h
+
+          echo "🧹 Cleaning up disk space..."
+
+          # Clean APT cache and remove unnecessary packages
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+
+          # Remove unused system packages and tools
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+
+          # Clean Docker resources (images, containers, volumes, build cache)
+          docker system prune -af --volumes || true
+
+          # Remove all Docker images if any exist
+          docker rmi $(docker images -aq) 2>/dev/null || true
+
+          # Clean pip cache if it exists
+          pip cache purge 2>/dev/null || true
+
+          echo "📊 Disk space after cleanup:"
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
