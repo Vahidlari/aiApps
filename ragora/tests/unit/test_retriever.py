@@ -635,3 +635,294 @@ class TestRetriever:
                     return_metadata=MetadataQuery(distance=True),
                     filters=None,
                 )
+
+    def test_batch_search_similar_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful batch vector similarity search."""
+        queries = ["query1", "query2", "query3"]
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.near_text.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(retriever, "_preprocess_query", return_value="processed"):
+            with patch.object(retriever, "_process_vector_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+
+                results = retriever.batch_search_similar(
+                    queries, collection="Document", top_k=5
+                )
+
+                assert len(results) == 3
+                assert all(len(r) == 1 for r in results)
+                assert mock_collection.query.near_text.call_count == 3
+
+    def test_batch_search_similar_empty_queries(self, retriever):
+        """Test batch search with empty queries list."""
+        with pytest.raises(ValueError, match="Queries list cannot be empty"):
+            retriever.batch_search_similar([], collection="Document")
+
+    def test_batch_search_similar_empty_query_string(self, retriever):
+        """Test batch search with empty query string."""
+        with pytest.raises(ValueError, match="Query at index 1 cannot be empty"):
+            retriever.batch_search_similar(
+                ["query1", "", "query3"], collection="Document"
+            )
+
+    def test_batch_search_similar_partial_failure(self, retriever):
+        """Test batch search with partial query failures."""
+        queries = ["query1", "query2", "query3"]
+
+        # Mock search_similar to raise on second call
+        call_count = {"count": 0}
+
+        def search_similar_side_effect(*args, **kwargs):
+            call_count["count"] += 1
+            if call_count["count"] == 2:
+                raise Exception("Query 2 failed")
+            return [
+                SearchResultItem(
+                    content=f"test{call_count['count']}",
+                    chunk_id=f"test_{call_count['count']}",
+                    similarity_score=0.8,
+                    retrieval_method="vector_similarity",
+                )
+            ]
+
+        with patch.object(
+            retriever, "search_similar", side_effect=search_similar_side_effect
+        ):
+            results = retriever.batch_search_similar(
+                queries, collection="Document", top_k=5
+            )
+
+            # All queries should have results (empty for failed ones)
+            assert len(results) == 3
+            # First and third should have results, second should be empty
+            assert len(results[0]) > 0
+            assert len(results[1]) == 0  # Failed query
+            assert len(results[2]) > 0
+
+    def test_batch_search_similar_with_filter(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test batch search with filter parameter."""
+        queries = ["query1", "query2"]
+        test_filter = Filter.by_property("chunk_type").equal("text")
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.near_text.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(retriever, "_preprocess_query", return_value="processed"):
+            with patch.object(retriever, "_process_vector_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+
+                results = retriever.batch_search_similar(
+                    queries, collection="Document", top_k=5, filter=test_filter
+                )
+
+                assert len(results) == 2
+                # Verify filter was passed to all calls
+                assert all(
+                    call.kwargs.get("filters") == test_filter
+                    for call in mock_collection.query.near_text.call_args_list
+                )
+
+    def test_batch_search_hybrid_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful batch hybrid search."""
+        queries = ["query1", "query2"]
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.hybrid.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(retriever, "_preprocess_query", return_value="processed"):
+            with patch.object(retriever, "_process_hybrid_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        similarity_score=0.8,
+                        hybrid_score=0.8,
+                        retrieval_method="hybrid_search",
+                    )
+                ]
+
+                results = retriever.batch_search_hybrid(
+                    queries, collection="Document", alpha=0.7, top_k=5
+                )
+
+                assert len(results) == 2
+                assert all(len(r) == 1 for r in results)
+                assert mock_collection.query.hybrid.call_count == 2
+
+    def test_batch_search_hybrid_invalid_alpha(self, retriever):
+        """Test batch hybrid search with invalid alpha."""
+        with pytest.raises(ValueError, match="Alpha must be between 0.0 and 1.0"):
+            retriever.batch_search_hybrid(
+                ["query1", "query2"], collection="Document", alpha=1.5
+            )
+
+    def test_batch_search_keyword_success(
+        self, retriever, mock_db_manager, mock_collection, mock_search_result
+    ):
+        """Test successful batch keyword search."""
+        queries = ["query1", "query2", "query3"]
+        mock_result = Mock()
+        mock_result.objects = [mock_search_result]
+        mock_collection.query.bm25.return_value = mock_result
+        mock_db_manager.get_collection.return_value = mock_collection
+
+        with patch.object(retriever, "_preprocess_query", return_value="processed"):
+            with patch.object(retriever, "_process_keyword_results") as mock_process:
+                mock_process.return_value = [
+                    SearchResultItem(
+                        content="test",
+                        chunk_id="test_1",
+                        bm25_score=0.8,
+                        retrieval_method="keyword_search",
+                    )
+                ]
+
+                results = retriever.batch_search_keyword(
+                    queries, collection="Document", top_k=5
+                )
+
+                assert len(results) == 3
+                assert all(len(r) == 1 for r in results)
+                assert mock_collection.query.bm25.call_count == 3
+
+    def test_batch_search_result_indexing(self, retriever):
+        """Test that batch search results maintain query index alignment."""
+        queries = ["query1", "query2", "query3"]
+
+        # Mock search methods to return different results for each query
+        def search_similar_side_effect(query, *args, **kwargs):
+            if query == "query1":
+                return [
+                    SearchResultItem(
+                        content="result1",
+                        chunk_id="chunk1",
+                        similarity_score=0.9,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+            elif query == "query2":
+                return [
+                    SearchResultItem(
+                        content="result2",
+                        chunk_id="chunk2",
+                        similarity_score=0.8,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+            else:  # query3
+                return [
+                    SearchResultItem(
+                        content="result3",
+                        chunk_id="chunk3",
+                        similarity_score=0.7,
+                        retrieval_method="vector_similarity",
+                    )
+                ]
+
+        with patch.object(
+            retriever, "search_similar", side_effect=search_similar_side_effect
+        ):
+            results = retriever.batch_search_similar(
+                queries, collection="Document", top_k=5
+            )
+
+            # Verify results are in correct order
+            assert len(results) == 3
+            assert results[0][0].content == "result1"
+            assert results[1][0].content == "result2"
+            assert results[2][0].content == "result3"
+
+    def test_batch_search_max_workers(self, retriever):
+        """Test batch search with custom max_workers."""
+        queries = ["query1", "query2", "query3"]
+
+        with patch.object(retriever, "search_similar") as mock_search:
+            mock_search.return_value = []
+            # Create mock futures
+            mock_futures = []
+            for _ in queries:
+                mock_future = MagicMock()
+                mock_future.result.return_value = []
+                mock_futures.append(mock_future)
+
+            # Create mock executor instance
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.submit.side_effect = mock_futures
+            mock_executor_instance.__enter__.return_value = mock_executor_instance
+            mock_executor_instance.__exit__.return_value = None
+
+            # Create mock ThreadPoolExecutor class
+            mock_executor_class = MagicMock()
+            mock_executor_class.return_value = mock_executor_instance
+
+            with patch("ragora.core.retriever.ThreadPoolExecutor", mock_executor_class):
+                with patch("ragora.core.retriever.as_completed") as mock_as_completed:
+
+                    def as_completed_side_effect(futures_dict):
+                        return iter(futures_dict.keys())
+
+                    mock_as_completed.side_effect = as_completed_side_effect
+                    retriever.batch_search_similar(
+                        queries, collection="Document", max_workers=2
+                    )
+                    # Verify ThreadPoolExecutor was called with max_workers=2
+                    mock_executor_class.assert_called_once_with(max_workers=2)
+
+    def test_batch_search_default_max_workers(self, retriever):
+        """Test batch search with default max_workers calculation."""
+        queries = ["query1"] * 10  # 10 queries
+
+        with patch.object(retriever, "search_similar") as mock_search:
+            mock_search.return_value = []
+            # Create mock futures
+            mock_futures = []
+            for _ in queries:
+                mock_future = MagicMock()
+                mock_future.result.return_value = []
+                mock_futures.append(mock_future)
+
+            # Create mock executor instance
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.submit.side_effect = mock_futures
+            mock_executor_instance.__enter__.return_value = mock_executor_instance
+            mock_executor_instance.__exit__.return_value = None
+
+            # Create mock ThreadPoolExecutor class
+            mock_executor_class = MagicMock()
+            mock_executor_class.return_value = mock_executor_instance
+
+            with patch("ragora.core.retriever.ThreadPoolExecutor", mock_executor_class):
+                with patch("ragora.core.retriever.as_completed") as mock_as_completed:
+
+                    def as_completed_side_effect(futures_dict):
+                        return iter(futures_dict.keys())
+
+                    mock_as_completed.side_effect = as_completed_side_effect
+                    retriever.batch_search_similar(queries, collection="Document")
+                    # Default should be min(32, len(queries) + 4) = min(32, 14) = 14
+                    mock_executor_class.assert_called_once_with(max_workers=14)

@@ -204,9 +204,7 @@ class TestKnowledgeBaseManager:
         finally:
             os.unlink(temp_path)
 
-    def test_process_markdown_document(
-        self, mock_components, sample_chunks, tmp_path
-    ):
+    def test_process_markdown_document(self, mock_components, sample_chunks, tmp_path):
         """Markdown documents should be routed through the preprocessor."""
 
         mock_components["document_preprocessor"].preprocess_document.return_value = (
@@ -228,9 +226,9 @@ class TestKnowledgeBaseManager:
         )
 
         assert result == ["uuid-md"]
-        mock_components["document_preprocessor"].preprocess_document.assert_called_once_with(
-            str(markdown_file), "markdown"
-        )
+        mock_components[
+            "document_preprocessor"
+        ].preprocess_document.assert_called_once_with(str(markdown_file), "markdown")
         mock_components["vector_store"].store_chunks.assert_called_once_with(
             sample_chunks, collection="Doc"
         )
@@ -257,9 +255,9 @@ class TestKnowledgeBaseManager:
         )
 
         assert result == ["uuid-txt"]
-        mock_components["document_preprocessor"].preprocess_document.assert_called_once_with(
-            str(text_file), "text"
-        )
+        mock_components[
+            "document_preprocessor"
+        ].preprocess_document.assert_called_once_with(str(text_file), "text")
         mock_components["vector_store"].store_chunks.assert_called_once_with(
             sample_chunks, collection="Doc"
         )
@@ -1026,3 +1024,315 @@ class TestKnowledgeBaseManager:
         assert result is not None
         assert result.metadata.source_document == "test_doc.pdf"
         assert result.metadata.page_number == 1
+
+    def test_batch_search_success(self, mock_components):
+        """Test successful batch search."""
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
+
+        queries = ["query1", "query2", "query3"]
+        batch_results = [
+            [
+                SearchResultItem(
+                    content="result1",
+                    chunk_id="chunk1",
+                    properties={"content": "result1", "chunk_id": "chunk1"},
+                    similarity_score=0.9,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="doc1.pdf"),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="result2",
+                    chunk_id="chunk2",
+                    properties={"content": "result2", "chunk_id": "chunk2"},
+                    similarity_score=0.8,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="doc2.pdf"),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="result3",
+                    chunk_id="chunk3",
+                    properties={"content": "result3", "chunk_id": "chunk3"},
+                    similarity_score=0.7,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="doc3.pdf"),
+                )
+            ],
+        ]
+
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID, top_k=5)
+
+        # Assertions
+        assert len(results) == 3
+        assert all(isinstance(r, SearchResult) for r in results)
+        assert results[0].query == "query1"
+        assert results[1].query == "query2"
+        assert results[2].query == "query3"
+        assert results[0].total_found == 1
+        assert results[1].total_found == 1
+        assert results[2].total_found == 1
+        mock_components["retriever"].batch_search_hybrid.assert_called_once()
+
+    def test_batch_search_different_strategies(self, mock_components):
+        """Test batch search with different strategies."""
+        from ragora.core.models import SearchResultItem
+
+        queries = ["query1", "query2"]
+        batch_results = [[], []]  # Empty results for simplicity
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test SIMILAR strategy
+        mock_components["retriever"].batch_search_similar.return_value = batch_results
+        results = kbm.batch_search(queries, strategy=SearchStrategy.SIMILAR)
+        assert len(results) == 2
+        mock_components["retriever"].batch_search_similar.assert_called_once()
+
+        # Test KEYWORD strategy
+        mock_components["retriever"].batch_search_keyword.return_value = batch_results
+        results = kbm.batch_search(queries, strategy=SearchStrategy.KEYWORD)
+        assert len(results) == 2
+        mock_components["retriever"].batch_search_keyword.assert_called_once()
+
+        # Test HYBRID strategy
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID)
+        assert len(results) == 2
+        mock_components["retriever"].batch_search_hybrid.assert_called_once()
+
+    def test_batch_search_empty_queries(self, mock_components):
+        """Test batch search with empty queries list."""
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.logger = Mock()
+
+        with pytest.raises(ValueError, match="Queries list cannot be empty"):
+            kbm.batch_search([], strategy=SearchStrategy.HYBRID)
+
+    def test_batch_search_empty_query_string(self, mock_components):
+        """Test batch search with empty query string."""
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.logger = Mock()
+
+        with pytest.raises(ValueError, match="Query at index 1 cannot be empty"):
+            kbm.batch_search(["query1", "", "query3"], strategy=SearchStrategy.HYBRID)
+
+    def test_batch_search_not_initialized(self):
+        """Test batch search when system not initialized."""
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = False
+
+        with pytest.raises(
+            RuntimeError, match="Knowledge base manager not initialized"
+        ):
+            kbm.batch_search(["query1"], strategy=SearchStrategy.HYBRID)
+
+    def test_batch_search_metadata_aggregation(self, mock_components):
+        """Test batch search metadata aggregation per query."""
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
+
+        queries = ["query1", "query2"]
+        batch_results = [
+            [
+                SearchResultItem(
+                    content="result1",
+                    chunk_id="chunk1",
+                    properties={
+                        "content": "result1",
+                        "chunk_id": "chunk1",
+                        "source_document": "doc1.pdf",
+                        "chunk_type": "text",
+                    },
+                    similarity_score=0.9,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(
+                        source_document="doc1.pdf", chunk_type="text"
+                    ),
+                ),
+                SearchResultItem(
+                    content="result2",
+                    chunk_id="chunk2",
+                    properties={
+                        "content": "result2",
+                        "chunk_id": "chunk2",
+                        "source_document": "doc1.pdf",
+                        "chunk_type": "equation",
+                    },
+                    similarity_score=0.8,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(
+                        source_document="doc1.pdf", chunk_type="equation"
+                    ),
+                ),
+            ],
+            [
+                SearchResultItem(
+                    content="result3",
+                    chunk_id="chunk3",
+                    properties={
+                        "content": "result3",
+                        "chunk_id": "chunk3",
+                        "source_document": "doc2.pdf",
+                        "chunk_type": "text",
+                    },
+                    similarity_score=0.7,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(
+                        source_document="doc2.pdf", chunk_type="text"
+                    ),
+                )
+            ],
+        ]
+
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID)
+
+        # Assertions
+        assert len(results) == 2
+        # First query should have metadata from both results
+        assert "doc1.pdf" in results[0].metadata["chunk_sources"]
+        assert "text" in results[0].metadata["chunk_types"]
+        assert "equation" in results[0].metadata["chunk_types"]
+        assert results[0].metadata["avg_similarity"] == pytest.approx(
+            0.85
+        )  # (0.9 + 0.8) / 2
+        assert results[0].metadata["max_similarity"] == pytest.approx(0.9)
+
+        # Second query should have metadata from its result
+        assert "doc2.pdf" in results[1].metadata["chunk_sources"]
+        assert "text" in results[1].metadata["chunk_types"]
+        assert results[1].metadata["avg_similarity"] == pytest.approx(0.7)
+        assert results[1].metadata["max_similarity"] == pytest.approx(0.7)
+
+    def test_batch_search_with_strategy_kwargs(self, mock_components):
+        """Test batch search with strategy-specific kwargs."""
+        from ragora.core.models import SearchResultItem
+
+        queries = ["query1", "query2"]
+        batch_results = [[], []]
+
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test with alpha and score_threshold
+        results = kbm.batch_search(
+            queries,
+            strategy=SearchStrategy.HYBRID,
+            alpha=0.7,
+            score_threshold=0.5,
+        )
+
+        # Verify kwargs were passed
+        call_args = mock_components["retriever"].batch_search_hybrid.call_args
+        assert call_args[0][0] == queries  # queries list
+        assert call_args[1]["alpha"] == 0.7
+        assert call_args[1]["score_threshold"] == 0.5
+
+    def test_batch_search_with_filter(self, mock_components):
+        """Test batch search with filter parameter."""
+        from weaviate.classes.query import Filter
+
+        from ragora.core.models import SearchResultItem
+
+        queries = ["query1", "query2"]
+        batch_results = [[], []]
+        test_filter = Filter.by_property("chunk_type").equal("text")
+
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        results = kbm.batch_search(
+            queries, strategy=SearchStrategy.HYBRID, filter=test_filter
+        )
+
+        # Verify filter was passed
+        call_args = mock_components["retriever"].batch_search_hybrid.call_args
+        assert call_args[1]["filter"] == test_filter
+
+    def test_batch_search_result_ordering(self, mock_components):
+        """Test that batch search results maintain query order."""
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
+
+        queries = ["query1", "query2", "query3"]
+        batch_results = [
+            [
+                SearchResultItem(
+                    content="result1",
+                    chunk_id="chunk1",
+                    properties={"content": "result1", "chunk_id": "chunk1"},
+                    similarity_score=0.9,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="result2",
+                    chunk_id="chunk2",
+                    properties={"content": "result2", "chunk_id": "chunk2"},
+                    similarity_score=0.8,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="result3",
+                    chunk_id="chunk3",
+                    properties={"content": "result3", "chunk_id": "chunk3"},
+                    similarity_score=0.7,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(),
+                )
+            ],
+        ]
+
+        mock_components["retriever"].batch_search_hybrid.return_value = batch_results
+
+        kbm = KnowledgeBaseManager.__new__(KnowledgeBaseManager)
+        kbm.is_initialized = True
+        kbm.retriever = mock_components["retriever"]
+        kbm.logger = Mock()
+
+        # Test
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID)
+
+        # Verify results are in correct order
+        assert len(results) == 3
+        assert results[0].query == "query1"
+        assert results[0].results[0].content == "result1"
+        assert results[1].query == "query2"
+        assert results[1].results[0].content == "result2"
+        assert results[2].query == "query3"
+        assert results[2].results[0].content == "result3"

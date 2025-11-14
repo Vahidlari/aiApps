@@ -516,3 +516,153 @@ Einstein, A. (1905). On the Electrodynamics of Moving Bodies. Annalen der Physik
         assert kbm.embedding_engine is None  # Not initialized by default
         assert kbm.document_preprocessor is not None
         assert kbm.data_chunker is None  # Not initialized by KnowledgeBaseManager
+
+    @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
+    @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
+    @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
+    def test_batch_search_integration(
+        self,
+        mock_document_preprocessor,
+        mock_retriever,
+        mock_vector_store,
+        mock_db_manager,
+    ):
+        """Test batch search integration with multiple queries."""
+        from ragora.core.models import RetrievalMetadata, SearchResultItem
+
+        # Setup mocks
+        mock_db_manager.return_value = Mock()
+        mock_vector_store.return_value = Mock()
+        mock_retriever_instance = Mock()
+        mock_retriever.return_value = mock_retriever_instance
+        mock_document_preprocessor.return_value = Mock()
+
+        # Create knowledge base manager
+        kbm = KnowledgeBaseManager()
+
+        # Setup batch search results
+        queries = ["neural networks", "machine learning", "deep learning"]
+        batch_results = [
+            [
+                SearchResultItem(
+                    content="Neural networks are computing systems",
+                    chunk_id="chunk1",
+                    properties={
+                        "content": "Neural networks are computing systems",
+                        "chunk_id": "chunk1",
+                        "source_document": "ai_paper.pdf",
+                    },
+                    similarity_score=0.95,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="ai_paper.pdf"),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="Machine learning algorithms learn from data",
+                    chunk_id="chunk2",
+                    properties={
+                        "content": "Machine learning algorithms learn from data",
+                        "chunk_id": "chunk2",
+                        "source_document": "ml_book.pdf",
+                    },
+                    similarity_score=0.92,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="ml_book.pdf"),
+                )
+            ],
+            [
+                SearchResultItem(
+                    content="Deep learning uses multiple layers",
+                    chunk_id="chunk3",
+                    properties={
+                        "content": "Deep learning uses multiple layers",
+                        "chunk_id": "chunk3",
+                        "source_document": "dl_tutorial.pdf",
+                    },
+                    similarity_score=0.88,
+                    retrieval_method="hybrid_search",
+                    metadata=RetrievalMetadata(source_document="dl_tutorial.pdf"),
+                )
+            ],
+        ]
+
+        mock_retriever_instance.batch_search_hybrid.return_value = batch_results
+
+        # Test batch search
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID, top_k=5)
+
+        # Assertions
+        assert len(results) == 3
+        assert all(isinstance(r, SearchResult) for r in results)
+        assert results[0].query == "neural networks"
+        assert results[1].query == "machine learning"
+        assert results[2].query == "deep learning"
+        assert results[0].total_found == 1
+        assert results[1].total_found == 1
+        assert results[2].total_found == 1
+
+        # Verify batch_search_hybrid was called with correct parameters
+        mock_retriever_instance.batch_search_hybrid.assert_called_once()
+        call_args = mock_retriever_instance.batch_search_hybrid.call_args
+        assert call_args[0][0] == queries
+        assert call_args[1]["top_k"] == 5
+        assert call_args[1]["alpha"] == 0.5  # Default alpha
+
+    @patch("ragora.ragora.core.knowledge_base_manager.DatabaseManager")
+    @patch("ragora.ragora.core.knowledge_base_manager.VectorStore")
+    @patch("ragora.ragora.core.knowledge_base_manager.Retriever")
+    @patch("ragora.ragora.core.knowledge_base_manager.DocumentPreprocessor")
+    def test_batch_search_performance_comparison(
+        self,
+        mock_document_preprocessor,
+        mock_retriever,
+        mock_vector_store,
+        mock_db_manager,
+    ):
+        """Test that batch search processes multiple queries efficiently."""
+        from ragora.core.models import SearchResultItem
+
+        # Setup mocks
+        mock_db_manager.return_value = Mock()
+        mock_vector_store.return_value = Mock()
+        mock_retriever_instance = Mock()
+        mock_retriever.return_value = mock_retriever_instance
+        mock_document_preprocessor.return_value = Mock()
+
+        # Create knowledge base manager
+        kbm = KnowledgeBaseManager()
+
+        # Setup batch search with multiple queries
+        queries = [f"query{i}" for i in range(10)]  # 10 queries
+        batch_results = [
+            [
+                SearchResultItem(
+                    content=f"result for query{i}",
+                    chunk_id=f"chunk{i}",
+                    properties={
+                        "content": f"result for query{i}",
+                        "chunk_id": f"chunk{i}",
+                    },
+                    similarity_score=0.8,
+                    retrieval_method="hybrid_search",
+                )
+            ]
+            for i in range(10)
+        ]
+
+        mock_retriever_instance.batch_search_hybrid.return_value = batch_results
+
+        # Test batch search
+        results = kbm.batch_search(queries, strategy=SearchStrategy.HYBRID)
+
+        # Assertions
+        assert len(results) == 10
+        assert all(r.total_found == 1 for r in results)
+        # Verify batch method was called once (not 10 times)
+        assert mock_retriever_instance.batch_search_hybrid.call_count == 1
+
+        # Verify all queries were processed
+        call_args = mock_retriever_instance.batch_search_hybrid.call_args
+        assert len(call_args[0][0]) == 10

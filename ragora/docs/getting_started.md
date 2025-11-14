@@ -269,6 +269,91 @@ results = kbm.search("query", filter=raw_filter)
 
 For more details, see the [API Reference - Filters](api-reference.md#filters).
 
+### Batch Search
+
+Ragora supports efficient batch search operations for processing multiple queries in parallel. This is particularly useful for bulk operations and can significantly improve performance when querying multiple items.
+
+```python
+from ragora import KnowledgeBaseManager, SearchStrategy
+
+kbm = KnowledgeBaseManager()
+
+# Batch search with multiple queries
+queries = [
+    "What is machine learning?",
+    "Explain neural networks",
+    "How does deep learning work?",
+]
+
+# Execute batch search
+results = kbm.batch_search(
+    queries,
+    strategy=SearchStrategy.HYBRID,
+    top_k=5,
+    alpha=0.7
+)
+
+# Process results for each query
+for i, result in enumerate(results):
+    print(f"Query: {queries[i]}")
+    print(f"Found {result.total_found} results in {result.execution_time:.3f}s")
+    for hit in result.results:
+        print(f"  - {hit.content[:100]}...")
+```
+
+**Batch Search Features:**
+
+- **Parallel Execution**: Queries are processed in parallel using ThreadPoolExecutor for improved performance
+- **Consistent API**: Same parameters as single-query search (strategy, top_k, filter, etc.)
+- **Index Alignment**: Results maintain the same order as input queries
+- **Error Handling**: Individual query failures don't stop the batch operation
+- **Performance**: Significantly faster than sequential searches for multiple queries
+
+**Performance Notes:**
+
+- Batch search uses parallel execution, making it much faster than calling `search()` multiple times
+- Default `max_workers` is `min(32, len(queries) + 4)` for optimal performance
+- For large batches (100+ queries), consider processing in smaller chunks
+- Total execution time is logged, along with average time per query
+
+**Example: Batch Search with Filters**
+
+```python
+from ragora import FilterBuilder
+
+# Batch search with filter
+queries = ["machine learning", "neural networks"]
+text_filter = FilterBuilder.by_chunk_type("text")
+
+results = kbm.batch_search(
+    queries,
+    strategy=SearchStrategy.HYBRID,
+    filter=text_filter,
+    top_k=10
+)
+```
+
+**Example: Using Retriever Batch Methods Directly**
+
+```python
+from ragora.core import Retriever, DatabaseManager
+
+db_manager = DatabaseManager(url="http://localhost:8080")
+retriever = Retriever(db_manager=db_manager)
+
+# Batch similarity search
+queries = ["query1", "query2", "query3"]
+results = retriever.batch_search_similar(
+    queries,
+    collection="Document",
+    top_k=5
+)
+
+# results[0] contains results for "query1"
+# results[1] contains results for "query2"
+# results[2] contains results for "query3"
+```
+
 ## 🔧 Configuration
 
 ### Embedding Models

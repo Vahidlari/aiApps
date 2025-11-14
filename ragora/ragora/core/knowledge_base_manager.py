@@ -427,6 +427,196 @@ class KnowledgeBaseManager:
             self.logger.error(f"Search failed: {str(e)}")
             raise
 
+    def batch_search(
+        self,
+        queries: List[str],
+        collection: str = "Document",
+        strategy: SearchStrategy = SearchStrategy.HYBRID,
+        top_k: int = 5,
+        filter: Optional[Filter] = None,
+        max_workers: Optional[int] = None,
+        **strategy_kwargs,
+    ) -> List[SearchResult]:
+        """Unified batch search interface for multiple queries.
+
+        This method performs search operations for multiple queries in parallel,
+        improving performance for bulk operations while maintaining consistency
+        with the single-query search API.
+
+        Args:
+            queries: List of search query texts
+            collection: Collection name to search in
+            strategy: Search strategy to use (applied to all queries)
+            top_k: Number of results to return per query
+            filter: Optional Weaviate Filter to filter results by properties
+            max_workers: Maximum number of parallel workers
+                (default: min(32, len(queries) + 4))
+            **strategy_kwargs: Strategy-specific parameters
+                (alpha, score_threshold, etc.)
+
+        Returns:
+            List[SearchResult]: List of search results, one per query, maintaining
+                the same order as the input queries list
+
+        Raises:
+            RuntimeError: If system not initialized
+            ValueError: If queries list is empty, contains empty strings, or invalid strategy
+
+        Examples:
+            ```python
+            kb = KnowledgeBaseManager()
+            queries = ["neural networks", "machine learning", "deep learning"]
+            results = kb.batch_search(
+                queries,
+                strategy=SearchStrategy.HYBRID,
+                top_k=5
+            )
+            for i, result in enumerate(results):
+                print(f"Query: {queries[i]}")
+                print(f"Found {result.total_found} results")
+                for hit in result.results:
+                    print(f"  - {hit.content[:50]}...")
+            ```
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Knowledge base manager not initialized")
+
+        if not queries:
+            raise ValueError("Queries list cannot be empty")
+
+        # Validate all queries are non-empty
+        for i, query in enumerate(queries):
+            if not query or not query.strip():
+                raise ValueError(f"Query at index {i} cannot be empty")
+
+        start_time = time.time()
+
+        try:
+            self.logger.info(
+                f"Processing batch search: {len(queries)} queries "
+                f"(strategy: {strategy.value if hasattr(strategy, 'value') else strategy}, collection: {collection})"
+            )
+
+            # Extract strategy-specific parameters
+            alpha = strategy_kwargs.get("alpha", 0.5)
+            score_threshold = strategy_kwargs.get("score_threshold", 0.0)
+
+            # Execute batch search based on strategy
+            if strategy == SearchStrategy.SIMILAR:
+                batch_results = self.retriever.batch_search_similar(
+                    queries,
+                    collection=collection,
+                    top_k=top_k,
+                    score_threshold=score_threshold,
+                    filter=filter,
+                    max_workers=max_workers,
+                )
+            elif strategy == SearchStrategy.KEYWORD:
+                batch_results = self.retriever.batch_search_keyword(
+                    queries,
+                    collection=collection,
+                    top_k=top_k,
+                    score_threshold=score_threshold,
+                    filter=filter,
+                    max_workers=max_workers,
+                )
+            elif strategy == SearchStrategy.HYBRID:
+                batch_results = self.retriever.batch_search_hybrid(
+                    queries,
+                    collection=collection,
+                    top_k=top_k,
+                    alpha=alpha,
+                    score_threshold=score_threshold,
+                    filter=filter,
+                    max_workers=max_workers,
+                )
+            elif strategy == SearchStrategy.AUTO:
+                # For now, default to hybrid.
+                # Could be enhanced with automatic strategy selection
+                batch_results = self.retriever.batch_search_hybrid(
+                    queries,
+                    collection=collection,
+                    top_k=top_k,
+                    alpha=alpha,
+                    score_threshold=score_threshold,
+                    filter=filter,
+                    max_workers=max_workers,
+                )
+            else:
+                raise ValueError(f"Invalid search strategy: {strategy}")
+
+            execution_time = time.time() - start_time
+
+            # Convert strategy enum to string for SearchResult
+            strategy_str = (
+                strategy.value if hasattr(strategy, "value") else str(strategy)
+            )
+
+            # Build SearchResult objects for each query
+            search_results = []
+            for i, (query, results) in enumerate(zip(queries, batch_results)):
+                # Prepare metadata for this query's results
+                metadata = {
+                    "chunk_sources": list(
+                        set(
+                            result.properties.get("source_document", "")
+                            or result.metadata.source_document
+                            or ""
+                            for result in results
+                        )
+                    ),
+                    "chunk_types": list(
+                        set(
+                            result.properties.get("chunk_type", "")
+                            or result.metadata.chunk_type
+                            or ""
+                            for result in results
+                        )
+                    ),
+                }
+
+                # Add similarity scores if available
+                similarity_scores = [
+                    result.similarity_score
+                    for result in results
+                    if result.similarity_score is not None
+                ]
+
+                if similarity_scores:
+                    metadata["avg_similarity"] = sum(similarity_scores) / len(
+                        similarity_scores
+                    )
+                    metadata["max_similarity"] = max(similarity_scores)
+
+                # Convert results to dicts for SearchResult
+                results_dicts = [item.model_dump() for item in results]
+
+                # Create SearchResult for this query
+                search_result = SearchResult.model_validate(
+                    {
+                        "query": query,
+                        "strategy": strategy_str,
+                        "collection": collection,
+                        "results": results_dicts,
+                        "total_found": len(results),
+                        "execution_time": execution_time
+                        / len(queries),  # Average time per query
+                        "metadata": metadata,
+                    }
+                )
+                search_results.append(search_result)
+
+            self.logger.info(
+                f"Batch search completed: {len(queries)} queries processed in {execution_time:.3f}s "
+                f"({execution_time/len(queries):.3f}s per query average)"
+            )
+
+            return search_results
+
+        except Exception as e:
+            self.logger.error(f"Batch search failed: {str(e)}")
+            raise
+
     def get_chunk(
         self, chunk_id: str, collection: str
     ) -> Optional[RetrievalResultItem]:
