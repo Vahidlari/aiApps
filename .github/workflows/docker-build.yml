@@ -1,21 +1,14 @@
 name: Build and Push Docker Image
 
+# Only trigger on pushes to main when Docker-related files change
+# Pipfile.lock changes trigger builds (after being updated in PRs)
+# Dockerfile changes trigger builds directly
 on:
-  # Trigger when update-dependencies workflow completes successfully
-  workflow_run:
-    workflows: ["Update Dependencies"]
-    types: [completed]
-    branches: [main]
-  # Also trigger on direct changes to Docker files (not Pipfile)
   push:
     branches: [main]
     paths:
+      - "tools/docker/Pipfile.lock"
       - "tools/docker/Dockerfile"
-      - ".github/workflows/docker-build.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "tools/docker/**"
       - ".github/workflows/docker-build.yml"
 
 env:
@@ -25,11 +18,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Only run if update-dependencies workflow succeeded OR if no Pipfile was modified
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'push' && !contains(github.event.head_commit.modified, 'tools/docker/Pipfile')) ||
-      github.event_name == 'pull_request'
+    timeout-minutes: 90 # Multi-platform build timeout (amd64 + arm64 can take 60-75 min)
     permissions:
       contents: read
       packages: write
@@ -37,17 +26,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Check for race condition
-        if: github.event_name == 'push'
-        run: |
-          if echo "${{ github.event.head_commit.modified }}" | grep -q "tools/docker/Pipfile"; then
-            echo "🚨 RACE CONDITION DETECTED!"
-            echo "Pipfile was modified in this push. The 'Update Dependencies' workflow should handle this."
-            echo "This workflow will exit to avoid building with outdated dependencies."
-            echo "The docker build will be triggered automatically after dependencies are updated."
-            exit 1
-          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -66,13 +44,13 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.run_number }},enable={{is_default_branch}}
             type=raw,value=${{ steps.date-tag.outputs.date }},enable={{is_default_branch}}
 
       - name: Build and push Docker image
+        timeout-minutes: 85 # Build step timeout (multi-platform builds are slower)
         uses: docker/build-push-action@v5
         with:
           context: ./tools/docker
